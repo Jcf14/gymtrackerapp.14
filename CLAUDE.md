@@ -165,7 +165,7 @@ Estado inicial: el ciclo vigente es el **2**. Al migrar, duplicar `rutinas/ciclo
 
 ### 3.7 Cierre de ciclo
 
-1. Pedirme el export JSON de la app → guardarlo en `/exports/ciclo-N-export.json`.
+1. En la app: ⚙ → Ciclos → **Cerrar ciclo N**. Verifica que el máximo (peso y reps) de cada ejercicio quede en el historial, descarga el export, guarda el historial, comprueba la escritura y recién ahí borra el ciclo del celular (si algo no verifica, no borra nada). Pedirme ese export → guardarlo en `/exports/ciclo-N-export.json`.
 2. Resumir en `HISTORIAL.md`: pesos pico por ejercicio (con las reps de ese pico) y cómo me fue.
 3. Agregar **una hoja por ciclo** a `/exports/Historial_Bloques.xlsx` (semanas con fechas, pesos, reps, notas). Un solo Excel que crece; nada de un archivo por ciclo.
 
@@ -318,6 +318,7 @@ Todos los valores se guardan como JSON (`JSON.stringify`).
   - `"meta"` → `{ startDate (inicio del ciclo editado en ⚙; manda sobre el del JSON), dayDates: { "E_w0": "YYYY-MM-DD" } (fecha real editada de un día), dayStatus: { "A_w2": { status: "skipped", reason, savedAt } } (día no completado) }`. La fecha de un registro es la del día (editada o calculada desde el inicio); si no hay, la de guardado. Récords y sesiones se ordenan por ciclo y semana primero.
   - `"unit_<día>_<idxEjercicio>"` → `"lb"` | `"kg"`: unidad elegida para ese ejercicio en el ciclo (si no hay, la unidad por defecto).
   - `"ovr_<día>_<idxEjercicio>"` → `{ name, savedAt }` (`name: null` = override borrado).
+- `gluteo_historial` → `{ version: 1, cycles: [{ cycle, name, startDate, closedAt, sessions }], sessions: [{ cycle, week, weekShort, day, exercise, pattern, type, noWeight, target, date, weight, unit, reps, repsSame, repsSameValue, note, completed, altUsed }], skipped: [{ cycle, week, day, date, reason }] }`: ciclos cerrados. Historial, máximos, récords y sugerencias (S1 contra S1) leen de acá además de los ciclos abiertos. Un ciclo cerrado no se vuelve a cargar desde el servidor. Va incluido en el respaldo completo.
 - `gluteo_rutinas` → `{ "<N>": rutina }`: cada rutina cargada (del servidor o importada) queda guardada, así se pueden consultar ciclos anteriores sin conexión. `gluteo_ciclo_activo` → N.
 - `gluteo_unit` (`lb`/`kg`) · `gluteo_theme` (`light`/`dark`/`auto`; por defecto `light`) · `gluteo_last_day` · `gluteo_last_week` (`{ cycle, week }`) · `gluteo_last_backup` (ISO).
 - Al arrancar, la app trae `rutinas/ciclo-actual.json` (en el service worker: red primero con tope de 4 s, después caché). Si es un ciclo mayor al activo, pasa a ese ciclo sola.

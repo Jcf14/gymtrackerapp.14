@@ -13,6 +13,7 @@
     lastDay: "gluteo_last_day",
     lastWeek: "gluteo_last_week",
     lastBackup: "gluteo_last_backup",
+    history: "gluteo_historial",   // sesiones de ciclos cerrados (ver G.closeCycle)
   };
   const ROUTINE_URL = "rutinas/ciclo-actual.json";
   const BACKUP_EVERY_DAYS = 7;
@@ -50,13 +51,15 @@
     sheetFx: false,
     skipOpen: false,    // formulario "No pude hacerlo" abierto
     skipReason: "",
-    remote: null,       // ciclos publicados en el servidor (rutinas/index.json)     // animar la entrada de la hoja en el próximo render
+    remote: null,       // ciclos publicados en el servidor (rutinas/index.json)
+    hist: null,         // historial de ciclos cerrados     // animar la entrada de la hoja en el próximo render
     fx: { view: true }, // efectos para el próximo render
   };
 
   // ---------- Estado ----------
 
   const routine = () => S.routines[S.cycle] || null;
+  const recordsOf = (name) => G.collectRecords(S.routines, allData(), name).concat(G.historyRecords(S.hist, name));
   const cycleList = () => Object.keys(S.routines).map(Number).sort((a, b) => b - a);
   const dataOf = (c) => (Number(c) === S.cycle ? S.data : store.get(G.dataKey(c), {}));
 
@@ -199,16 +202,16 @@
   function recFor(day, ex, idx, w, name, u) {
     if (ex.noWeight) return null;
     const r = routine();
-    const records = G.collectRecords(S.routines, allData(), name);
+    const records = recordsOf(name);
     const k = G.slotKey(day.key, idx, w);
     const others = records.filter((x) => !(x.cycle === S.cycle && x.key === k));
     const prev = inUnit(G.prevWeight(S.data, day.key, idx, w, ex, r.unitDefault), u);
     const lastS1 = inUnit(G.lastCycleS1(others, S.cycle), u);
     let lastS1Target = null;
     if (lastS1) {
-      const p = G.parseSlotKey(lastS1.key), lr = S.routines[lastS1.cycle];
+      const p = G.parseSlotKey(lastS1.key) || {}, lr = S.routines[lastS1.cycle];
       const ld = lr && lr.days.find((d) => d.key === p.day);
-      lastS1Target = ld && ld.exercises[p.idx] ? ld.exercises[p.idx].targets[0] : null;
+      lastS1Target = lastS1.target || (ld && ld.exercises[p.idx] ? ld.exercises[p.idx].targets[0] : null);
     }
     return {
       max: inUnit(G.findMax(records), u),
@@ -241,8 +244,8 @@
   function renderEmpty() {
     return `<div class="empty">
       <div class="empty-ic">${icon("layers")}</div>
-      <h2>Sin rutina</h2>
-      <p>No hay ninguna rutina cargada. Se carga sola desde <code>${ROUTINE_URL}</code> cuando hay conexión, o podés importarla desde Ajustes.</p>
+      <h2>${S.hist && S.hist.cycles.length ? "Ciclo cerrado" : "Sin rutina"}</h2>
+      <p>${S.hist && S.hist.cycles.length ? "Tu historial está guardado. " : ""}No hay ninguna rutina cargada. Se carga sola desde <code>${ROUTINE_URL}</code> cuando hay conexión, o podés importarla desde Ajustes.</p>
       <button class="secondary-btn open-settings-btn" data-action="open-settings">${icon("gear")}Abrir ajustes</button>
     </div>`;
   }
@@ -519,10 +522,10 @@
 
   const HIST_FILTERS = [["all", "Todos"], ["lower", "Pierna"], ["upper", "Superior"], ["core", "Core"]];
 
-  function histIndex() { return G.exerciseIndex(S.routines, allData(), S.cycle); }
+  function histIndex() { return G.exerciseIndex(S.routines, allData(), S.cycle, S.hist); }
 
   function renderHistorial() {
-    if (!cycleList().length) return renderEmpty();
+    if (!cycleList().length && !(S.hist && S.hist.sessions.length)) return renderEmpty();
     if (S.histEx) {
       const e = histIndex().find((x) => x.key === S.histEx);
       if (e) return renderHistDetail(e);
@@ -628,7 +631,11 @@
     const startRow = routine() ? `<label class="list-row date-row">${icon("calendar")}<span class="grow">Inicio del ciclo ${S.cycle}
         <span class="sub">${start ? fmtDate(start, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "Sin fecha: elegí el día en que empezaste"}</span></span>
         <input type="date" class="cycle-start-input" data-change="cycle-start" value="${start || ""}" aria-label="Inicio del ciclo"></label>` : "";
-    const remoteRows = (S.remote || []).filter((c) => !S.routines[c.cycle]).map((c) =>
+    const closeRow = routine() ? `<button class="list-row close-cycle-btn" data-action="close-cycle">${icon("archive")}<span class="grow">Cerrar ciclo ${S.cycle}
+        <span class="sub">Verifica que tus máximos estén en el historial, descarga el export y lo borra del celular</span></span></button>` : "";
+    const closed = S.hist && S.hist.cycles.length
+      ? `<p class="note">Ciclos cerrados (en el historial): ${S.hist.cycles.map((c) => `${c.cycle}`).join(", ")} · ${S.hist.sessions.length} sesiones guardadas.</p>` : "";
+    const remoteRows = (S.remote || []).filter((c) => !S.routines[c.cycle] && !G.isClosed(S.hist, c.cycle)).map((c) =>
       `<button class="list-row remote-cycle-btn" data-action="load-remote-cycle" data-cycle="${c.cycle}">${icon("download")}<span class="grow">Ciclo ${c.cycle}
         <span class="sub">${esc(c.name)} · tocá para cargarlo</span></span></button>`).join("");
     return `${sheetHead("Ajustes")}
@@ -639,7 +646,7 @@
         <p class="note">Para ejercicios sin unidad elegida. Cada ejercicio puede cambiarla con el selector lb | kg junto al peso; lo ya guardado no cambia.</p></div>
       <div class="group"><span class="eyebrow">Ciclos</span><div class="group-card">${cycles}${startRow}${remoteRows}
         <label class="list-row file-btn">${icon("upload")}<span class="grow">Importar rutina (JSON)</span>
-          <input type="file" class="visually-hidden import-routine-input" accept=".json,application/json" data-change="import-routine"></label></div></div>
+          <input type="file" class="visually-hidden import-routine-input" accept=".json,application/json" data-change="import-routine"></label>${closeRow}</div>${closed}</div>
       <div class="group"><span class="eyebrow">Datos</span><div class="group-card">
         ${S.cycle !== null ? `<button class="list-row export-cycle-btn" data-action="export-cycle">${icon("download")}<span class="grow">Exportar datos del ciclo ${S.cycle}<span class="sub">Para cerrar el ciclo (HISTORIAL y Excel)</span></span></button>` : ""}
         <button class="list-row backup-btn" data-action="backup">${icon("archive")}<span class="grow">Respaldo completo<span class="sub">Último: ${last ? fmtDate(last, { day: "numeric", month: "short", year: "numeric" }) : "nunca"}</span></span></button>
@@ -708,14 +715,15 @@
     const errs = G.checkBackup(b);
     if (errs.length) { console.warn("Respaldo inválido:", errs); toast(errs[0], "error"); return; }
     const cycles = Object.keys(b.routines);
-    if (!confirm(`Restaurar el respaldo del ${new Date(b.exportedAt).toLocaleDateString("es")}? Reemplaza los datos de: ciclo ${cycles.join(", ")}.`)) return;
+    if (!confirm(`Restaurar el respaldo del ${new Date(b.exportedAt).toLocaleDateString("es")}? Reemplaza los datos de: ${cycles.length ? `ciclo ${cycles.join(", ")}` : "ningún ciclo abierto"}${b.history ? " y el historial" : ""}.`)) return;
     for (const c of cycles) {
       S.routines[c] = b.routines[c];
       store.set(G.dataKey(c), b.data[c] || {});
     }
     store.set(KEYS.routines, S.routines);
     if (b.prefs && b.prefs.unit) { S.unit = b.prefs.unit; store.set(KEYS.unit, S.unit); }
-    loadCycle(S.routines[S.cycle] ? S.cycle : cycleList()[0]);
+    if (b.history && Array.isArray(b.history.sessions)) { S.hist = b.history; store.set(KEYS.history, S.hist); }
+    if (cycleList().length) loadCycle(S.routines[S.cycle] ? S.cycle : cycleList()[0]);
     render();
     toast("Respaldo restaurado ✓");
   }
@@ -846,7 +854,7 @@
       const k = el.dataset.k;
       const { dayObj, idx, ex, week } = exFromKey(k);
       const name = G.slotName(S.data, dayObj.key, idx, ex, week);
-      const before = G.findMax(G.collectRecords(S.routines, allData(), name).filter((r) => !(r.cycle === S.cycle && r.key === k)));
+      const before = G.findMax(recordsOf(name).filter((r) => !(r.cycle === S.cycle && r.key === k)));
       if (!saveEntry(k)) return;
       S.open.delete(idx);
       const now = G.collectRecords(S.routines, allData(), name).find((r) => r.cycle === S.cycle && r.key === k);
@@ -909,6 +917,31 @@
     },
     "open-glossary"() { S.sheet = "glossary"; S.sheetFx = true; renderSheet(); },
     "open-settings"() { S.sheet = "settings"; S.sheetFx = true; renderSheet(); loadRemoteIndex(); },
+    async "close-cycle"() {
+      const r = routine();
+      if (!r) return;
+      const res = G.closeCycle(S.hist, r, S.data, new Date());
+      if (res.error) { toast(res.error, "error"); return; }
+      if (res.missing.length) { toast(`No se pudo verificar el máximo de: ${res.missing.join(", ")}. No se borró nada.`, "error"); return; }
+      if (!confirm(`Cerrar el ciclo ${r.cycle} (${r.name})\n\n✓ ${res.exercises} ejercicios y ${res.sessions} sesiones verificados: los máximos quedan en el historial.\n\nSe descarga el export del ciclo y después el ciclo se borra del celular. No se puede deshacer.`)) return;
+      const exported = await deliverFile(`gluteo-ciclo-${r.cycle}-${today()}.json`, G.buildCycleExport(r, S.data, S.unit));
+      if (!exported) { toast("Cierre cancelado: no se descargó el export", "error"); return; }
+      if (!store.set(KEYS.history, res.hist)) return;
+      const back = store.get(KEYS.history, null);
+      if (!back || back.sessions.length !== res.hist.sessions.length || !G.isClosed(back, r.cycle)) {
+        toast("No se pudo comprobar el historial guardado. No se borró el ciclo.", "error"); return;
+      }
+      S.hist = back;
+      delete S.routines[r.cycle];
+      store.set(KEYS.routines, S.routines);
+      try { localStorage.removeItem(G.dataKey(r.cycle)); } catch { /* ya no está */ }
+      const next = cycleList()[0];
+      if (next !== undefined) loadCycle(next);
+      else { S.cycle = null; S.data = {}; S.drafts = {}; store.set(KEYS.active, null); }
+      S.sheet = false; S.fx.view = true;
+      render();
+      toast(`Ciclo ${r.cycle} cerrado · ${res.sessions} sesiones en el historial ✓`);
+    },
     "open-skip"() { S.skipOpen = true; S.skipReason = ""; render(); },
     "cancel-skip"() { S.skipOpen = false; render(); },
     "skip-reason"(el) {
@@ -955,7 +988,7 @@
     async backup() {
       const data = {};
       for (const c of Object.keys(S.routines)) data[c] = dataOf(c);
-      const b = G.buildBackup({ routines: S.routines, data, unit: S.unit, theme: S.theme });
+      const b = G.buildBackup({ routines: S.routines, data, unit: S.unit, theme: S.theme, history: S.hist });
       const ok = await deliverFile(`gluteo-respaldo-${today()}.json`, b);
       if (ok) { store.set(KEYS.lastBackup, b.exportedAt); render(); toast("Respaldo listo ✓"); }
     },
@@ -1043,6 +1076,7 @@
     } catch { return false; }
     const errs = G.validateRoutine(r);
     if (errs.length) { console.warn(`${ROUTINE_URL} inválido:`, errs); return false; }
+    if (G.isClosed(S.hist, r.cycle)) return false;
     const prev = S.routines[r.cycle];
     let changed = false;
     if (!prev || JSON.stringify(prev) !== JSON.stringify(r)) {
@@ -1087,6 +1121,7 @@
     S.theme = store.get(KEYS.theme, "light");
     applyTheme();
     S.routines = store.get(KEYS.routines, {});
+    S.hist = store.get(KEYS.history, null);
     const active = store.get(KEYS.active, null);
     const start = S.routines[active] ? active : cycleList()[0];
     S.unit = store.get(KEYS.unit, null) || (S.routines[start] && S.routines[start].unitDefault) || "lb";

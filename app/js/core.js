@@ -338,10 +338,81 @@
     return null;
   }
 
+  // ---------- Historial de ciclos cerrados ----------
+  // hist = { version: 1, cycles: [{ cycle, name, startDate, closedAt, sessions }], sessions: [...], skipped: [...] }
+  // Al cerrar un ciclo sus registros pasan acá y el ciclo se borra del celular.
+
+  const emptyHistory = () => ({ version: 1, cycles: [], sessions: [], skipped: [] });
+  const isClosed = (hist, cycle) => !!(hist && hist.cycles.some((c) => c.cycle === Number(cycle)));
+
+  // Sesiones del ciclo (todo registro con peso, reps, nota o completado) y días no completados.
+  function cycleSessions(routine, data) {
+    const sessions = [], skipped = [];
+    routine.days.forEach((d) => {
+      for (let w = 0; w < 4; w++) {
+        const st = dayStatus(data, d.key, w);
+        if (st) skipped.push({ cycle: routine.cycle, week: w, weekShort: routine.weekShort[w], day: d.key, date: dayDate(routine, data, d.key, w), reason: st.reason || "" });
+      }
+      d.exercises.forEach((ex, idx) => {
+        for (let w = 0; w < 4; w++) {
+          const rec = data[slotKey(d.key, idx, w)];
+          if (!rec) continue;
+          const weight = parseNum(rec.weight);
+          const hasReps = (rec.reps || []).some((x) => String(x).trim() !== "");
+          if (!(weight > 0) && !hasReps && !rec.completed && !rec.note) continue;
+          sessions.push({
+            cycle: routine.cycle, week: w, weekShort: routine.weekShort[w], day: d.key,
+            exercise: slotName(data, d.key, idx, ex, w), pattern: ex.pattern, type: d.type, noWeight: !!ex.noWeight, target: ex.targets[w],
+            date: dayDate(routine, data, d.key, w) || rec.savedAt || null,
+            weight: weight > 0 ? weight : null, unit: weight > 0 ? recUnit(rec, routine) : null,
+            reps: rec.reps || [], repsSame: !!rec.repsSame, repsSameValue: rec.repsSameValue || "",
+            note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed,
+          });
+        }
+      });
+    });
+    return { sessions, skipped };
+  }
+
+  // Marcas con peso del historial, con la misma forma que collectRecords.
+  function historyRecords(hist, name) {
+    if (!hist) return [];
+    const target = normName(name);
+    return hist.sessions.filter((x) => x.weight > 0 && normName(x.exercise) === target).map((x) => {
+      const repsArr = repsNums(x);
+      const unit = x.unit || "lb";
+      return {
+        cycle: x.cycle, week: x.week, key: `hist:${x.cycle}:${x.day}:${x.week}`, day: x.day, weight: x.weight, unit, weightLb: toLb(x.weight, unit),
+        reps: repsText(x), repsArr, topReps: repsArr.length ? Math.max(...repsArr) : 0, date: x.date || null, savedAt: null,
+        note: x.note || "", completed: !!x.completed, altUsed: !!x.altUsed, weekShort: x.weekShort, target: x.target, archived: true,
+      };
+    });
+  }
+
+  // Cierra un ciclo: arma el historial nuevo y verifica que el máximo de cada ejercicio quedó igual.
+  // No modifica nada: devuelve { hist, sessions, exercises, missing } o { error }.
+  function closeCycle(hist, routine, data, now) {
+    const h = hist ? JSON.parse(JSON.stringify(hist)) : emptyHistory();
+    if (isClosed(h, routine.cycle)) return { error: `El ciclo ${routine.cycle} ya estaba cerrado` };
+    const { sessions, skipped } = cycleSessions(routine, data);
+    h.sessions.push(...sessions);
+    h.skipped.push(...skipped);
+    h.cycles.push({ cycle: routine.cycle, name: routine.name, startDate: cycleStart(routine, data), closedAt: (now || new Date()).toISOString(), sessions: sessions.length });
+    const names = new Set(sessions.map((x) => x.exercise));
+    const missing = [];
+    for (const n of names) {
+      const mine = findMax(collectRecords({ [routine.cycle]: routine }, { [routine.cycle]: data }, n));
+      if (!mine) continue;
+      const kept = findMax(historyRecords(h, n).filter((r) => r.cycle === routine.cycle));
+      if (!kept || cmpW(kept) !== cmpW(mine) || kept.topReps !== mine.topReps) missing.push(n);
+    }
+    return { hist: h, sessions: sessions.length, exercises: names.size, missing };
+  }
+
   // ---------- Índice de ejercicios (para el historial) ----------
 
   // Un ejercicio por nombre (sin tildes ni mayúsculas), en todos los ciclos guardados.
-  function exerciseIndex(routines, allData, activeCycle) {
+  function exerciseIndex(routines, allData, activeCycle, hist) {
     const map = new Map();
     for (const c of Object.keys(routines).map(Number).sort((a, b) => b - a)) {
       const r = routines[c], data = allData[c] || {};
@@ -356,9 +427,15 @@
         }
       }));
     }
+    // Ejercicios que solo existen en ciclos cerrados.
+    for (const x of (hist && hist.sessions) || []) {
+      const key = normName(x.exercise);
+      if (!map.has(key)) map.set(key, { key, name: x.exercise, pattern: x.pattern, type: x.type, noWeight: !!x.noWeight, days: new Set(), cycles: new Set(), order: Infinity });
+      map.get(key).cycles.add(x.cycle);
+    }
     const list = [...map.values()];
     for (const e of list) {
-      e.records = collectRecords(routines, allData, e.name);
+      e.records = collectRecords(routines, allData, e.name).concat(historyRecords(hist, e.name));
       e.max = findMax(e.records);
       e.last = lastRecord(e.records);
       e.group = e.pattern && /^core/i.test(e.pattern) ? "core" : e.type;
@@ -431,8 +508,8 @@
     };
   }
 
-  function buildBackup({ routines, data, unit, theme }, now) {
-    return { type: "gluteo-backup", version: 1, exportedAt: (now || new Date()).toISOString(), prefs: { unit, theme }, routines, data };
+  function buildBackup({ routines, data, unit, theme, history }, now) {
+    return { type: "gluteo-backup", version: 1, exportedAt: (now || new Date()).toISOString(), prefs: { unit, theme }, routines, data, history: history || null };
   }
 
   function checkBackup(b) {
@@ -457,5 +534,6 @@
     weekFromStart, autoDayKey,
     isoDate, parseDate, dayId, cycleStart, plannedDate, dayDate, dayStatus,
     buildCycleExport, buildBackup, checkBackup,
+    emptyHistory, isClosed, cycleSessions, historyRecords, closeCycle,
   };
 })(typeof window !== "undefined" ? window : globalThis);

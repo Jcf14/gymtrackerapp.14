@@ -189,3 +189,31 @@ test("fechas del ciclo y orden real de récords entre ciclos", () => {
   ];
   assert.deepEqual(plain(G.prHistory(recs).map((x) => x.cycle)), [1]);
 });
+
+test("cerrar ciclo: pasa todo al historial y verifica los máximos", () => {
+  const r = fixture();
+  const data = {
+    meta: { startDate: "2026-09-07", dayStatus: { B_w2: { status: "skipped", reason: "Viaje" } } },
+    A_0_w0: { weight: "215", reps: ["10", "10", "9", "9"], unit: "lb", completed: true, note: "pesado" },
+    A_0_w2: { weight: "235", reps: ["5", "5", "4", "18"], unit: "lb", completed: true },
+    A_1_w1: { weight: "60", reps: ["12", "12", "12"], unit: "lb", altUsed: false },
+    A_2_w0: { completed: true, reps: ["10", "10", "10"] },                 // core sin peso
+    ovr_A_1: { name: "Zancada reversa" },
+  };
+  const res = G.closeCycle(null, r, data, new Date("2026-10-21T00:00:00Z"));
+  assert.deepEqual(plain(res.missing), []);
+  assert.equal(res.sessions, 4);
+  assert.equal(res.exercises, 3);
+  assert.equal(res.hist.cycles[0].cycle, 9);
+  assert.equal(res.hist.skipped[0].reason, "Viaje");
+  const s = res.hist.sessions.find((x) => x.week === 1);
+  assert.equal(s.exercise, "Zancada reversa", "guarda el nombre editado");
+  assert.equal(s.date, "2026-09-14");
+  const max = G.findMax(G.historyRecords(res.hist, r.days[0].exercises[0].name));
+  assert.equal(max.weight, 235); assert.equal(max.topReps, 18);
+  assert.ok(G.isClosed(res.hist, 9));
+  assert.match(G.closeCycle(res.hist, r, data).error, /ya estaba cerrado/);
+  // el índice del historial sigue mostrando los ejercicios del ciclo cerrado
+  const idx = G.exerciseIndex({}, {}, null, res.hist);
+  assert.equal(idx.find((e) => e.name.startsWith("Hip thrust")).max.weight, 235);
+});

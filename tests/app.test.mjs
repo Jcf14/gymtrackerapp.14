@@ -449,3 +449,51 @@ test("ciclos publicados: se cargan desde Ajustes sin cambiar el activo", async (
   assert.equal(t.$("#cycleChip").textContent, "Ciclo 8");
   assert.deepEqual(t.errors, []);
 });
+
+test("cerrar ciclo: verifica, exporta, guarda el historial y borra el ciclo", async () => {
+  const t = await boot();
+  t.goTo(0, "A"); t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
+  t.goTo(2, "A"); t.openCard(0); t.type(".weight-input", "235"); t.click(".save-entry-btn");
+  t.click(".settings-btn");
+  t.click(".close-cycle-btn");
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(t.downloads.names.length, 1, "descarga el export antes de borrar");
+  assert.match(t.downloads.names[0], /gluteo-ciclo-9-/);
+  const hist = JSON.parse(t.w.localStorage.getItem("gluteo_historial"));
+  assert.equal(hist.cycles[0].cycle, 9);
+  assert.equal(hist.sessions.length, 2);
+  assert.equal(t.w.localStorage.getItem("gluteo_tracker_ciclo-9"), null, "el ciclo se borró del celular");
+  assert.equal(JSON.parse(t.w.localStorage.getItem("gluteo_rutinas"))[9], undefined);
+  assert.match(t.$("#root").textContent, /Ciclo cerrado/);
+  t.click('.tab[data-tab="historial"]');
+  const item = t.$$(".hist-item").find((b) => /Hip thrust/.test(b.textContent));
+  assert.match(item.textContent, /235 lb/, "el máximo sigue en el historial");
+  t.click(item);
+  assert.equal(t.$$(".pr-row").length, 2);
+  // al reabrir, aunque el servidor siga publicando ciclo-actual = 9, no vuelve
+  const storage = {};
+  for (let i = 0; i < t.w.localStorage.length; i++) { const k = t.w.localStorage.key(i); storage[k] = t.w.localStorage.getItem(k); }
+  const t2 = await boot({ storage, published: [FIXTURE] });
+  assert.equal(JSON.parse(t2.w.localStorage.getItem("gluteo_rutinas"))[9], undefined);
+  t2.click(".settings-btn");
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(t2.$('.remote-cycle-btn[data-cycle="9"]'), null);
+  assert.match(t2.$("#sheet").textContent, /Ciclos cerrados \(en el historial\): 9/);
+  assert.deepEqual(t.errors, []); assert.deepEqual(t2.errors, []);
+});
+
+test("las sugerencias del ciclo nuevo usan el historial del ciclo cerrado (S1 contra S1)", async () => {
+  const t = await boot();
+  t.goTo(0, "A"); t.openCard(0);
+  t.$$(".rep-input").forEach((el) => { el.value = "10"; el.dispatchEvent(new t.w.Event("input", { bubbles: true })); });
+  t.type(".weight-input", "200"); t.click(".save-entry-btn");
+  t.click(".settings-btn"); t.click(".close-cycle-btn");
+  await new Promise((r) => setTimeout(r, 30));
+  const storage = {};
+  for (let i = 0; i < t.w.localStorage.length; i++) { const k = t.w.localStorage.key(i); storage[k] = t.w.localStorage.getItem(k); }
+  const next = structuredClone(FIXTURE); next.cycle = 10; next.name = "Ciclo nuevo";
+  const t2 = await boot({ storage, routine: next });
+  t2.goTo(0, "A");
+  assert.match(t2.$$(".card")[0].querySelector(".ex-sug").textContent, /210 lb/, "S1 anterior 200 + 5%");
+  assert.deepEqual(t2.errors, []);
+});

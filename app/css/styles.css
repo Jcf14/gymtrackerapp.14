@@ -526,3 +526,5 @@ textarea.text-input { resize: none; min-height: 44px; }
 .date-row input[type="date"] {
   flex: none; max-width: 150px; padding: 6px 8px; border: 0; border-radius: 9px; background: var(--surface-2); font-size: 15px; color: var(--text);
 }
+.close-cycle-btn > .ic { background: #FDECEA; color: var(--danger); }
+:root[data-theme="dark"] .close-cycle-btn > .ic { background: #3A2220; }
