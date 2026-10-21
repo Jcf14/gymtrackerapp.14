@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "cycle": 9,
+  "name": "Rutina de prueba",
+  "startDate": null,
+  "unitDefault": "lb",
+  "weeks": ["Semana 1", "Semana 2", "Semana 3", "Semana 4"],
+  "weekShort": ["S1", "S2", "S3", "S4 (Deload)"],
+  "notes": "Solo para tests.",
+  "days": [
+    {
+      "key": "A",
+      "label": "Lun · A",
+      "dayName": "Lunes",
+      "weekday": 1,
+      "title": "Glúteo #1 — Sesgo Vertical",
+      "type": "lower",
+      "warmup": "Banda en tobillos: monster walk 2x15 pasos",
+      "exercises": [
+        {
+          "pattern": "Thrust/Bridge",
+          "name": "Hip thrust con barra libre (pausa 2s arriba)",
+          "alt": "Hip thrust con mancuerna en banco",
+          "rest": "90-120s",
+          "targets": ["4x8-10 @RPE7", "4x6-8 @RPE8 (+peso)", "3x4-6 @RPE9 + 1x15-20", "2x10 @RPE6"],
+          "sets": [4, 4, 4, 2]
+        },
+        {
+          "pattern": "Squat/Lunge",
+          "name": "Sentadilla búlgara",
+          "alt": null,
+          "rest": "75-90s",
+          "targets": ["3x8-12 c/pierna @RPE7", "3x8-12 c/pierna @RPE8", "3x8-10 c/pierna @RPE9", "2x10 c/pierna (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Core",
+          "name": "Plancha con elevación de pierna alterna",
+          "alt": null,
+          "rest": "30-45s",
+          "noWeight": true,
+          "targets": ["3x10 c/lado", "3x10 c/lado", "3x12 c/lado", "2x8 c/lado"],
+          "sets": [3, 3, 3, 2]
+        }
+      ]
+    },
+    {
+      "key": "B",
+      "label": "Mar · B",
+      "dayName": "Martes",
+      "weekday": 2,
+      "title": "Tren superior — Empuje",
+      "type": "upper",
+      "warmup": "Movilidad de hombro + series de aproximación",
+      "exercises": [
+        {
+          "pattern": null,
+          "name": "Press inclinado con mancuernas",
+          "alt": null,
+          "rest": "90-120s",
+          "targets": ["3x8-10 @RPE7", "3x6-8 @RPE8", "4x4-6 @RPE9", "2x8 @RPE5-6"],
+          "sets": [3, 3, 4, 2]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Glúteo Tracker</title>
+  <meta name="description" content="Registro personal de entrenamientos: pesos, reps, notas e historial por ciclo.">
+  <meta name="theme-color" content="#1F3C56">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Glúteo">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-title">Glúteo Tracker</span>
+      <span id="cycleChip" class="chip" hidden></span>
+    </div>
+    <button class="icon-btn settings-btn" data-action="open-settings" aria-label="Ajustes">⚙</button>
+  </header>
+
+  <nav class="tabs" aria-label="Secciones">
+    <button class="tab active" data-action="tab" data-tab="rutina">Rutina</button>
+    <button class="tab" data-action="tab" data-tab="historial">Historial</button>
+  </nav>
+
+  <div id="updateBanner" class="banner" hidden>
+    <span>Hay una versión nueva de la app.</span>
+    <button class="link-btn reload-btn" data-action="reload-app">Actualizar</button>
+  </div>
+
+  <main id="root"><p class="empty">Cargando…</p></main>
+
+  <div id="sheet" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/core.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

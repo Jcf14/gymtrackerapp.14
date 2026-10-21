@@ -1,0 +1,17 @@
+{
+  "name": "gluteo-tracker",
+  "private": true,
+  "type": "module",
+  "description": "PWA personal para registrar entrenamientos por ciclo.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "validar": "node scripts/validar-rutina.mjs",
+    "iconos": "node scripts/iconos.mjs",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}
