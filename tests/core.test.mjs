@@ -16,7 +16,7 @@ test("cuenta series del target, incluida la de rematado", () => {
 });
 
 test("detecta marcas de descarga y (+peso)", () => {
-  for (const t of ["2x10 @RPE6", "2x10 @RPE5-6", "2x10 (liviano)", "2x10 (liviano/asistido)"]) assert.ok(G.isDeloadTarget(t), t);
+  for (const t of ["2x10 @RPE6", "2x10 @RPE5-6", "2x10 (liviano)", "2x10 (liviano/asistido)", "2x10 (asistido o liviano)"]) assert.ok(G.isDeloadTarget(t), t);
   for (const t of ["3x8 @RPE7", "3x6 @RPE6-7", "4x5 @RPE9"]) assert.ok(!G.isDeloadTarget(t), t);
   assert.ok(G.hasPlusWeight("4x6-8 @RPE8 (+peso)"));
   assert.ok(!G.hasPlusWeight("4x6-8 @RPE8"));
@@ -174,4 +174,18 @@ test("unidades: conversión y máximo comparando lb con kg", () => {
   assert.equal(G.collectRecords({ 9: r }, { 9: { A_0_w0: { weight: "200" } } }, r.days[0].exercises[0].name)[0].unit, "lb");
   const out = G.buildCycleExport(r, data, "lb");
   assert.equal(out.days[0].exercises[0].weeks[1].unit, "kg");
+});
+
+test("fechas del ciclo y orden real de récords entre ciclos", () => {
+  const r = fixture();
+  const data = { meta: { startDate: "2026-09-07", dayDates: { A_w1: "2026-09-15" } } };
+  assert.equal(G.plannedDate(r, data, "B", 0), "2026-09-08");
+  assert.equal(G.dayDate(r, data, "A", 1), "2026-09-15");
+  assert.equal(G.dayDate(r, {}, "A", 0), null);
+  // un ciclo viejo cargado después sigue siendo anterior
+  const recs = [
+    { cycle: 2, week: 0, weight: 215, topReps: 8, date: "2026-10-01T10:00:00Z" },
+    { cycle: 1, week: 2, weight: 235, topReps: 5, date: "2026-10-21T10:00:00Z" },
+  ];
+  assert.deepEqual(plain(G.prHistory(recs).map((x) => x.cycle)), [1]);
 });

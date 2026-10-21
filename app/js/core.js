@@ -19,7 +19,7 @@
   }
 
   function isDeloadTarget(target) {
-    return /\(liviano[^)]*\)|@\s*RPE\s*5\s*-\s*6|@\s*RPE\s*6(?![\d.-])/i.test(String(target));
+    return /\([^)]*liviano[^)]*\)|@\s*RPE\s*5\s*-\s*6|@\s*RPE\s*6(?![\d.-])/i.test(String(target));
   }
 
   function hasPlusWeight(target) {
@@ -139,6 +139,37 @@
   const toLb = (w, unit) => convert(w, unit || "lb", "lb");
   const round1 = (n) => Math.round(n * 10) / 10;
   const roundHalf = (n) => Math.round(n * 2) / 2;
+  // ---------- Fechas del ciclo ----------
+  // data.meta = { startDate, dayDates: { "E_w0": "YYYY-MM-DD" }, dayStatus: { "E_w0": { status: "skipped", reason, savedAt } } }
+
+  const isoDate = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  function parseDate(str) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || "");
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+  }
+  const dayId = (day, week) => `${day}_w${week}`;
+  const cycleStart = (routine, data) => (data && data.meta && data.meta.startDate) || routine.startDate || null;
+
+  // Fecha planificada del día: inicio del ciclo + semana + distancia al día de la semana.
+  function plannedDate(routine, data, dayKey, week) {
+    const start = parseDate(cycleStart(routine, data));
+    const d = routine.days.find((x) => x.key === dayKey);
+    if (!start || !d) return null;
+    const offset = (d.weekday - start.getDay() + 7) % 7;
+    return isoDate(new Date(start.getFullYear(), start.getMonth(), start.getDate() + week * 7 + offset));
+  }
+
+  // Fecha real: la editada a mano, o la planificada.
+  function dayDate(routine, data, dayKey, week) {
+    const o = data && data.meta && data.meta.dayDates && data.meta.dayDates[dayId(dayKey, week)];
+    return o || plannedDate(routine, data, dayKey, week);
+  }
+
+  function dayStatus(data, dayKey, week) {
+    const st = data && data.meta && data.meta.dayStatus && data.meta.dayStatus[dayId(dayKey, week)];
+    return st && st.status ? st : null;
+  }
+
   // Unidad de un registro: la guardada, o la de la rutina (registros anteriores a esta función).
   const recUnit = (rec, routine) => (rec && rec.unit) || (routine && routine.unitDefault) || "lb";
 
@@ -178,7 +209,7 @@
           const unit = recUnit(rec, r);
           out.push({
             cycle: Number(c), week: w, key: k, day: d.key, weight, unit, weightLb: toLb(weight, unit), reps: repsText(rec), repsArr,
-            topReps: repsArr.length ? Math.max(...repsArr) : 0, date: rec.savedAt || null,
+            topReps: repsArr.length ? Math.max(...repsArr) : 0, date: dayDate(r, data, d.key, w) || rec.savedAt || null, savedAt: rec.savedAt || null,
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed, weekShort: r.weekShort[w],
           });
         }
@@ -187,10 +218,11 @@
     return out;
   }
 
-  // Orden cronológico: por fecha de guardado; sin fecha, por ciclo y semana.
+  // Orden cronológico: ciclo y semana mandan; dentro de la misma semana, la fecha.
   function chrono(a, b) {
+    if (a.cycle !== b.cycle || a.week !== b.week) return a.cycle - b.cycle || a.week - b.week;
     if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
-    return a.cycle - b.cycle || a.week - b.week;
+    return 0;
   }
 
   // ¿r supera a best? Más peso, o el mismo peso con más reps.
@@ -337,6 +369,7 @@
   // ---------- Fechas y selección automática ----------
 
   function weekFromStart(startDate, today) {
+    if (startDate && typeof startDate === "object") startDate = isoDate(startDate);
     if (!startDate) return null;
     const [y, m, d] = startDate.split("-").map(Number);
     const start = new Date(y, m - 1, d);
@@ -362,10 +395,15 @@
       type: "gluteo-cycle-export",
       cycle: routine.cycle,
       cycleName: routine.name,
+      startDate: cycleStart(routine, data),
       unit,
       days: routine.days.map((d) => ({
         day: d.key,
         title: d.title,
+        sessions: [0, 1, 2, 3].map((w) => {
+          const st = dayStatus(data, d.key, w);
+          return { week: routine.weekShort[w], date: dayDate(routine, data, d.key, w), status: st ? st.status : null, reason: st ? st.reason || "" : "" };
+        }),
         exercises: d.exercises.map((ex, idx) => ({
           name: effectiveName(data, d.key, idx, ex),
           originalName: ex.name,
@@ -417,6 +455,7 @@
     LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
     collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
     weekFromStart, autoDayKey,
+    isoDate, parseDate, dayId, cycleStart, plannedDate, dayDate, dayStatus,
     buildCycleExport, buildBackup, checkBackup,
   };
 })(typeof window !== "undefined" ? window : globalThis);

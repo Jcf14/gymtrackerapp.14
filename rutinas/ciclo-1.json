@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 1,
+  "cycle": 1,
+  "name": "Rutina Puente (Ciclo 1)",
+  "startDate": null,
+  "unitDefault": "lb",
+  "weeks": ["Semana 1", "Semana 2", "Semana 3", "Semana 4"],
+  "weekShort": ["S1", "S2", "S3", "S4 (Deload)"],
+  "notes": "Ciclo completado (~septiembre 2026). Reconstruido a posteriori desde Rutina_Puente_3_Semanas.md (S1-S3) y Semana_Descarga.xlsx (S4, que se hizo como semana aparte). Los valores de rest no figuraban en el plan original: se asignaron con las reglas de CLAUDE.md. La sentadilla se hacía en Smith.",
+  "days": [
+    {
+      "key": "A",
+      "label": "Lun · A",
+      "dayName": "Lunes",
+      "weekday": 1,
+      "title": "Glúteo #1 — Sesgo Vertical",
+      "type": "lower",
+      "warmup": "Banda en tobillos: monster walk 2x15 pasos + clamshell 2x15 c/lado",
+      "exercises": [
+        {
+          "pattern": "Squat/Lunge (vertical)",
+          "name": "Sentadilla trasera (back squat)",
+          "alt": "Prensa de piernas",
+          "rest": "90-120s",
+          "targets": ["4x8 @RPE7", "4x6-8 @RPE8", "3x4-6 @RPE9", "2x8 @RPE5-6"],
+          "sets": [4, 4, 3, 2]
+        },
+        {
+          "pattern": "Thrust/Bridge",
+          "name": "Hip Thrust con barra",
+          "alt": "Hip thrust en máquina",
+          "rest": "90-120s",
+          "targets": ["4x8-10 @RPE7", "4x6-8 @RPE8", "3x4-6 @RPE9 + 1x15-20", "2x10 @RPE6"],
+          "sets": [4, 4, 4, 2]
+        },
+        {
+          "pattern": "Hinge (horizontal)",
+          "name": "Peso muerto rumano (RDL)",
+          "alt": null,
+          "rest": "75-90s",
+          "targets": ["3x10", "3x8-10 (+peso)", "3x6-8 @RPE8", "2x10 @RPE6"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Abducción (frontal)",
+          "name": "Abducción de cadera (máquina/cable)",
+          "alt": "Abducción de pie con banda",
+          "rest": "45-60s",
+          "targets": ["3x15-20", "3x15-20 (+peso)", "3x20-25", "2x15 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Accesorio cuádriceps",
+          "name": "Extensión de cuádriceps",
+          "alt": "Zancada estática con mancuernas",
+          "rest": "45-60s",
+          "targets": ["3x12-15", "3x12-15", "3x15", "2x12 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Core",
+          "name": "Elevación de piernas colgado",
+          "alt": "Elevación de rodillas en silla romana",
+          "rest": "30-45s",
+          "noWeight": true,
+          "targets": ["3x15", "3x15", "3x15-20", "2x12"],
+          "sets": [3, 3, 3, 2]
+        }
+      ]
+    },
+    {
+      "key": "B",
+      "label": "Mar · B",
+      "dayName": "Martes",
+      "weekday": 2,
+      "title": "Tren Superior — Empuje",
+      "type": "upper",
+      "warmup": "Movilidad de hombro + 2x10 press con barra vacía",
+      "exercises": [
+        {
+          "pattern": null,
+          "name": "Press banca plano",
+          "alt": "Press banca con mancuernas",
+          "rest": "90-120s",
+          "targets": ["4x8-10", "4x6-8", "3x5-6 @RPE8-9", "2x8 @RPE6"],
+          "sets": [4, 4, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Press militar mancuernas",
+          "alt": null,
+          "rest": "75-90s",
+          "targets": ["3x10", "3x8-10", "3x8", "2x10 @RPE6"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Fondos en paralelas / press inclinado",
+          "alt": "Press inclinado con mancuernas",
+          "rest": "60-75s",
+          "targets": ["3x10-12", "3x10-12 (+peso)", "3x8-10", "2x10 @RPE6"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Elevaciones laterales",
+          "alt": null,
+          "rest": "45-60s",
+          "targets": ["3x15", "3x15", "3x15-20", "2x15 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Extensión de tríceps en polea",
+          "alt": "Extensión de tríceps con banda",
+          "rest": "45-60s",
+          "targets": ["3x12-15", "3x12-15", "3x12-15", "2x12 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Press francés o extensión copa",
+          "alt": null,
+          "rest": "45-60s",
+          "targets": ["3x12", "3x10-12 (+peso)", "3x12-15", "2x12 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Core",
+          "name": "Plancha",
+          "alt": null,
+          "rest": "30-45s",
+          "noWeight": true,
+          "targets": ["3x30-45s", "3x40-50s", "3x45-60s", "2x30s"],
+          "sets": [3, 3, 3, 2]
+        }
+      ]
+    },
+    {
+      "key": "C",
+      "label": "Mié · C",
+      "dayName": "Miércoles",
+      "weekday": 3,
+      "title": "Glúteo #2 — Sesgo Unilateral",
+      "type": "lower",
+      "warmup": "Sentadilla con banda por encima de rodillas 2x15",
+      "exercises": [
+        {
+          "pattern": "Squat/Lunge (unilateral)",
+          "name": "Sentadilla búlgara o step-up",
+          "alt": null,
+          "rest": "75-90s",
+          "targets": ["3x10-12 c/pierna", "3x8-10 c/pierna (+peso)", "3x8 c/pierna @RPE8-9", "2x10 c/pierna (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Thrust/Bridge (lockout)",
+          "name": "Hip thrust con banda + pulsos en el tope",
+          "alt": "Hip thrust con barra (sin banda)",
+          "rest": "75-90s",
+          "targets": ["3x12 + 10 pulsos", "3x10 + 10 pulsos (+banda)", "3x8 @RPE8 + 15 pulsos", "2x12 sin pulsos (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Hinge (vertical)",
+          "name": "Peso muerto convencional",
+          "alt": "Peso muerto con mancuernas",
+          "rest": "120-150s",
+          "targets": ["4x6-8 @RPE7", "4x5-6 @RPE8", "3x3-5 @RPE9", "2x8 @RPE6"],
+          "sets": [4, 4, 3, 2]
+        },
+        {
+          "pattern": "Abducción (transversal)",
+          "name": "Abducción de cadera de pie (cable/máquina)",
+          "alt": "Abducción de pie con banda",
+          "rest": "45-60s",
+          "targets": ["3x15 c/lado", "3x15 c/lado (+peso)", "3x15-20 c/lado", "2x15 c/lado (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Accesorio isquios",
+          "name": "Curl femoral (leg curl)",
+          "alt": "Curl femoral con balón suizo",
+          "rest": "45-60s",
+          "targets": ["3x12-15", "3x12-15", "3x15", "2x12 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Core",
+          "name": "Plancha lateral",
+          "alt": null,
+          "rest": "30-45s",
+          "noWeight": true,
+          "targets": ["3x30s c/lado", "3x35s c/lado", "3x40s c/lado", "2x25s c/lado"],
+          "sets": [3, 3, 3, 2]
+        }
+      ]
+    },
+    {
+      "key": "D",
+      "label": "Jue · D",
+      "dayName": "Jueves",
+      "weekday": 4,
+      "title": "Tren Superior — Tirón",
+      "type": "upper",
+      "warmup": "Band pull-apart 2x15 + activación escapular",
+      "exercises": [
+        {
+          "pattern": null,
+          "name": "Dominadas / jalón al pecho",
+          "alt": "Remo en máquina",
+          "rest": "90-120s",
+          "targets": ["4x8-10", "4x6-8 (+peso)", "3x6-8 @RPE8", "2x10 (asistido o liviano)"],
+          "sets": [4, 4, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Remo con barra",
+          "alt": "Remo en máquina",
+          "rest": "90-120s",
+          "targets": ["3x10", "3x8-10", "3x8", "2x10 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Remo unilateral con mancuerna",
+          "alt": null,
+          "rest": "60-75s",
+          "targets": ["3x10-12 c/lado", "3x10-12 c/lado", "3x10 c/lado", "2x12 c/lado (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Face pull",
+          "alt": "Elevación posterior con mancuerna",
+          "rest": "45-60s",
+          "targets": ["3x15", "3x15", "3x15-20", "2x15 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Curl de bíceps (barra/mancuerna)",
+          "alt": null,
+          "rest": "45-60s",
+          "targets": ["3x12", "3x12", "3x12-15", "2x12 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": null,
+          "name": "Curl martillo o inclinado",
+          "alt": null,
+          "rest": "45-60s",
+          "targets": ["3x12 c/lado", "3x10-12 (+peso)", "3x12-15", "2x12 c/lado (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Core",
+          "name": "Pallof press",
+          "alt": "Plancha con rotación (banda)",
+          "rest": "30-45s",
+          "noWeight": true,
+          "targets": ["3x12 c/lado", "3x12 c/lado", "3x15 c/lado", "2x12 c/lado"],
+          "sets": [3, 3, 3, 2]
+        }
+      ]
+    },
+    {
+      "key": "E",
+      "label": "Sáb · E",
+      "dayName": "Sábado",
+      "weekday": 6,
+      "title": "Glúteo #3 — Metabólico/Lockout",
+      "type": "lower",
+      "warmup": "Monster walk 2x15 pasos + puente de glúteo con banda 2x15",
+      "exercises": [
+        {
+          "pattern": "Squat/Lunge (bilateral)",
+          "name": "Prensa de piernas o zancadas caminando",
+          "alt": "Sentadilla goblet con mancuerna",
+          "rest": "75-90s",
+          "targets": ["3x10-12", "3x10-12 (+peso)", "3x8-10", "2x10 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Thrust/Bridge (unilateral)",
+          "name": "Hip thrust unipodal o puente de glúteo a una pierna",
+          "alt": null,
+          "rest": "75-90s",
+          "targets": ["3x10-12 c/lado", "3x10-12 c/lado (+peso)", "3x12 c/lado", "2x12 c/lado (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Hinge (horizontal)",
+          "name": "Hiperextensión (45°)",
+          "alt": "Buenos días con mancuernas",
+          "rest": "75-90s",
+          "targets": ["3x12-15", "3x10-12 (+peso)", "3x12-15", "2x12 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Abducción/rotación",
+          "name": "Patada de glúteo en polea (kickback)",
+          "alt": "Patada de glúteo con banda (4 apoyos)",
+          "rest": "45-60s",
+          "targets": ["3x15 c/pierna", "3x15 c/pierna", "3x20 c/pierna", "2x15 c/pierna (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Aducción (antagonista)",
+          "name": "Aducción de cadera (máquina)",
+          "alt": "Aducción isométrica con mancuerna entre piernas",
+          "rest": "45-60s",
+          "targets": ["3x15-20", "3x15-20 (+peso)", "3x20", "2x15 (liviano)"],
+          "sets": [3, 3, 3, 2]
+        },
+        {
+          "pattern": "Accesorio",
+          "name": "Elevación de talones (gemelos)",
+          "alt": "Elevación de talones con mancuernas",
+          "rest": "45-60s",
+          "targets": ["4x15-20", "4x15-20", "4x20-25", "2x15 (liviano)"],
+          "sets": [4, 4, 4, 2]
+        },
+        {
+          "pattern": "Core",
+          "name": "Dead bug",
+          "alt": null,
+          "rest": "30-45s",
+          "noWeight": true,
+          "targets": ["3x12 c/lado", "3x12 c/lado", "3x12 c/lado", "2x10 c/lado"],
+          "sets": [3, 3, 3, 2]
+        }
+      ]
+    }
+  ]
+}

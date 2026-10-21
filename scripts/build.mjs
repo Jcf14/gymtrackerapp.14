@@ -32,12 +32,23 @@ if (problems.length) {
   console.error(`✗ Hay rutinas inválidas:\n  - ${problems.join("\n  - ")}`);
   process.exit(1);
 }
+await mkdir(path.join(DIST, "rutinas"), { recursive: true });
 if (existsSync(RUTINA)) {
-  await mkdir(path.join(DIST, "rutinas"), { recursive: true });
   await copyFile(RUTINA, path.join(DIST, "rutinas", "ciclo-actual.json"));
 } else {
   console.warn("⚠ No existe rutinas/ciclo-actual.json: la app publicada arrancará sin rutina (se puede importar a mano).");
 }
+// Todos los ciclos se publican, con un índice, para cargarlos desde ⚙ → Ciclos.
+const cycles = [];
+for (const f of listRutinas()) {
+  const m = /^ciclo-(\d+)\.json$/.exec(path.basename(f));
+  if (!m) continue;
+  const r = JSON.parse(await readFile(f, "utf8"));
+  await copyFile(f, path.join(DIST, "rutinas", path.basename(f)));
+  cycles.push({ cycle: r.cycle, name: r.name });
+}
+cycles.sort((a, b) => b.cycle - a.cycle);
+await writeFile(path.join(DIST, "rutinas", "index.json"), JSON.stringify({ cycles }, null, 2));
 
 const files = (await walk(DIST)).filter((f) => !NOT_PRECACHED.has(f));
 const hash = createHash("sha256");

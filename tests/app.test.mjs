@@ -18,7 +18,7 @@ function inlineHTML() {
   return html;
 }
 
-async function boot({ storage = {}, routine = FIXTURE } = {}) {
+async function boot({ storage = {}, routine = FIXTURE, published = [] } = {}) {
   const errors = [];
   const vc = new VirtualConsole();
   vc.on("jsdomError", (e) => errors.push(e.message));
@@ -31,9 +31,16 @@ async function boot({ storage = {}, routine = FIXTURE } = {}) {
     virtualConsole: vc,
     beforeParse(win) {
       for (const [k, v] of Object.entries(storage)) win.localStorage.setItem(k, v);
-      win.fetch = async (url) => routine
-        ? { ok: true, json: async () => structuredClone(routine) }
-        : { ok: false, json: async () => ({}) };
+      // Red simulada: ciclo-actual.json, el índice de ciclos publicados y cada ciclo-N.json.
+      const ok = (body) => ({ ok: true, json: async () => structuredClone(body) });
+      const fail = { ok: false, json: async () => ({}) };
+      win.fetch = async (url) => {
+        if (!routine) return fail;
+        if (/index\.json$/.test(url)) return ok({ cycles: published.map((r) => ({ cycle: r.cycle, name: r.name })) });
+        const m = /ciclo-(\d+)\.json$/.exec(url);
+        if (m) { const r = published.find((x) => x.cycle === Number(m[1])); return r ? ok(r) : fail; }
+        return ok(routine);
+      };
       win.confirm = () => true;
       win.scrollTo = () => {};
       win.URL.createObjectURL = (blob) => { downloads.push(blob); return "blob:test"; };
@@ -372,5 +379,73 @@ test("lb/kg por ejercicio: convierte, guarda la unidad y muestra la equivalencia
   // la calculadora usa la barra en kg
   t.openCard(0); t.click(".calc-toggle-btn");
   assert.match(t.$(".calc-bar-btn").textContent, /Mujer 15/);
+  assert.deepEqual(t.errors, []);
+});
+
+test("descanso visible en la tarjeta plegada", async () => {
+  const t = await boot();
+  t.goTo(0, "A");
+  assert.match(t.$$(".card")[0].querySelector(".ex-rest").textContent, /90-120s/);
+});
+
+test("fechas: inicio del ciclo, día calculado y fecha editada (día E en viernes)", async () => {
+  const t = await boot();
+  const change = (sel, value) => { const el = t.$(sel); el.value = value; el.dispatchEvent(new t.w.Event("change", { bubbles: true })); };
+  t.goTo(0, "A");
+  assert.match(t.$(".date-chip").textContent, /Poner fecha/);
+  t.click(".settings-btn");
+  change(".cycle-start-input", "2026-09-07");                 // lunes
+  assert.equal(t.data().meta.startDate, "2026-09-07");
+  t.click(".close-settings-btn");
+  t.goTo(1, "B");
+  assert.equal(t.$(".day-date-input").value, "2026-09-15", "martes de la semana 2");
+  change(".day-date-input", "2026-09-18");                    // lo hizo el viernes
+  assert.equal(t.data().meta.dayDates.B_w1, "2026-09-18");
+  assert.ok(t.$(".date-chip .edited-dot"));
+  t.openCard(0); t.type(".weight-input", "40"); t.click(".save-entry-btn");
+  t.click('.tab[data-tab="historial"]');
+  t.click(t.$$(".hist-item").find((b) => /Press inclinado/.test(b.textContent)));
+  assert.match(t.$(".sess-date").textContent, /18/, "la sesión usa la fecha real del día");
+  // volver a la fecha planificada quita el override
+  t.click('.tab[data-tab="rutina"]'); t.goTo(1, "B");
+  change(".day-date-input", "2026-09-15");
+  assert.equal(t.data().meta.dayDates.B_w1, undefined);
+  assert.deepEqual(t.errors, []);
+});
+
+test("día no completado con motivo, y deshacer", async () => {
+  const t = await boot();
+  t.goTo(2, "A");
+  t.click(".skip-btn");
+  t.click('.skip-chip[data-reason="Viaje"]');
+  assert.equal(t.$(".skip-input").value, "Viaje");
+  t.type(".skip-input", "Viaje de trabajo");
+  t.click(".save-skip-btn");
+  const st = t.data().meta.dayStatus.A_w2;
+  assert.equal(st.status, "skipped"); assert.equal(st.reason, "Viaje de trabajo");
+  assert.ok(t.$(".hero").classList.contains("skipped"));
+  assert.match(t.$(".skip-state").textContent, /No completado · Viaje de trabajo/);
+  assert.ok(t.$('.day-btn[data-day="A"]').classList.contains("skipped"));
+  t.goTo(1, "A");
+  assert.ok(!t.$(".hero").classList.contains("skipped"), "solo esa semana");
+  t.goTo(2, "A"); t.click(".undo-skip-btn");
+  assert.equal(t.data().meta.dayStatus.A_w2, undefined);
+  assert.deepEqual(t.errors, []);
+});
+
+test("ciclos publicados: se cargan desde Ajustes sin cambiar el activo", async () => {
+  const old = structuredClone(FIXTURE); old.cycle = 8; old.name = "Ciclo viejo";
+  const t = await boot({ published: [old, FIXTURE] });
+  t.click(".settings-btn");
+  await new Promise((r) => setTimeout(r, 20));
+  const btn = t.$('.remote-cycle-btn[data-cycle="8"]');
+  assert.ok(btn, "aparece el ciclo 8 para cargar");
+  assert.equal(t.$('.remote-cycle-btn[data-cycle="9"]'), null, "el ya cargado no se ofrece");
+  t.click(btn);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(JSON.parse(t.w.localStorage.getItem("gluteo_rutinas"))[8].name, "Ciclo viejo");
+  assert.equal(t.$("#cycleChip").textContent, "Ciclo 9", "sigue el ciclo activo");
+  t.click('.cycle-btn[data-cycle="8"]');
+  assert.equal(t.$("#cycleChip").textContent, "Ciclo 8");
   assert.deepEqual(t.errors, []);
 });

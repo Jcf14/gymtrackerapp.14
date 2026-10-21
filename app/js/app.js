@@ -47,7 +47,10 @@
     histFilter: "all",
     histEx: null,       // clave del ejercicio abierto en el historial
     sheet: false,       // false | "settings" | "glossary"
-    sheetFx: false,     // animar la entrada de la hoja en el próximo render
+    sheetFx: false,
+    skipOpen: false,    // formulario "No pude hacerlo" abierto
+    skipReason: "",
+    remote: null,       // ciclos publicados en el servidor (rutinas/index.json)     // animar la entrada de la hoja en el próximo render
     fx: { view: true }, // efectos para el próximo render
   };
 
@@ -78,7 +81,7 @@
     S.histEx = null;
     const r = routine();
     const lw = store.get(KEYS.lastWeek, null);
-    S.week = lw && lw.cycle === S.cycle ? lw.week : G.weekFromStart(r.startDate, new Date()) ?? 0;
+    S.week = lw && lw.cycle === S.cycle ? lw.week : G.weekFromStart(G.cycleStart(r, S.data), new Date()) ?? 0;
     S.day = G.autoDayKey(r, new Date(), store.get(KEYS.lastDay, null));
     store.set(KEYS.active, S.cycle);
   }
@@ -131,6 +134,8 @@
     up: '<path d="M7 17 17 7M9 7h8v8"/>',
     down: '<path d="M7 7l10 10M17 9v8H9"/>',
     flat: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    ban: '<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
   };
   const icon = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ""}</svg>`;
@@ -159,7 +164,15 @@
   function splitTitle(t) { const i = t.indexOf("—"); return i < 0 ? [t, ""] : [t.slice(0, i).trim(), t.slice(i + 1).trim()]; }
   function splitWeek(w) { const m = /^(.*?)\s*\((.+)\)\s*$/.exec(w); return m ? [m[1], m[2]] : [w, ""]; }
   const pad2 = (n) => String(n).padStart(2, "0");
-  const fmtDate = (iso, opts) => (iso ? new Date(iso).toLocaleDateString("es", opts || { day: "2-digit", month: "2-digit" }) : "—");
+  const toDate = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? G.parseDate(v) : new Date(v));
+  const fmtDate = (iso, opts) => (iso ? toDate(iso).toLocaleDateString("es", opts || { day: "2-digit", month: "2-digit" }) : "—");
+  const SKIP_REASONS = ["Enfermedad", "Cansancio", "Trabajo", "Viaje", "Molestia o lesión", "Otro"];
+  function meta() {
+    const m = S.data.meta || (S.data.meta = {});
+    m.dayDates = m.dayDates || {};
+    m.dayStatus = m.dayStatus || {};
+    return m;
+  }
   const pctTxt = (p) => (p === null || p === undefined ? "" : p > 0 ? `+${p}%` : p < 0 ? `−${Math.abs(p)}%` : "0%");
   const dirIcon = (r) => (r.mode === "deload" ? "down" : r.mode === "reps" ? "plus" : r.value > r.base ? "up" : "flat");
   const prettyTarget = (t) => String(t).replace(/(\d)\s*x\s*(\d)/gi, "$1×$2").replace(/\s*@\s*RPE\s*/gi, " · RPE ");
@@ -256,7 +269,8 @@
     const days = r.days.map((d) => {
       const n = d.exercises.length, done = doneOf(d);
       const abbr = d.label.split("·")[0].trim();
-      return `<button class="day-btn ${d.type}${d.key === day.key ? " active" : ""}${done === n ? " complete" : ""}" data-action="day" data-day="${d.key}" aria-label="${esc(d.dayName)}, día ${d.key}">
+      const skipped = !!G.dayStatus(S.data, d.key, S.week);
+      return `<button class="day-btn ${d.type}${d.key === day.key ? " active" : ""}${done === n ? " complete" : ""}${skipped ? " skipped" : ""}" data-action="day" data-day="${d.key}" aria-label="${esc(d.dayName)}, día ${d.key}">
         <span class="day-name">${esc(abbr)}</span><span class="day-key">${esc(d.key)}</span><small>${done}/${n}</small></button>`;
     }).join("");
     const n = day.exercises.length, done = doneOf(day);
@@ -264,10 +278,26 @@
     const off = C * (1 - (n ? done / n : 0));
     const [main, sub] = splitTitle(day.title);
     const chev = icon("chevron").replace('class="ic"', 'class="ic chev"');
+    const date = G.dayDate(r, S.data, day.key, S.week);
+    const dateEdited = !!(S.data.meta && S.data.meta.dayDates && S.data.meta.dayDates[G.dayId(day.key, S.week)]);
+    const st = G.dayStatus(S.data, day.key, S.week);
+    const dateChip = `<label class="hero-chip date-chip">${icon("calendar")}<span>${date ? fmtDate(date, { weekday: "short", day: "numeric", month: "short" }) : "Poner fecha"}</span>${dateEdited ? '<i class="edited-dot" title="Fecha editada"></i>' : ""}
+        <input type="date" class="day-date-input" data-change="day-date" value="${date || ""}" aria-label="Fecha de este día"></label>`;
+    const skipUI = st
+      ? `<div class="skip-state">${icon("ban")}<span><b>No completado</b>${st.reason ? ` · ${esc(st.reason)}` : ""}</span>
+          <button class="hero-link undo-skip-btn" data-action="undo-skip">Deshacer</button></div>`
+      : S.skipOpen
+        ? `<div class="skip-box"><div class="skip-title">¿Por qué no se pudo?</div>
+            <div class="skip-chips">${SKIP_REASONS.map((x) =>
+              `<button class="skip-chip${S.skipReason === x ? " on" : ""}" data-action="skip-reason" data-reason="${x}">${x}</button>`).join("")}</div>
+            <input class="text-input skip-input" data-skip="reason" value="${esc(S.skipReason)}" placeholder="Motivo (opcional)" aria-label="Motivo">
+            <div class="row-btns"><button class="chip-btn solid save-skip-btn" data-action="save-skip">Marcar no completado</button>
+              <button class="chip-btn cancel-skip-btn" data-action="cancel-skip">Cancelar</button></div></div>`
+        : "";
     return `${backupNag()}
       <div class="seg weeks" role="tablist" aria-label="Semana">${weeks}</div>
       <div class="days" role="tablist" aria-label="Día">${days}</div>
-      <section class="hero ${day.type}">
+      <section class="hero ${day.type}${st ? " skipped" : ""}">
         <div class="hero-top">
           <div class="hero-text">
             <div class="eyebrow">${esc(day.dayName)} · ${esc(r.weeks[S.week])}</div>
@@ -280,6 +310,8 @@
             <div class="ring-txt"><div><b>${done}/${n}</b><span>hechos</span></div></div>
           </div>
         </div>
+        <div class="hero-actions">${dateChip}${!st && !S.skipOpen ? `<button class="hero-chip skip-btn" data-action="open-skip">${icon("ban")}No pude hacerlo</button>` : ""}</div>
+        ${skipUI}
         ${day.warmup ? `<details class="warmup"><summary>${icon("flame")}Activación${chev}</summary><p>${esc(day.warmup)}</p></details>` : ""}
       </section>
       <div class="section-head"><h2>Ejercicios</h2><span>${day.type === "lower" ? "Tren inferior" : "Tren superior"} · ${n}</span></div>
@@ -291,14 +323,14 @@
     if (!(w > 0)) return "";
     const u = G.recUnit(rec, routine());
     const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? ` · ${fmt(rec.perSideDisplay)}/lado` : "";
-    return `<span class="ex-weight"><span><b>${fmt(w)}</b> ${u}</span><span class="side">${side} · ${convTxt(w, u)}</span></span>`;
+    return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u}</span><span class="side">${side} · ${convTxt(w, u)}</span></span>`;
   }
 
   function recBadge(rec, u) {
     if (!rec) return "";
     const cls = rec.mode === "deload" ? "down" : rec.mode === "reps" ? "reps" : rec.mode === "calibrate" ? "cal" : rec.value > rec.base ? "up" : "flat";
     const pct = rec.mode !== "calibrate" && rec.pct ? `${pctTxt(rec.pct)} · ` : "";
-    return `<span class="ex-sug ${cls}"><span><b>${fmt(rec.value)}</b> ${u}</span> <em>${icon(dirIcon(rec))}${pct}${esc(SHORT_GOAL[rec.goal] || rec.goal)}</em></span>`;
+    return `<span class="ex-sug ${cls}"><span class="sug-lbl">Sugerido</span><span class="ex-val"><b>${fmt(rec.value)}</b> ${u}</span> <em>${icon(dirIcon(rec))}${pct}${esc(SHORT_GOAL[rec.goal] || rec.goal)}</em></span>`;
   }
 
   function draftFor(k, rec, sets) {
@@ -347,9 +379,9 @@
         <button class="done-btn${FX.done === k ? " fx-pop" : ""}" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">${icon("check")}</button>
         <div class="card-info">
           <div class="ex-name">${esc(name)}${tagTxt ? ` <span class="edited">· ${tagTxt}</span>` : ""}</div>
-          <div class="ex-sub"><span class="ex-target">${esc(prettyTarget(ex.targets[w]))}</span>${maxTxt}</div>
+          <div class="ex-sub"><span class="ex-target">${esc(prettyTarget(ex.targets[w]))}</span><span class="ex-rest">${icon("clock")}${esc(ex.rest)}</span>${maxTxt}</div>
+          ${right ? `<div class="ex-line">${right}</div>` : ""}
         </div>
-        ${right ? `<div class="ex-right">${right}</div>` : ""}
       </div>`;
     const cls = `card ${day.type}${done ? " done" : ""}${open ? " open" : ""}${FX.pr === k ? " fx-pr" : ""}`;
     if (!open) return `<li class="${cls}" style="--i:${idx}">${head}</li>`;
@@ -592,13 +624,20 @@
         ${icon(active ? "check" : "layers")}<span class="grow">Ciclo ${c}<span class="sub">${esc(r.name)}</span></span>
         ${active ? '<span class="badge">Activo</span>' : ""}</button>`;
     }).join("");
+    const start = routine() ? G.cycleStart(routine(), S.data) : null;
+    const startRow = routine() ? `<label class="list-row date-row">${icon("calendar")}<span class="grow">Inicio del ciclo ${S.cycle}
+        <span class="sub">${start ? fmtDate(start, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "Sin fecha: elegí el día en que empezaste"}</span></span>
+        <input type="date" class="cycle-start-input" data-change="cycle-start" value="${start || ""}" aria-label="Inicio del ciclo"></label>` : "";
+    const remoteRows = (S.remote || []).filter((c) => !S.routines[c.cycle]).map((c) =>
+      `<button class="list-row remote-cycle-btn" data-action="load-remote-cycle" data-cycle="${c.cycle}">${icon("download")}<span class="grow">Ciclo ${c.cycle}
+        <span class="sub">${esc(c.name)} · tocá para cargarlo</span></span></button>`).join("");
     return `${sheetHead("Ajustes")}
       <div class="group"><span class="eyebrow">Apariencia</span><div class="seg">${themes.map(([v, l]) =>
         `<button class="seg-btn theme-btn${S.theme === v ? " active" : ""}" data-action="set-theme" data-theme="${v}">${l}</button>`).join("")}</div></div>
       <div class="group"><span class="eyebrow">Unidad por defecto</span><div class="seg">${units.map(([v, l]) =>
         `<button class="seg-btn unit-btn${S.unit === v ? " active" : ""}" data-action="set-unit" data-unit="${v}">${l}</button>`).join("")}</div>
         <p class="note">Para ejercicios sin unidad elegida. Cada ejercicio puede cambiarla con el selector lb | kg junto al peso; lo ya guardado no cambia.</p></div>
-      <div class="group"><span class="eyebrow">Ciclos</span><div class="group-card">${cycles}
+      <div class="group"><span class="eyebrow">Ciclos</span><div class="group-card">${cycles}${startRow}${remoteRows}
         <label class="list-row file-btn">${icon("upload")}<span class="grow">Importar rutina (JSON)</span>
           <input type="file" class="visually-hidden import-routine-input" accept=".json,application/json" data-change="import-routine"></label></div></div>
       <div class="group"><span class="eyebrow">Datos</span><div class="group-card">
@@ -724,10 +763,10 @@
   const actions = {
     tab(el) { if (S.tab === el.dataset.tab && !S.histEx) return; S.tab = el.dataset.tab; S.histEx = null; S.fx.view = true; render(); window.scrollTo(0, 0); },
     week(el) {
-      S.week = Number(el.dataset.week); S.open = new Set(); S.fx.view = true;
+      S.week = Number(el.dataset.week); S.open = new Set(); S.fx.view = true; S.skipOpen = false;
       store.set(KEYS.lastWeek, { cycle: S.cycle, week: S.week }); render();
     },
-    day(el) { S.day = el.dataset.day; S.open = new Set(); S.fx.view = true; store.set(KEYS.lastDay, S.day); render(); },
+    day(el) { S.day = el.dataset.day; S.open = new Set(); S.fx.view = true; S.skipOpen = false; store.set(KEYS.lastDay, S.day); render(); },
     "toggle-card"(el) {
       const i = Number(el.dataset.idx);
       if (S.open.has(i)) S.open.delete(i); else { S.open.add(i); S.fx.opened = i; }
@@ -869,7 +908,41 @@
       S.drafts[k].altOpen = false; render(); toast("Alternativa en todo el ciclo · se deshace con Editar nombre → Restablecer");
     },
     "open-glossary"() { S.sheet = "glossary"; S.sheetFx = true; renderSheet(); },
-    "open-settings"() { S.sheet = "settings"; S.sheetFx = true; renderSheet(); },
+    "open-settings"() { S.sheet = "settings"; S.sheetFx = true; renderSheet(); loadRemoteIndex(); },
+    "open-skip"() { S.skipOpen = true; S.skipReason = ""; render(); },
+    "cancel-skip"() { S.skipOpen = false; render(); },
+    "skip-reason"(el) {
+      S.skipReason = el.dataset.reason;
+      document.querySelectorAll(".skip-chip").forEach((c) => c.classList.toggle("on", c === el));
+      const input = document.querySelector(".skip-input");
+      if (input) input.value = S.skipReason;
+    },
+    "save-skip"() {
+      const day = currentDay();
+      meta().dayStatus[G.dayId(day.key, S.week)] = { status: "skipped", reason: S.skipReason.trim(), savedAt: new Date().toISOString() };
+      if (!saveData()) return;
+      S.skipOpen = false; render(); toast("Día marcado como no completado");
+    },
+    "undo-skip"() {
+      const day = currentDay();
+      delete meta().dayStatus[G.dayId(day.key, S.week)];
+      if (!saveData()) return;
+      render(); toast("Marca de no completado quitada");
+    },
+    async "load-remote-cycle"(el) {
+      const c = Number(el.dataset.cycle);
+      try {
+        const res = await fetch(`rutinas/ciclo-${c}.json`, { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status);
+        const r = await res.json();
+        const errs = G.validateRoutine(r);
+        if (errs.length || r.cycle !== c) { toast(`El ciclo ${c} no es válido`, "error"); return; }
+        S.routines[c] = r;
+        store.set(KEYS.routines, S.routines);
+        renderSheet();
+        toast(`Ciclo ${c} cargado · tocalo para abrirlo`);
+      } catch { toast("Sin conexión: no se pudo cargar el ciclo", "error"); }
+    },
     "close-settings"() { S.sheet = false; renderSheet(); },
     "set-theme"(el) { S.theme = el.dataset.theme; store.set(KEYS.theme, S.theme); applyTheme(); renderSheet(); },
     "set-unit"(el) { S.unit = el.dataset.unit; store.set(KEYS.unit, S.unit); S.drafts = {}; render(); },
@@ -902,6 +975,7 @@
 
   function onInput(e) {
     const el = e.target, f = el.dataset.field, k = el.dataset.k;
+    if (el.dataset.skip === "reason") { S.skipReason = el.value; return; }
     if (el.dataset.search === "hist") {
       S.histQuery = el.value;
       const list = document.querySelector(".hist-list");
@@ -934,6 +1008,19 @@
       d.repsSame = el.checked;
       if (d.repsSame && !d.repsSameValue) d.repsSameValue = d.reps.find((x) => String(x).trim() !== "") || "";
       render();
+      return;
+    }
+    if (el.dataset.change === "day-date") {
+      const day = currentDay(), id = G.dayId(day.key, S.week);
+      const planned = G.plannedDate(routine(), S.data, day.key, S.week);
+      if (!el.value || el.value === planned) delete meta().dayDates[id];
+      else meta().dayDates[id] = el.value;
+      if (saveData()) { render(); toast(el.value ? "Fecha del día guardada" : "Fecha quitada"); }
+      return;
+    }
+    if (el.dataset.change === "cycle-start") {
+      meta().startDate = el.value || null;
+      if (saveData()) { render(); toast(el.value ? "Inicio del ciclo guardado" : "Inicio del ciclo quitado"); }
       return;
     }
     const file = el.files && el.files[0];
@@ -971,6 +1058,19 @@
     }
     if (changed && r.cycle === S.cycle) S.drafts = {};
     return changed;
+  }
+
+  // Ciclos publicados junto con la app (rutinas/index.json, lo arma el build).
+  async function loadRemoteIndex() {
+    if (typeof fetch !== "function") return;
+    try {
+      const res = await fetch("rutinas/index.json", { cache: "no-store" });
+      if (!res.ok) return;
+      const j = await res.json();
+      if (!j || !Array.isArray(j.cycles)) return;
+      S.remote = j.cycles.filter((c) => Number.isInteger(c.cycle));
+      if (S.sheet === "settings") renderSheet();
+    } catch { /* sin conexión: no se muestran */ }
   }
 
   function registerSW() {

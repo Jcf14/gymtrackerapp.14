@@ -249,7 +249,7 @@ Cada ciclo es un archivo `rutinas/ciclo-N.json`. Se basa en el arreglo `DAYS` de
 - `sets[i]` debe coincidir con el primer número de `targets[i]` (`"4x8 @RPE7"` → 4). Si hay serie de rematado se suma: `"3x4-6 @RPE9 + 1x15-20"` → 4.
 - **Convenciones de texto que la app interpreta** en `targets`:
   - `(+peso)` → sugiere subir ~5 lb respecto de la semana anterior.
-  - `(liviano)` (o un paréntesis que empiece así, ej. `(liviano/asistido)`), `@RPE5-6` o `@RPE6` → semana de descarga: sugiere ~55% del peso de la semana previa.
+  - `(liviano)` (o cualquier paréntesis que contenga "liviano", ej. `(liviano/asistido)`, `(asistido o liviano)`), `@RPE5-6` o `@RPE6` → semana de descarga: sugiere ~55% del peso de la semana previa.
   - La S4 de cualquier ejercicio sin `noWeight` **debe** incluir una de esas marcas, o la sugerencia de descarga no se activa.
   - `c/pierna`, `c/lado` y `+ N pulsos` son solo descriptivos.
 - Las claves de día son `A`–`E` y no cambian. El orden de los ejercicios dentro de un día **es parte de la clave de almacenamiento** (`A_0_w0` = día A, ejercicio 0, semana 1): no reordenar ni insertar ejercicios a mitad de un ciclo. Un ciclo nuevo usa un espacio de almacenamiento nuevo.
@@ -294,12 +294,14 @@ Siempre:
 ### 6.1 Comportamiento esperado (heredado del artifact, implementado de cero)
 
 - **Navegación:** pestañas "Rutina" / "Historial" en una barra inferior; arriba, botón ⓘ (glosario) y ⚙ (ajustes). En Rutina: selector de **semana** arriba y de **día** abajo (orden pedido por mí). Autodetecta el día por la fecha real (lun–jue y sáb); viernes y domingo respetan el último día visto.
-- **Tarjeta por ejercicio:** plegada muestra número, patrón, nombre, objetivo de la semana, 🏆 máximo (peso×reps), y el peso guardado o, si no hay, el **sugerido con % y qué se espera**. Un círculo de "completado" se toca directo. Desplegada: descanso, sugerido y máximo como mini estadísticas, el porqué de la sugerencia, alternativa, renombrar, reps por serie, calculadora de barra, peso, nota y Guardar.
+- **Tarjeta por ejercicio:** plegada muestra en 3 líneas: nombre (todo el ancho); objetivo, ⏱ descanso y 🏆 máximo (peso×reps); y el peso guardado o, si no hay, el **sugerido con % y qué se espera**. Un círculo de "completado" se toca directo. Desplegada: descanso, sugerido y máximo como mini estadísticas, el porqué de la sugerencia, alternativa, renombrar, reps por serie, calculadora de barra, peso, nota y Guardar.
 - **Validación:** no se puede guardar ni completar sin peso, salvo `noWeight`.
 - **Reps por serie:** un casillero por serie, o "todas las series fueron iguales" (un solo campo).
 - **Calculadora de barra:** barra Mujer (35 lb / 15 kg), Hombre (45 lb / 20 kg) o personalizada; modo "por lado" o "total"; muestra el total o el equivalente por lado; "Usar este peso" lo vuelca al campo.
 - **Editar ejercicio:** reemplaza el nombre del ejercicio en ese espacio (todas las semanas); "Restablecer" vuelve al original.
 - **Sugerencias:** siempre dicen en simple qué se espera: "Más peso, menos reps", "Mismo peso, más reps", "Más peso y más reps", "Menos peso", etc. (no usar jerga como "doble progresión"), con el % contra la referencia. Reglas: descarga → 55% de la semana previa · "(+peso)" → anterior + 5 · rango de reps más bajo que la semana anterior → +5% (mín. +5 lb) · si no llegó al techo del rango en todas las series → mismo peso, más reps; si llegó → +5 lb · S1 → S1 del ciclo anterior +5% (o mismo peso si allí no llegó al techo) · sin referencia → ~90% del máximo ("Calibrá el peso"). La semana anterior solo cuenta si fue el mismo ejercicio (no la alternativa).
+- **Fechas y días no completados:** en la tarjeta del día, chip con la fecha (tocar para cambiarla, por ej. Día E hecho el viernes) y "No pude hacerlo" (motivo con atajos: Enfermedad, Cansancio, Trabajo, Viaje, Molestia o lesión, Otro). El día queda marcado en la tira de días y en el export (`days[].sessions`). Inicio del ciclo: ⚙ → Ciclos.
+- **Ciclos publicados:** el build publica todos los `rutinas/ciclo-N.json` y `rutinas/index.json`; en ⚙ → Ciclos aparecen los que no están en el celular para cargarlos con un toque (no cambia el ciclo activo).
 - **Historial:** lista de ejercicios de **todos los ciclos**, con buscador (ignora tildes) y filtros Todos / Pierna / Superior / Core. Cada fila muestra solo el máximo actual (peso × reps) y su fecha. Al tocar: máximo actual, **récords anteriores** (cada vez que se superó el máximo: más peso, o mismo peso con más reps) y todas las sesiones con sus notas.
 - **Alternativa:** "Usar esta semana" marca `altUsed` en ese registro (el peso cuenta para la alternativa, no para el original); "Usar en todo el ciclo" crea un override de nombre (se deshace con Renombrar → Restablecer).
 - **Glosario:** solo desde el botón ⓘ del encabezado (se sacó de cada tarjeta a pedido). Incluye RPE, reps en reserva, rango, semanas, descarga, (+peso), sugerido, máximo, pulsos, rematado, c/lado, por lado/total, alternativa. Textos sacados de la sección 3; si se agrega un término nuevo a las rutinas, sumarlo a `GLOSSARY` en app.js.
@@ -313,6 +315,7 @@ Todos los valores se guardan como JSON (`JSON.stringify`).
 
 - `gluteo_tracker_ciclo-<N>` → un objeto por ciclo con:
   - `"<día>_<idxEjercicio>_w<semana0-3>"` → `{ weight (string, peso total), weightMode ("perSide"|"total"), perSideDisplay (número o null), note, completed (bool), reps (array de strings), repsSame (bool), repsSameValue, altUsed (bool, se hizo la alternativa esa semana), unit ("lb"|"kg": la del peso guardado; si falta, `unitDefault` de la rutina), savedAt (ISO o null) }`
+  - `"meta"` → `{ startDate (inicio del ciclo editado en ⚙; manda sobre el del JSON), dayDates: { "E_w0": "YYYY-MM-DD" } (fecha real editada de un día), dayStatus: { "A_w2": { status: "skipped", reason, savedAt } } (día no completado) }`. La fecha de un registro es la del día (editada o calculada desde el inicio); si no hay, la de guardado. Récords y sesiones se ordenan por ciclo y semana primero.
   - `"unit_<día>_<idxEjercicio>"` → `"lb"` | `"kg"`: unidad elegida para ese ejercicio en el ciclo (si no hay, la unidad por defecto).
   - `"ovr_<día>_<idxEjercicio>"` → `{ name, savedAt }` (`name: null` = override borrado).
 - `gluteo_rutinas` → `{ "<N>": rutina }`: cada rutina cargada (del servidor o importada) queda guardada, así se pueden consultar ciclos anteriores sin conexión. `gluteo_ciclo_activo` → N.
