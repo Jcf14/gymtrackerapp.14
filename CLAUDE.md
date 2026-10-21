@@ -158,7 +158,7 @@ Estado inicial: el ciclo vigente es el **2**. Al migrar, duplicar `rutinas/ciclo
   - **Aducción:** máquina [C1, C2] · plancha copenhague (alt.).
   - **Cuádriceps accesorio:** extensión de cuádriceps [C1] · extensión unilateral (la hice en lugar de la zancada en el ciclo 2).
   - **Isquios accesorio:** curl femoral sentado [C1] · arrodillado a una pierna [C2] · acostado [C2] · puente de isquios con talones en banco (alt.).
-  - **Pantorrillas:** de pie [C2] · sentado [C2].
+  - **Pantorrillas:** de pie [C1, C2] · sentado [C2].
   - **Empuje:** press banca plano [C1] · inclinado con mancuernas [C2] · press militar con mancuernas [C1] · Arnold [C2] · press de pecho en máquina [C2] · laterales con mancuerna [C1] / en polea [C2] · tríceps: pushdown [C1], overhead con cuerda [C2], press francés o copa [C1, C2].
   - **Tirón:** dominadas/jalón [C1] · jalón agarre neutro [C2] · remo con barra [C1] · remo en polea baja [C2] · remo unilateral con mancuerna [C1, C2] · face pull [C1] · reverse pec deck [C2] · curl barra/mancuerna [C1] · curl en polea baja [C2] · martillo/inclinado [C1] · concentrado [C2].
   - **Core:** elevación de piernas colgado [C1] · plancha con elevación de pierna [C2] · plancha lateral [C1] · plancha con toque de hombro [C2] · plancha con desplazamiento [C2] · Pallof [C1] · rueda abdominal [C2] · dead bug [C1] · bird dog [C2].
