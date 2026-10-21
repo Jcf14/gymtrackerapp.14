@@ -18,16 +18,13 @@
 <body>
   <header class="topbar">
     <div class="brand">
+      <span class="brand-mark" data-icon="dumbbell"></span>
       <span class="brand-title">Gym Tracker</span>
-      <span id="cycleChip" class="chip" hidden></span>
     </div>
-    <button class="icon-btn settings-btn" data-action="open-settings" aria-label="Ajustes">⚙</button>
+    <span id="cycleChip" class="chip" hidden></span>
+    <button class="icon-btn glossary-top-btn" data-action="open-glossary" data-icon="info" aria-label="Glosario"></button>
+    <button class="icon-btn settings-btn" data-action="open-settings" data-icon="gear" aria-label="Ajustes"></button>
   </header>
-
-  <nav class="tabs" aria-label="Secciones">
-    <button class="tab active" data-action="tab" data-tab="rutina">Rutina</button>
-    <button class="tab" data-action="tab" data-tab="historial">Historial</button>
-  </nav>
 
   <div id="updateBanner" class="banner" hidden>
     <span>Hay una versión nueva de la app.</span>
@@ -35,6 +32,11 @@
   </div>
 
   <main id="root"><p class="empty">Cargando…</p></main>
+
+  <nav class="tabbar" aria-label="Secciones">
+    <button class="tab active" data-action="tab" data-tab="rutina" data-icon="list">Rutina</button>
+    <button class="tab" data-action="tab" data-tab="historial" data-icon="chart">Historial</button>
+  </nav>
 
   <div id="sheet" hidden></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

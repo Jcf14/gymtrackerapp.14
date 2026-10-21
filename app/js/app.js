@@ -43,9 +43,11 @@
     day: null,
     open: new Set(),    // índices de tarjetas abiertas
     drafts: {},         // borradores por slotKey (sobreviven al re-render)
-    histCycle: null,
-    histNotes: new Set(),
-    sheet: false,
+    histQuery: "",
+    histFilter: "all",
+    histEx: null,       // clave del ejercicio abierto en el historial
+    sheet: false,       // false | "settings" | "glossary"
+    glossaryTerms: null,
   };
 
   // ---------- Estado ----------
@@ -72,7 +74,7 @@
     S.data = store.get(G.dataKey(S.cycle), {});
     S.drafts = {};
     S.open = new Set();
-    S.histCycle = null;
+    S.histEx = null;
     const r = routine();
     const lw = store.get(KEYS.lastWeek, null);
     S.week = lw && lw.cycle === S.cycle ? lw.week : G.weekFromStart(r.startDate, new Date()) ?? 0;
@@ -99,6 +101,102 @@
     document.documentElement.setAttribute("data-theme", S.theme);
   }
 
+  // ---------- Íconos (trazos estilo Lucide) ----------
+
+  const ICONS = {
+    gear: '<path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.8l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.8v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    dumbbell: '<path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/>',
+    list: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
+    chart: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r=".6"/>',
+    trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+    swap: '<path d="M7 7h13l-3-3M17 17H4l3 3"/>',
+    pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/>',
+    calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
+    flame: '<path d="M12 3c1 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-8z"/>',
+    note: '<path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/>',
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+    upload: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>',
+    archive: '<path d="M4 8h16v12H4zM3 4h18v4H3zM10 12h4"/>',
+    refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>',
+    layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    back: '<path d="M15 18l-6-6 6-6"/>',
+    chevron: '<path d="m9 6 6 6-6 6"/>',
+    up: '<path d="M7 17 17 7M9 7h8v8"/>',
+    down: '<path d="M7 7l10 10M17 9v8H9"/>',
+    flat: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  };
+  const icon = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ""}</svg>`;
+
+  // ---------- Glosario (CLAUDE.md §3) ----------
+
+  const GLOSSARY = [
+    { id: "rpe", term: "RPE", text: "Qué tan duro fue, del 1 al 10. Se mide por cuántas reps te quedaron en reserva al terminar la serie: RPE 6 = 4 o más · RPE 7 = 3 · RPE 8 = 2 · RPE 9 = 1 · RPE 10 = ninguna (fallo)." },
+    { id: "reserva", term: "Reps en reserva", text: "Las repeticiones que todavía podrías hacer con buena técnica cuando cortás la serie. Es la forma práctica de llegar al RPE pedido." },
+    { id: "rango", term: "Series × reps (3x8-12)", text: "3 series de entre 8 y 12 repeticiones. El peso se ajusta para caer dentro del rango con el RPE pedido; las reps no se negocian." },
+    { id: "fases", term: "Semanas del ciclo", text: "S1 adaptación (RPE 7) · S2 intensificación (RPE 8) · S3 pico (RPE 9, menos reps y más peso en los básicos) · S4 descarga." },
+    { id: "descarga", term: "Descarga (deload)", text: "Semana liviana para recuperarte y llegar fresca al ciclo siguiente: mismos ejercicios, 2 series (3 si querés), ~50–60% del peso de S3 y RPE 5–6. Sin pulsos ni serie de rematado." },
+    { id: "peso", term: "(+peso)", text: "El plan pide subir el peso respecto de la semana anterior, normalmente 5 lb." },
+    { id: "sugerido", term: "Peso sugerido y %", text: "Lo calcula la app con tu última semana registrada de ese ejercicio. Te dice qué se espera (más peso, más reps, ambos o igual) y el % de cambio contra esa vez. Si en accesorios no llegaste al techo del rango en todas las series, toca más reps con el mismo peso. Manda siempre la primera serie: si se siente más pesada de lo pedido, bajá." },
+    { id: "maximo", term: "Máximo (récord)", text: "Tu mejor marca del ejercicio: el peso más alto y, a igual peso, más reps. Cuando lo superás, el anterior queda guardado en el historial de récords." },
+    { id: "pulsos", term: "Pulsos", text: "Movimientos cortos arriba, al final de la serie (después de la última rep, sin bajar del todo), no en cada rep. 10 en S1–S2, 15 en S3, ninguno en la descarga." },
+    { id: "rematado", term: "Serie de rematado (+ 1x15-20)", text: "Una serie extra de 15–20 reps con ~40–50% menos peso que las series pesadas. Solo en el hip thrust del Día A en S3." },
+    { id: "lado", term: "c/pierna · c/lado", text: "Las reps se cuentan para cada pierna o lado por separado." },
+    { id: "barra", term: "Por lado / total", text: "Por lado = los discos de un solo lado, sin la barra. Total = 2 × lado + barra. Barra de mujer: 35 lb (15 kg)." },
+    { id: "alternativa", term: "Alternativa", text: "Ejercicio de reemplazo si la máquina o la barra están ocupadas. \"Usar esta semana\" lo marca solo en esa semana; \"Usar en todo el ciclo\" cambia el nombre en las 4 semanas." },
+  ];
+
+  function glossaryFor(ex, week) {
+    const t = ex.targets[week];
+    const ids = ["rango", "sugerido", "maximo"];
+    if (/RPE/i.test(t)) ids.unshift("rpe", "reserva");
+    if (G.hasPlusWeight(t)) ids.push("peso");
+    if (week === 3) ids.push("descarga");
+    if (/puls/i.test(t)) ids.push("pulsos");
+    if (/\+\s*1\s*x/i.test(t)) ids.push("rematado");
+    if (/c\/(pierna|lado)/i.test(t)) ids.push("lado");
+    return ids;
+  }
+
+  // ---------- Ayudas de render ----------
+
+  function splitTitle(t) { const i = t.indexOf("—"); return i < 0 ? [t, ""] : [t.slice(0, i).trim(), t.slice(i + 1).trim()]; }
+  function splitWeek(w) { const m = /^(.*?)\s*\((.+)\)\s*$/.exec(w); return m ? [m[1], m[2]] : [w, ""]; }
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const fmtDate = (iso, opts) => (iso ? new Date(iso).toLocaleDateString("es", opts || { day: "2-digit", month: "2-digit" }) : "—");
+  const pctTxt = (p) => (p === null || p === undefined ? "" : p > 0 ? `+${p}%` : p < 0 ? `−${Math.abs(p)}%` : "0%");
+  const dirIcon = (r) => (r.mode === "deload" ? "down" : r.value > r.base ? "up" : "flat");
+
+  // Recomendación de una tarjeta de la rutina (o null).
+  function recFor(day, ex, idx, w, name) {
+    if (ex.noWeight) return null;
+    const r = routine();
+    const records = G.collectRecords(S.routines, allData(), name);
+    const k = G.slotKey(day.key, idx, w);
+    const others = records.filter((x) => !(x.cycle === S.cycle && x.key === k));
+    const prev = G.prevWeight(S.data, day.key, idx, w, ex);
+    const lastS1 = G.lastCycleS1(others, S.cycle);
+    let lastS1Target = null;
+    if (lastS1) {
+      const p = G.parseSlotKey(lastS1.key), lr = S.routines[lastS1.cycle];
+      const ld = lr && lr.days.find((d) => d.key === p.day);
+      lastS1Target = ld && ld.exercises[p.idx] ? ld.exercises[p.idx].targets[0] : null;
+    }
+    return {
+      max: G.findMax(records),
+      rec: G.recommend({
+        target: ex.targets[w], prevTarget: prev ? ex.targets[prev.week] : null, week: w, prev,
+        prevRec: prev ? S.data[G.slotKey(day.key, idx, prev.week)] : null,
+        lastS1, lastS1Target, max: G.findMax(others), unit: S.unit, weekShort: r.weekShort,
+      }),
+    };
+  }
+
   // ---------- Render principal ----------
 
   function render() {
@@ -113,9 +211,10 @@
 
   function renderEmpty() {
     return `<div class="empty">
-      <p><b>No hay ninguna rutina cargada.</b></p>
-      <p>Se carga sola desde <code>${ROUTINE_URL}</code> cuando hay conexión, o podés importarla desde ⚙ Ajustes.</p>
-      <button class="secondary-btn open-settings-btn" data-action="open-settings">Abrir Ajustes</button>
+      <div class="empty-ic">${icon("layers")}</div>
+      <h2>Sin rutina</h2>
+      <p>No hay ninguna rutina cargada. Se carga sola desde <code>${ROUTINE_URL}</code> cuando hay conexión, o podés importarla desde Ajustes.</p>
+      <button class="secondary-btn open-settings-btn" data-action="open-settings">${icon("gear")}Abrir ajustes</button>
     </div>`;
   }
 
@@ -125,37 +224,58 @@
     const days = last ? Math.floor((Date.now() - new Date(last)) / 86400000) : null;
     if (days !== null && days < BACKUP_EVERY_DAYS) return "";
     const txt = days === null ? "Todavía no hiciste ningún respaldo." : `Hace ${days} días que no hacés un respaldo.`;
-    return `<div class="banner inline"><span>💾 ${txt}</span><button class="link-btn backup-nag-btn" data-action="backup">Respaldar</button></div>`;
+    return `<div class="banner inline">${icon("archive")}<span>${txt}</span><button class="link-btn backup-nag-btn" data-action="backup">Respaldar</button></div>`;
   }
 
   function renderRutina() {
     const r = routine();
     if (!r) return renderEmpty();
     const day = currentDay();
-    const weeks = r.weekShort.map((w, i) =>
-      `<button class="seg-btn week-btn${i === S.week ? " active" : ""}" data-action="week" data-week="${i}">${esc(w)}</button>`).join("");
-    const days = r.days.map((d) => {
-      const done = d.exercises.filter((_, i) => S.data[G.slotKey(d.key, i, S.week)]?.completed).length;
-      return `<button class="day-btn ${d.type}${d.key === day.key ? " active" : ""}" data-action="day" data-day="${d.key}">
-        <span>${esc(d.label)}</span><small>${done}/${d.exercises.length}</small></button>`;
+    const weeks = r.weekShort.map((w, i) => {
+      const [main, sub] = splitWeek(w);
+      return `<button class="seg-btn week-btn${i === S.week ? " active" : ""}" data-action="week" data-week="${i}">
+        <span class="wk-num">${esc(main)}</span>${sub ? `<span class="wk-sub">${esc(sub)}</span>` : ""}</button>`;
     }).join("");
-    const cards = day.exercises.map((ex, i) => renderCard(day, ex, i)).join("");
+    const days = r.days.map((d) => {
+      const n = d.exercises.length;
+      const done = d.exercises.filter((_, i) => S.data[G.slotKey(d.key, i, S.week)]?.completed).length;
+      const abbr = d.label.split("·")[0].trim();
+      return `<button class="day-btn ${d.type}${d.key === day.key ? " active" : ""}" data-action="day" data-day="${d.key}" aria-label="${esc(d.dayName)}, día ${d.key}">
+        <i class="type-dot"></i><span class="day-name">${esc(abbr)}</span><span class="day-key">${esc(d.key)}</span>
+        <small>${done}/${n}</small><i class="day-bar"><b style="width:${Math.round((done / n) * 100)}%"></b></i></button>`;
+    }).join("");
+    const n = day.exercises.length;
+    const done = day.exercises.filter((_, i) => S.data[G.slotKey(day.key, i, S.week)]?.completed).length;
+    const [main, sub] = splitTitle(day.title);
     return `${backupNag()}
       <div class="seg weeks" role="tablist" aria-label="Semana">${weeks}</div>
       <div class="days" role="tablist" aria-label="Día">${days}</div>
-      <div class="day-head">
-        <h2>${esc(day.title)}</h2>
-        <div class="sub">${esc(day.dayName)} · ${esc(r.weeks[S.week])}</div>
-        ${day.warmup ? `<div class="warmup">🔥 <b>Activación:</b> ${esc(day.warmup)}</div>` : ""}
-      </div>
-      ${cards}`;
+      <section class="hero">
+        <div class="eyebrow">${esc(day.dayName)} · ${esc(r.weeks[S.week])}</div>
+        <h1 class="hero-title">${esc(main)}</h1>
+        ${sub ? `<div class="hero-sub">${esc(sub)}</div>` : ""}
+        <div class="hero-meta">
+          <span class="tag ${day.type}">${day.type === "lower" ? "Tren inferior" : "Tren superior"}</span>
+          <div class="progress"><b style="width:${Math.round((done / n) * 100)}%"></b></div>
+          <span class="hero-count">${done}/${n}</span>
+        </div>
+        ${day.warmup ? `<div class="warmup">${icon("flame")}<div><b>Activación</b>${esc(day.warmup)}</div></div>` : ""}
+      </section>
+      <ol class="ex-list">${day.exercises.map((ex, i) => renderCard(day, ex, i)).join("")}</ol>`;
   }
 
   function weightSummary(rec) {
     const w = rec ? G.parseNum(rec.weight) : NaN;
-    if (!(w > 0)) return "Sin peso";
+    if (!(w > 0)) return "";
     const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? ` · ${fmt(rec.perSideDisplay)}/lado` : "";
-    return `${fmt(w)} ${S.unit}${side}`;
+    const reps = G.repsText(rec);
+    return `<span class="ex-weight"><b>${fmt(w)}</b> ${S.unit}${side}${reps ? ` · ${esc(reps)}` : ""}</span>`;
+  }
+
+  function recBadge(rec) {
+    if (!rec) return "";
+    const cls = rec.mode === "deload" ? "down" : rec.mode === "calibrate" ? "cal" : rec.value > rec.base ? "up" : "flat";
+    return `<span class="ex-sug ${cls}">${icon(dirIcon(rec))}<b>${fmt(rec.value)}</b> ${S.unit}${rec.mode !== "calibrate" && rec.pct ? ` <em>${pctTxt(rec.pct)}</em>` : ""} · ${esc(rec.goal)}</span>`;
   }
 
   function draftFor(k, rec, sets) {
@@ -188,50 +308,75 @@
     const w = S.week;
     const k = G.slotKey(day.key, idx, w);
     const rec = S.data[k] || null;
-    const name = G.effectiveName(S.data, day.key, idx, ex);
+    const name = G.slotName(S.data, day.key, idx, ex, w);
+    const altUsed = !!(rec && rec.altUsed && ex.alt);
     const open = S.open.has(idx);
     const done = !!(rec && rec.completed);
-    const repsTxt = G.repsText(rec);
+    const info = recFor(day, ex, idx, w, name);
+    const line = weightSummary(rec) || (info && info.rec ? recBadge(info.rec) : "");
+    const tagTxt = altUsed ? "alternativa" : name !== ex.name ? "editado" : "";
+    const maxTxt = info && info.max ? `<span class="ex-max">${icon("trophy")}${fmt(info.max.weight)}${info.max.topReps ? `×${info.max.topReps}` : ""}</span>` : "";
     const head = `<div class="card-head" data-action="toggle-card" data-idx="${idx}">
+        <span class="ex-idx">${done ? icon("check") : pad2(idx + 1)}</span>
         <div class="card-info">
           ${ex.pattern ? `<div class="pattern">${esc(ex.pattern)}</div>` : ""}
-          <div class="ex-name">${esc(name)}${name !== ex.name ? ' <span class="edited">(editado)</span>' : ""}</div>
-          <div class="ex-target">${esc(ex.targets[w])}</div>
-          <div class="ex-weight">${esc(weightSummary(rec))}${repsTxt ? ` · reps ${esc(repsTxt)}` : ""}</div>
+          <div class="ex-name">${esc(name)}${tagTxt ? ` <span class="edited">· ${tagTxt}</span>` : ""}</div>
+          <div class="ex-meta"><span class="ex-target">${esc(ex.targets[w])}</span>${maxTxt}</div>
+          ${line ? `<div class="ex-line">${line}</div>` : ""}
         </div>
-        <button class="done-btn" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">✓</button>
+        <button class="done-btn" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">${icon("check")}</button>
       </div>`;
     const cls = `card ${day.type}${done ? " done" : ""}${open ? " open" : ""}`;
-    if (!open) return `<div class="${cls}">${head}</div>`;
-    return `<div class="${cls}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name)}</div>`;
+    if (!open) return `<li class="${cls}">${head}</li>`;
+    return `<li class="${cls}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name, info)}</li>`;
   }
 
-  function renderCardBody(day, ex, idx, k, rec, name) {
-    const w = S.week, r = routine(), u = S.unit;
+  function renderCardBody(day, ex, idx, k, rec, name, info) {
+    const w = S.week, u = S.unit;
     const sets = ex.sets[w];
     const d = draftFor(k, rec, sets);
-    const records = G.collectRecords(S.routines, allData(), name);
-    const max = G.findMax(records);
-    const others = records.filter((x) => !(x.cycle === S.cycle && x.key === k));
-    const sug = ex.noWeight ? null : G.suggest({
-      target: ex.targets[w], week: w, prev: G.prevWeight(S.data, day.key, idx, w),
-      max: G.findMax(others), unit: u, weekShort: r.weekShort,
-    });
-    const overridden = name !== ex.name;
+    const baseName = G.effectiveName(S.data, day.key, idx, ex);
+    const altUsed = !!(rec && rec.altUsed && ex.alt);
+    const showAlt = ex.alt && G.normName(baseName) !== G.normName(ex.alt);
+    const overridden = baseName !== ex.name;
+    const sug = info && info.rec;
+    const max = info && info.max;
 
-    const sugRow = sug
-      ? `<div class="info-row">💡 Sugerido: <b>${fmt(sug.value)} ${u}</b> <span class="muted">· ${esc(sug.text)}</span>
-           <button class="link-btn use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}">Usar</button></div>`
-      : ex.noWeight ? "" : `<div class="info-row muted">💡 Sin historial: calibrá el peso con la primera serie.</div>`;
-    const maxRow = ex.noWeight && !max ? "" : `<div class="info-row">🏆 ${max
-      ? `Máximo: <b>${fmt(max.weight)} ${u}</b>${max.reps ? ` × ${esc(max.reps)}` : ""} <span class="muted">· Ciclo ${max.cycle} · ${esc(max.weekShort)}</span>`
-      : '<span class="muted">Sin máximo registrado todavía</span>'}</div>`;
+    const statRest = `<div class="stat"><span class="stat-label">${icon("clock")}Descanso</span>
+      <span class="stat-val">${esc(ex.rest)}</span><span class="stat-sub">${sets} series</span></div>`;
+    const statSug = sug
+      ? `<div class="stat sug ${sug.mode}"><span class="stat-label">${icon("target")}Sugerido</span>
+          <span class="stat-val">${fmt(sug.value)} <small>${u}</small>${sug.mode !== "calibrate" && sug.pct ? ` <em>${pctTxt(sug.pct)}</em>` : ""}</span>
+          <span class="stat-goal">${esc(sug.goal)}</span>
+          <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}">Usar</button></div>`
+      : `<div class="stat sug"><span class="stat-label">${icon("target")}Sugerido</span>
+          <span class="stat-val empty">—</span><span class="stat-goal">Calibrá con la 1ª serie</span></div>`;
+    const statMax = max
+      ? `<div class="stat"><span class="stat-label">${icon("trophy")}Máximo</span>
+          <span class="stat-val">${fmt(max.weight)} <small>${u}</small></span>
+          <span class="stat-sub">${max.topReps ? `${max.topReps} reps · ` : ""}${fmtDate(max.date)}</span></div>`
+      : `<div class="stat"><span class="stat-label">${icon("trophy")}Máximo</span>
+          <span class="stat-val empty">—</span><span class="stat-sub">Sin registros</span></div>`;
+    const stats = ex.noWeight
+      ? `<div class="stats two">${statRest}<div class="stat"><span class="stat-label">${icon("target")}Objetivo</span>
+          <span class="stat-val">${sets} <small>series</small></span><span class="stat-sub">Sin peso obligatorio</span></div></div>`
+      : `<div class="stats">${statRest}${statSug}${statMax}</div>`;
+    const why = sug ? `<p class="why">${icon("info")}<span>${esc(sug.text)}</span></p>` : "";
+
+    const altBox = !(d.altOpen && showAlt) ? "" : altUsed
+      ? `<div class="alt-box"><b>Esta semana hacés la alternativa</b>${esc(ex.alt)}
+          <div class="row-btns"><button class="chip-btn undo-alt-btn" data-action="undo-alt" data-k="${k}">Volver a ${esc(baseName)}</button></div></div>`
+      : `<div class="alt-box"><b>Alternativa</b>${esc(ex.alt)}
+          <div class="row-btns">
+            <button class="chip-btn solid use-alt-btn" data-action="use-alt" data-k="${k}">Usar esta semana</button>
+            <button class="chip-btn use-alt-cycle-btn" data-action="use-alt-cycle" data-k="${k}">Usar en todo el ciclo</button>
+          </div></div>`;
 
     const editBox = d.editOpen ? `<div class="edit-box">
         <input class="text-input" data-field="editName" data-k="${k}" value="${esc(d.editName)}" placeholder="Nombre del ejercicio" aria-label="Nuevo nombre">
-        <div class="muted small" style="margin-top:6px">Reemplaza el nombre en las 4 semanas. Original: ${esc(ex.name)}</div>
+        <div class="hint">Cambia el nombre en las 4 semanas. Original: ${esc(ex.name)}</div>
         <div class="row-btns">
-          <button class="chip-btn save-name-btn" data-action="save-name" data-k="${k}">Guardar nombre</button>
+          <button class="chip-btn solid save-name-btn" data-action="save-name" data-k="${k}">Guardar nombre</button>
           ${overridden ? `<button class="chip-btn reset-name-btn" data-action="reset-name" data-k="${k}">Restablecer</button>` : ""}
           <button class="chip-btn cancel-name-btn" data-action="toggle-edit" data-k="${k}">Cancelar</button>
         </div></div>` : "";
@@ -239,41 +384,43 @@
     const repsInputs = d.repsSame
       ? `<input class="num-input reps-same-input" inputmode="numeric" data-field="repsSameValue" data-k="${k}" value="${esc(d.repsSameValue)}" placeholder="Reps de cada serie">`
       : `<div class="reps-grid">${Array.from({ length: sets }, (_, i) =>
-          `<label class="rep-cell"><span>Serie ${i + 1}</span><input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}"></label>`).join("")}</div>`;
+          `<label class="rep-cell"><span>SERIE ${i + 1}</span><input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}" aria-label="Reps serie ${i + 1}"></label>`).join("")}</div>`;
 
     const sideHint = d.weightMode === "perSide" && d.perSideDisplay != null
-      ? `<div class="muted small perside-hint" style="margin-top:4px">= ${fmt(d.perSideDisplay)} ${u} por lado + barra</div>` : "";
+      ? `<div class="perside-hint">= ${fmt(d.perSideDisplay)} ${u} por lado + barra</div>` : "";
 
     return `<div class="card-body">
-      <div class="info-row">⏱ Descanso: <b>${esc(ex.rest)}</b> <span class="muted">· ${sets} series</span></div>
-      ${sugRow}
-      ${maxRow}
-      <div class="row-btns">
-        ${ex.alt ? `<button class="chip-btn alt-btn" data-action="toggle-alt" data-k="${k}">${d.altOpen ? "Ocultar" : "Ver"} alternativa</button>` : ""}
-        <button class="chip-btn edit-btn" data-action="toggle-edit" data-k="${k}">✏️ Editar nombre</button>
+      ${stats}
+      ${why}
+      <div class="tools">
+        ${showAlt ? `<button class="tool-btn alt-btn${d.altOpen || altUsed ? " on" : ""}" data-action="toggle-alt" data-k="${k}">${icon("swap")}${altUsed ? "Usando alternativa" : "Alternativa"}</button>` : ""}
+        <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>
+        <button class="tool-btn glossary-btn" data-action="open-glossary" data-terms="${glossaryFor(ex, w).join(",")}">${icon("info")}¿Qué es?</button>
       </div>
-      ${d.altOpen && ex.alt ? `<div class="alt-box">🔁 <b>Alternativa:</b> ${esc(ex.alt)}</div>` : ""}
+      ${altBox}
       ${editBox}
       <div class="field">
-        <div class="field-label">Reps por serie</div>
-        <label class="check"><input type="checkbox" class="reps-same-check" data-field="repsSame" data-k="${k}"${d.repsSame ? " checked" : ""}> Todas las series fueron iguales</label>
+        <div class="field-head"><span class="field-label">Reps por serie</span>
+          <label class="check"><input type="checkbox" class="reps-same-check" data-field="repsSame" data-k="${k}"${d.repsSame ? " checked" : ""}> Todas iguales</label></div>
         ${repsInputs}
       </div>
       <div class="field">
-        <div class="field-label">Peso${ex.noWeight ? ' <span class="muted">(opcional)</span>' : ""}</div>
+        <div class="field-head"><span class="field-label">Peso${ex.noWeight ? " · opcional" : ""}</span></div>
         <div class="weight-row">
-          <input class="num-input weight-input" inputmode="decimal" data-field="weight" data-k="${k}" value="${esc(d.weight)}" placeholder="0" aria-label="Peso total">
-          <span class="unit">${u}</span>
-          ${ex.noWeight ? "" : `<button class="chip-btn calc-toggle-btn" data-action="toggle-calc" data-k="${k}">🧮 Barra</button>`}
+          <div class="weight-box">
+            <input class="num-input weight-input" inputmode="decimal" data-field="weight" data-k="${k}" value="${esc(d.weight)}" placeholder="0" aria-label="Peso total">
+            <span class="unit">${u}</span>
+          </div>
+          ${ex.noWeight ? "" : `<button class="tool-btn calc-toggle-btn${d.calcOpen ? " on" : ""}" data-action="toggle-calc" data-k="${k}">${icon("calc")}Barra</button>`}
         </div>
         ${sideHint}
         ${d.calcOpen && !ex.noWeight ? renderCalc(k, d) : ""}
       </div>
       <div class="field">
-        <div class="field-label">Nota</div>
+        <div class="field-head"><span class="field-label">Nota</span></div>
         <textarea class="text-input note-input" rows="2" data-field="note" data-k="${k}" placeholder="Cómo se sintió, molestias, ajustes…">${esc(d.note)}</textarea>
       </div>
-      <button class="primary-btn save-entry-btn" data-action="save-entry" data-k="${k}">Guardar</button>
+      <button class="primary-btn save-entry-btn" data-action="save-entry" data-k="${k}">${icon("check")}Guardar</button>
     </div>`;
   }
 
@@ -307,78 +454,128 @@
     return res.perSide < 0 ? "El total es menor que la barra" : `Por lado: ${fmt(res.perSide)} ${S.unit}`;
   }
 
-  // ---------- Historial ----------
+  // ---------- Historial (por ejercicio, en todos los ciclos) ----------
+
+  const HIST_FILTERS = [["all", "Todos"], ["lower", "Pierna"], ["upper", "Superior"], ["core", "Core"]];
+
+  function histIndex() { return G.exerciseIndex(S.routines, allData(), S.cycle); }
 
   function renderHistorial() {
-    const cycles = cycleList();
-    if (!cycles.length) return renderEmpty();
-    const hc = S.histCycle ?? S.cycle;
-    const r = S.routines[hc];
-    const data = dataOf(hc);
-    const select = cycles.length > 1 ? `<div class="seg small hist-select">${cycles.map((c) =>
-      `<button class="seg-btn hist-cycle-btn${c === hc ? " active" : ""}" data-action="hist-cycle" data-cycle="${c}">Ciclo ${c}</button>`).join("")}</div>` : "";
-
-    const days = r.days.map((d) => {
-      const exs = d.exercises.map((ex, idx) => {
-        const rows = [0, 1, 2, 3].map((w) => {
-          const k = G.slotKey(d.key, idx, w), rec = data[k];
-          const wt = rec ? G.parseNum(rec.weight) : NaN;
-          const date = rec && rec.savedAt ? new Date(rec.savedAt).toLocaleDateString("es", { day: "2-digit", month: "2-digit" }) : "—";
-          const noteKey = `${hc}:${k}`;
-          const hasNote = !!(rec && rec.note);
-          const row = `<div class="hist-row${hasNote ? " has-note" : ""}"${hasNote ? ` data-action="toggle-note" data-note="${noteKey}"` : ""}>
-              <span class="wk">${esc(r.weekShort[w])}</span>
-              <span class="muted">${date}</span>
-              <span>${wt > 0 ? `${fmt(wt)} ${S.unit}` : "—"}${hasNote ? " 📝" : ""}</span>
-              <span class="muted">${esc(G.repsText(rec)) || "—"}</span>
-              <span class="ok">${rec && rec.completed ? "✓" : ""}</span>
-            </div>`;
-          return row + (hasNote && S.histNotes.has(noteKey) ? `<div class="hist-note">${esc(rec.note)}</div>` : "");
-        }).join("");
-        return `<div class="hist-ex"><div class="hist-ex-head">
-            ${ex.pattern ? `<div class="pattern">${esc(ex.pattern)}</div>` : ""}
-            <div class="ex-name">${esc(G.effectiveName(data, d.key, idx, ex))}</div></div>${rows}</div>`;
-      }).join("");
-      return `<h3 class="hist-day">${esc(d.key)} · ${esc(d.title)}</h3>${exs}`;
-    }).join("");
-    return `${select}<div class="muted small">${esc(r.name)}</div>${days}`;
+    if (!cycleList().length) return renderEmpty();
+    if (S.histEx) {
+      const e = histIndex().find((x) => x.key === S.histEx);
+      if (e) return renderHistDetail(e);
+      S.histEx = null;
+    }
+    const chips = HIST_FILTERS.map(([v, l]) =>
+      `<button class="seg-btn hist-filter-btn${S.histFilter === v ? " active" : ""}" data-action="hist-filter" data-filter="${v}">${l}</button>`).join("");
+    return `<div class="page-head"><div class="eyebrow">Tus marcas</div><h1 class="page-title">Historial</h1></div>
+      <label class="search">${icon("search")}<input type="search" class="search-input" data-search="hist" value="${esc(S.histQuery)}" placeholder="Buscar ejercicio" aria-label="Buscar ejercicio" autocomplete="off"></label>
+      <div class="seg small hist-filters">${chips}</div>
+      <div class="hist-list">${renderHistList()}</div>`;
   }
 
-  // ---------- Ajustes ----------
+  function renderHistList() {
+    const q = G.normName(S.histQuery);
+    const list = histIndex().filter((e) =>
+      (S.histFilter === "all" || e.group === S.histFilter) && (!q || G.normName(e.name).includes(q)));
+    if (!list.length) return `<p class="empty small">No hay ejercicios que coincidan.</p>`;
+    return `<ul class="hist-ul">${list.map((e) => {
+      const m = e.max;
+      const days = [...e.days].join(" · ");
+      const right = e.noWeight && !m
+        ? `<span class="hl-none">${e.last ? fmtDate(e.last.date) : "Sin peso"}</span>`
+        : m ? `<span class="hl-max"><b>${fmt(m.weight)}</b> ${S.unit}${m.topReps ? ` × ${m.topReps}` : ""}</span><span class="hl-date">${fmtDate(m.date)}</span>`
+          : `<span class="hl-none">Sin registros</span>`;
+      return `<li><button class="hist-item ${e.group}" data-action="hist-open" data-ex="${esc(e.key)}">
+        <span class="hl-info"><span class="pattern">${esc(e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"))}${days ? ` · ${esc(days)}` : ""}</span>
+          <span class="ex-name">${esc(e.name)}</span></span>
+        <span class="hl-right">${right}</span>${icon("chevron")}</button></li>`;
+    }).join("")}</ul>`;
+  }
+
+  function renderHistDetail(e) {
+    const u = S.unit;
+    const prs = G.prHistory(e.records).reverse();
+    const sessions = [...e.records].sort((a, b) => (a.date && b.date ? (a.date < b.date ? 1 : -1) : b.cycle - a.cycle || b.week - a.week));
+    const m = e.max;
+    const where = (r) => `C${r.cycle} · ${esc(splitWeek(r.weekShort)[0])} · ${esc(r.day)}`;
+    const prRows = prs.map((r, i) => {
+      const before = prs[i + 1];
+      const delta = before ? (r.weight > before.weight ? `+${fmt(r.weight - before.weight)} ${u}` : `+${r.topReps - before.topReps} reps`) : "Primera marca";
+      return `<li class="pr-row${i === 0 ? " current" : ""}"><span class="pr-w num"><b>${fmt(r.weight)}</b> ${u}${r.topReps ? ` × ${r.topReps}` : ""}</span>
+        <span class="pr-meta">${fmtDate(r.date, { day: "2-digit", month: "short", year: "2-digit" })} · ${where(r)}</span><span class="pr-delta">${i === 0 ? "Actual" : delta}</span></li>`;
+    }).join("");
+    const sessRows = sessions.map((r) => `<li class="sess-row">
+        <div class="sess-top"><span class="sess-date">${fmtDate(r.date)}</span><span class="sess-where">${where(r)}</span>
+          <span class="sess-w num"><b>${fmt(r.weight)}</b> ${u}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
+          <span class="ok">${r.completed ? icon("check") : ""}</span></div>
+        ${r.note ? `<div class="sess-note">${icon("note")}${esc(r.note)}</div>` : ""}</li>`).join("");
+    return `<button class="back-btn hist-back-btn" data-action="hist-back">${icon("back")}Historial</button>
+      <div class="page-head"><div class="eyebrow">${esc(e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"))}</div>
+        <h1 class="page-title detail">${esc(e.name)}</h1></div>
+      <div class="pr-hero">
+        <span class="stat-label">${icon("trophy")}Máximo actual</span>
+        ${m ? `<span class="pr-hero-val num">${fmt(m.weight)} <small>${u}</small>${m.topReps ? ` <span>× ${m.topReps}</span>` : ""}</span>
+          <span class="stat-sub">${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
+          : `<span class="pr-hero-val num empty">—</span><span class="stat-sub">Todavía no hay pesos registrados.</span>`}
+      </div>
+      ${prs.length > 1 ? `<h2 class="section-title">Récords anteriores</h2><ul class="pr-list">${prRows}</ul>` : ""}
+      <h2 class="section-title">Sesiones <span class="muted">(${sessions.length})</span></h2>
+      ${sessions.length ? `<ul class="sess-list">${sessRows}</ul>` : `<p class="muted small">Sin sesiones con peso.</p>`}`;
+  }
+
+  // ---------- Hojas: Ajustes y Glosario ----------
 
   function renderSheet() {
     const sheet = $("#sheet");
     if (!S.sheet) { sheet.hidden = true; sheet.innerHTML = ""; return; }
     sheet.hidden = false;
+    const body = S.sheet === "glossary" ? renderGlossary() : renderSettings();
+    sheet.innerHTML = `<div class="sheet-backdrop" data-action="close-settings"></div>
+      <div class="sheet-panel" role="dialog" aria-label="${S.sheet === "glossary" ? "Glosario" : "Ajustes"}">
+        <div class="sheet-grabber"></div>${body}</div>`;
+  }
+
+  function sheetHead(title) {
+    return `<div class="sheet-head"><h2>${title}</h2>
+      <button class="icon-btn close-settings-btn" data-action="close-settings" aria-label="Cerrar">${icon("x")}</button></div>`;
+  }
+
+  function renderGlossary() {
+    const focus = S.glossaryTerms;
+    const items = focus ? GLOSSARY.filter((g) => focus.includes(g.id)) : GLOSSARY;
+    return `${sheetHead("Glosario")}
+      ${focus ? `<p class="note">Términos de este ejercicio. <button class="link-btn glossary-all-btn" data-action="open-glossary">Ver todos</button></p>` : ""}
+      <dl class="glossary">${items.map((g) => `<div class="gl-item"><dt>${esc(g.term)}</dt><dd>${esc(g.text)}</dd></div>`).join("")}</dl>`;
+  }
+
+  function renderSettings() {
     const themes = [["light", "Claro"], ["dark", "Oscuro"], ["auto", "Automático"]];
     const units = [["lb", "lb"], ["kg", "kg"]];
     const last = store.get(KEYS.lastBackup, null);
     const cycles = cycleList().map((c) => {
-      const r = S.routines[c];
-      return `<button class="cycle-btn${c === S.cycle ? " active" : ""}" data-action="set-cycle" data-cycle="${c}">
-        <span><b>Ciclo ${c}</b><br><span class="muted small">${esc(r.name)}</span></span>
-        <span class="muted small">${c === S.cycle ? "activo" : ""}</span></button>`;
+      const r = S.routines[c], active = c === S.cycle;
+      return `<button class="list-row cycle-btn${active ? " active" : ""}" data-action="set-cycle" data-cycle="${c}">
+        ${icon(active ? "check" : "layers")}<span class="grow">Ciclo ${c}<span class="sub">${esc(r.name)}</span></span>
+        ${active ? '<span class="badge">Activo</span>' : ""}</button>`;
     }).join("");
-    sheet.innerHTML = `<div class="sheet-backdrop" data-action="close-settings"></div>
-      <div class="sheet-panel" role="dialog" aria-label="Ajustes">
-        <div class="sheet-head"><h2>Ajustes</h2>
-          <button class="icon-btn close-settings-btn" data-action="close-settings" aria-label="Cerrar">✕</button></div>
-        <section><h3>Apariencia</h3><div class="seg">${themes.map(([v, l]) =>
-          `<button class="seg-btn theme-btn${S.theme === v ? " active" : ""}" data-action="set-theme" data-theme="${v}">${l}</button>`).join("")}</div></section>
-        <section><h3>Unidad</h3><div class="seg">${units.map(([v, l]) =>
-          `<button class="seg-btn unit-btn${S.unit === v ? " active" : ""}" data-action="set-unit" data-unit="${v}">${l}</button>`).join("")}</div>
-          <p class="muted small">Solo cambia las etiquetas: no convierte los valores guardados.</p></section>
-        <section><h3>Ciclos</h3>${cycles || '<p class="muted small">Ninguno cargado.</p>'}
-          <label class="secondary-btn file-btn">Importar rutina (JSON)
-            <input type="file" class="visually-hidden import-routine-input" accept=".json,application/json" data-change="import-routine"></label></section>
-        <section><h3>Datos</h3>
-          ${S.cycle !== null ? `<button class="secondary-btn export-cycle-btn" data-action="export-cycle">Exportar datos del ciclo ${S.cycle}</button>` : ""}
-          <button class="secondary-btn backup-btn" data-action="backup">Respaldo completo</button>
-          <label class="secondary-btn file-btn">Restaurar respaldo
-            <input type="file" class="visually-hidden restore-input" accept=".json,application/json" data-change="restore-backup"></label>
-          <p class="muted small">Último respaldo: ${last ? new Date(last).toLocaleDateString("es") : "nunca"}.
-            Todo vive en este celular: si se borran los datos de Safari, se pierden. Guardá el respaldo en Archivos o iCloud.</p></section>
-      </div>`;
+    return `${sheetHead("Ajustes")}
+      <div class="group"><span class="eyebrow">Apariencia</span><div class="seg">${themes.map(([v, l]) =>
+        `<button class="seg-btn theme-btn${S.theme === v ? " active" : ""}" data-action="set-theme" data-theme="${v}">${l}</button>`).join("")}</div></div>
+      <div class="group"><span class="eyebrow">Unidad</span><div class="seg">${units.map(([v, l]) =>
+        `<button class="seg-btn unit-btn${S.unit === v ? " active" : ""}" data-action="set-unit" data-unit="${v}">${l}</button>`).join("")}</div>
+        <p class="note">Solo cambia las etiquetas: no convierte los valores guardados.</p></div>
+      <div class="group"><span class="eyebrow">Ciclos</span><div class="group-card">${cycles}
+        <label class="list-row file-btn">${icon("upload")}<span class="grow">Importar rutina (JSON)</span>
+          <input type="file" class="visually-hidden import-routine-input" accept=".json,application/json" data-change="import-routine"></label></div></div>
+      <div class="group"><span class="eyebrow">Datos</span><div class="group-card">
+        ${S.cycle !== null ? `<button class="list-row export-cycle-btn" data-action="export-cycle">${icon("download")}<span class="grow">Exportar datos del ciclo ${S.cycle}<span class="sub">Para cerrar el ciclo (HISTORIAL y Excel)</span></span></button>` : ""}
+        <button class="list-row backup-btn" data-action="backup">${icon("archive")}<span class="grow">Respaldo completo<span class="sub">Último: ${last ? fmtDate(last, { day: "numeric", month: "short", year: "numeric" }) : "nunca"}</span></span></button>
+        <label class="list-row file-btn">${icon("refresh")}<span class="grow">Restaurar respaldo</span>
+          <input type="file" class="visually-hidden restore-input" accept=".json,application/json" data-change="restore-backup"></label>
+      </div>
+      <p class="note">Todo vive en este celular: si se borran los datos de Safari, se pierden. Guardá el respaldo en Archivos o iCloud.</p></div>`;
   }
 
   // ---------- Archivos ----------
@@ -483,6 +680,7 @@
       reps: d.repsSame ? Array(sets).fill(same) : d.reps.slice(0, sets).map((x) => String(x).trim()),
       repsSame: d.repsSame,
       repsSameValue: d.repsSame ? same : "",
+      altUsed: !!prev.altUsed,
       savedAt: new Date().toISOString(),
     };
     if (!saveData()) return false;
@@ -578,13 +776,30 @@
       render();
       toast("Guardado ✓");
     },
-    "toggle-note"(el) {
-      const n = el.dataset.note;
-      if (S.histNotes.has(n)) S.histNotes.delete(n); else S.histNotes.add(n);
-      render();
+    "hist-open"(el) { S.histEx = el.dataset.ex; render(); window.scrollTo(0, 0); },
+    "hist-back"() { S.histEx = null; render(); },
+    "hist-filter"(el) { S.histFilter = el.dataset.filter; render(); },
+    "use-alt"(el) {
+      const k = el.dataset.k, { ex, week } = exFromKey(k);
+      S.data[k] = { ...(S.data[k] || { ...emptyRecord(ex.sets[week]), savedAt: null }), altUsed: true };
+      if (!saveData()) return;
+      S.drafts[k].altOpen = false; render(); toast("Esta semana: alternativa");
     },
-    "hist-cycle"(el) { S.histCycle = Number(el.dataset.cycle); render(); },
-    "open-settings"() { S.sheet = true; renderSheet(); },
+    "undo-alt"(el) {
+      const k = el.dataset.k;
+      if (S.data[k]) S.data[k].altUsed = false;
+      if (!saveData()) return;
+      S.drafts[k].altOpen = false; render(); toast("Volviste al ejercicio original");
+    },
+    "use-alt-cycle"(el) {
+      const k = el.dataset.k, { dayObj, idx, ex } = exFromKey(k);
+      S.data[G.ovrKey(dayObj.key, idx)] = { name: ex.alt, savedAt: new Date().toISOString() };
+      for (let w = 0; w < 4; w++) { const r = S.data[G.slotKey(dayObj.key, idx, w)]; if (r) r.altUsed = false; }
+      if (!saveData()) return;
+      S.drafts[k].altOpen = false; render(); toast("Alternativa en todo el ciclo · se deshace con Editar nombre → Restablecer");
+    },
+    "open-glossary"(el) { S.glossaryTerms = el.dataset.terms ? el.dataset.terms.split(",") : null; S.sheet = "glossary"; renderSheet(); },
+    "open-settings"() { S.sheet = "settings"; renderSheet(); },
     "close-settings"() { S.sheet = false; renderSheet(); },
     "set-theme"(el) { S.theme = el.dataset.theme; store.set(KEYS.theme, S.theme); applyTheme(); renderSheet(); },
     "set-unit"(el) { S.unit = el.dataset.unit; store.set(KEYS.unit, S.unit); S.drafts = {}; render(); },
@@ -617,6 +832,12 @@
 
   function onInput(e) {
     const el = e.target, f = el.dataset.field, k = el.dataset.k;
+    if (el.dataset.search === "hist") {
+      S.histQuery = el.value;
+      const list = document.querySelector(".hist-list");
+      if (list) list.innerHTML = renderHistList();
+      return;
+    }
     if (!f || !k || el.type === "checkbox") return;
     const d = S.drafts[k];
     if (!d) return;
@@ -698,6 +919,7 @@
     S.unit = store.get(KEYS.unit, null) || (S.routines[start] && S.routines[start].unitDefault) || "lb";
     if (start !== undefined) loadCycle(start);
 
+    document.querySelectorAll("[data-icon]").forEach((el) => el.insertAdjacentHTML("afterbegin", icon(el.dataset.icon)));
     document.addEventListener("click", onClick);
     document.addEventListener("input", onInput);
     document.addEventListener("change", onChange);

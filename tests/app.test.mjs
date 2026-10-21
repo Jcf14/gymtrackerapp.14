@@ -180,14 +180,20 @@ test("sugerencias: (+peso) en S2 y 55% en descarga", async () => {
   const t = await boot();
   t.goTo(0, "A"); t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
   t.goTo(1, "A"); t.openCard(0);
-  assert.match(t.$(".use-sug-btn").closest(".info-row").textContent, /220 lb/);
+  assert.match(t.$(".use-sug-btn").closest(".stat").textContent, /220 lb\s*\+2%/);
+  assert.match(t.$(".use-sug-btn").closest(".stat").textContent, /Más peso/);
   t.click(".use-sug-btn");
   assert.equal(t.$(".weight-input").value, "220");
   t.click(".save-entry-btn");
   t.goTo(2, "A"); t.openCard(0); t.type(".weight-input", "235"); t.click(".save-entry-btn");
   t.goTo(3, "A"); t.openCard(0);
-  assert.match(t.$(".use-sug-btn").closest(".info-row").textContent, /130 lb .*Descarga/);
-  assert.match(t.$(".card-body").textContent, /Máximo: 235 lb/);
+  assert.match(t.$(".use-sug-btn").closest(".stat").textContent, /130 lb\s*−45%/);
+  assert.match(t.$(".why").textContent, /Descarga/);
+  assert.match(t.$(".card-body").textContent, /Máximo\s*235 lb/);
+  // la tarjeta plegada también muestra máximo y sugerencia
+  t.click(t.$$(".card-head")[0]);
+  assert.match(t.$(".ex-max").textContent, /235/);
+  assert.match(t.$(".ex-sug").textContent, /130 lb −45% · Menos peso/);
 });
 
 test("borradores sobreviven al re-render de otra tarjeta", async () => {
@@ -199,17 +205,67 @@ test("borradores sobreviven al re-render de otra tarjeta", async () => {
   assert.equal(t.$(".weight-input").value, "180");
 });
 
-test("historial muestra la fila con nota desplegable", async () => {
+test("historial: lista con máximo, buscador, filtros y detalle con récords", async () => {
   const t = await boot();
   t.goTo(0, "A"); t.openCard(0);
   t.type(".weight-input", "215"); t.type(".note-input", "pausa bien marcada");
   t.click(".save-entry-btn");
+  t.goTo(1, "A"); t.openCard(0); t.type(".weight-input", "225"); t.click(".save-entry-btn");
   t.click('.tab[data-tab="historial"]');
-  const row = t.$(".hist-row.has-note");
-  assert.ok(row);
-  assert.match(row.textContent, /215 lb/);
-  t.click(row);
-  assert.match(t.$(".hist-note").textContent, /pausa bien marcada/);
+  const items = () => t.$$(".hist-item");
+  assert.equal(items().length, 4);
+  assert.match(items()[0].textContent, /225 lb/);
+  const search = t.$(".search-input");
+  t.type(".search-input", "bulgara");                       // sin tilde
+  assert.equal(items().length, 1);
+  assert.match(items()[0].textContent, /Sentadilla búlgara/);
+  assert.equal(t.$(".search-input"), search, "buscar no re-renderiza el campo (no se pierde el foco)");
+  t.type(".search-input", "");
+  t.click('.hist-filter-btn[data-filter="core"]');
+  assert.equal(items().length, 1);
+  t.click('.hist-filter-btn[data-filter="all"]');
+  t.click(items()[0]);
+  assert.match(t.$(".pr-hero").textContent, /225 lb/);
+  assert.equal(t.$$(".pr-row").length, 2);                  // 215 → 225
+  assert.equal(t.$$(".sess-row").length, 2);
+  assert.match(t.$(".sess-note").textContent, /pausa bien marcada/);
+  t.click(".hist-back-btn");
+  assert.ok(t.$(".search-input"));
+  assert.deepEqual(t.errors, []);
+});
+
+test("alternativa: usar esta semana, volver, y usar en todo el ciclo", async () => {
+  const t = await boot();
+  t.goTo(1, "A"); t.openCard(0);
+  t.click(".alt-btn");
+  t.click(".use-alt-btn");
+  assert.equal(t.data().A_0_w1.altUsed, true);
+  assert.match(t.$(".ex-name").textContent, /Hip thrust con mancuerna en banco · alternativa/);
+  t.type(".weight-input", "60"); t.click(".save-entry-btn");
+  assert.equal(t.data().A_0_w1.altUsed, true, "guardar conserva la alternativa");
+  t.goTo(0, "A");
+  assert.match(t.$(".ex-name").textContent, /pausa 2s/, "las otras semanas siguen con el original");
+  t.goTo(1, "A"); t.openCard(0); t.click(".alt-btn"); t.click(".undo-alt-btn");
+  assert.equal(t.data().A_0_w1.altUsed, false);
+  t.click(".alt-btn"); t.click(".use-alt-cycle-btn");
+  assert.equal(t.data().ovr_A_0.name, "Hip thrust con mancuerna en banco");
+  t.goTo(3, "A");
+  assert.match(t.$(".ex-name").textContent, /Hip thrust con mancuerna en banco · editado/);
+  assert.deepEqual(t.errors, []);
+});
+
+test("glosario: botón general y términos del ejercicio", async () => {
+  const t = await boot();
+  t.click(".glossary-top-btn");
+  assert.ok(t.$$(".gl-item").length >= 10);
+  assert.match(t.$("#sheet").textContent, /RPE/);
+  t.click(".close-settings-btn");
+  t.goTo(2, "A"); t.openCard(0); t.click(".glossary-btn");
+  const terms = t.$$(".gl-item dt").map((e) => e.textContent);
+  assert.ok(terms.includes("RPE") && terms.some((x) => /rematado/.test(x)));
+  assert.ok(!terms.includes("Pulsos"));
+  t.click(".glossary-all-btn");
+  assert.ok(t.$$(".gl-item").length >= 10);
   assert.deepEqual(t.errors, []);
 });
 

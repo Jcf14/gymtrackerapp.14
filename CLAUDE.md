@@ -293,14 +293,16 @@ Siempre:
 
 ### 6.1 Comportamiento esperado (heredado del artifact, implementado de cero)
 
-- **Navegación:** pestañas "Rutina" / "Historial". En Rutina: selector de **semana** arriba y de **día** abajo (orden pedido por mí). Autodetecta el día por la fecha real (lun–jue y sáb); viernes y domingo respetan el último día visto.
-- **Tarjeta por ejercicio:** plegada muestra patrón, nombre, objetivo de la semana, peso (o "Sin peso") y un círculo de "completado" que se toca directo. Desplegada: descanso sugerido, 💡 peso sugerido, 🏆 máximo registrado (con las reps de ese máximo), ver alternativa, editar nombre, reps por serie, calculadora de barra, peso, nota y botón Guardar.
+- **Navegación:** pestañas "Rutina" / "Historial" en una barra inferior; arriba, botón ⓘ (glosario) y ⚙ (ajustes). En Rutina: selector de **semana** arriba y de **día** abajo (orden pedido por mí). Autodetecta el día por la fecha real (lun–jue y sáb); viernes y domingo respetan el último día visto.
+- **Tarjeta por ejercicio:** plegada muestra número, patrón, nombre, objetivo de la semana, 🏆 máximo (peso×reps), y el peso guardado o, si no hay, el **sugerido con % y qué se espera**. Un círculo de "completado" se toca directo. Desplegada: descanso, sugerido y máximo como mini estadísticas, el porqué de la sugerencia, alternativa, renombrar, "¿Qué es?" (glosario de los términos de ese ejercicio), reps por serie, calculadora de barra, peso, nota y Guardar.
 - **Validación:** no se puede guardar ni completar sin peso, salvo `noWeight`.
 - **Reps por serie:** un casillero por serie, o "todas las series fueron iguales" (un solo campo).
 - **Calculadora de barra:** barra Mujer (35 lb / 15 kg), Hombre (45 lb / 20 kg) o personalizada; modo "por lado" o "total"; muestra el total o el equivalente por lado; "Usar este peso" lo vuelca al campo.
 - **Editar ejercicio:** reemplaza el nombre del ejercicio en ese espacio (todas las semanas); "Restablecer" vuelve al original.
-- **Sugerencias:** S1 con historial → 90% del máximo; "(+peso)" → anterior + 5; descarga → 55% de la semana previa; si no, similar a la anterior.
-- **Historial:** agrupado por ejercicio (con el nombre editado), una fila por semana con fecha, peso, reps y ✓; tocar la fila despliega la nota.
+- **Sugerencias:** siempre dicen en simple qué se espera: "Más peso, menos reps", "Mismo peso, más reps", "Más peso y más reps", "Menos peso", etc. (no usar jerga como "doble progresión"), con el % contra la referencia. Reglas: descarga → 55% de la semana previa · "(+peso)" → anterior + 5 · rango de reps más bajo que la semana anterior → +5% (mín. +5 lb) · si no llegó al techo del rango en todas las series → mismo peso, más reps; si llegó → +5 lb · S1 → S1 del ciclo anterior +5% (o mismo peso si allí no llegó al techo) · sin referencia → ~90% del máximo ("Calibrá el peso"). La semana anterior solo cuenta si fue el mismo ejercicio (no la alternativa).
+- **Historial:** lista de ejercicios de **todos los ciclos**, con buscador (ignora tildes) y filtros Todos / Pierna / Superior / Core. Cada fila muestra solo el máximo actual (peso × reps) y su fecha. Al tocar: máximo actual, **récords anteriores** (cada vez que se superó el máximo: más peso, o mismo peso con más reps) y todas las sesiones con sus notas.
+- **Alternativa:** "Usar esta semana" marca `altUsed` en ese registro (el peso cuenta para la alternativa, no para el original); "Usar en todo el ciclo" crea un override de nombre (se deshace con Renombrar → Restablecer).
+- **Glosario:** RPE, reps en reserva, rango, semanas, descarga, (+peso), sugerido, máximo, pulsos, rematado, c/lado, por lado/total, alternativa. Textos sacados de la sección 3; si se agrega un término nuevo a las rutinas, sumarlo a `GLOSSARY` en app.js.
 - **Ajustes:** apariencia (Claro por defecto / Oscuro / Automático), unidad lb/kg (solo cambia etiquetas; no convierte valores guardados) y exportar datos.
 - **Aviso flotante ("toast")** al guardar: tiene que sobrevivir al re-render.
 - **Offline primero:** todo se guarda al instante en el dispositivo.
@@ -310,7 +312,7 @@ Siempre:
 Todos los valores se guardan como JSON (`JSON.stringify`).
 
 - `gluteo_tracker_ciclo-<N>` → un objeto por ciclo con:
-  - `"<día>_<idxEjercicio>_w<semana0-3>"` → `{ weight (string, peso total), weightMode ("perSide"|"total"), perSideDisplay (número o null), note, completed (bool), reps (array de strings), repsSame (bool), repsSameValue, savedAt (ISO) }`
+  - `"<día>_<idxEjercicio>_w<semana0-3>"` → `{ weight (string, peso total), weightMode ("perSide"|"total"), perSideDisplay (número o null), note, completed (bool), reps (array de strings), repsSame (bool), repsSameValue, altUsed (bool, se hizo la alternativa esa semana), savedAt (ISO o null) }`
   - `"ovr_<día>_<idxEjercicio>"` → `{ name, savedAt }` (`name: null` = override borrado).
 - `gluteo_rutinas` → `{ "<N>": rutina }`: cada rutina cargada (del servidor o importada) queda guardada, así se pueden consultar ciclos anteriores sin conexión. `gluteo_ciclo_activo` → N.
 - `gluteo_unit` (`lb`/`kg`) · `gluteo_theme` (`light`/`dark`/`auto`; por defecto `light`) · `gluteo_last_day` · `gluteo_last_week` (`{ cycle, week }`) · `gluteo_last_backup` (ISO).
@@ -329,6 +331,7 @@ Todos los valores se guardan como JSON (`JSON.stringify`).
 
 ### 6.4 Decisiones de implementación
 
+- Estilo: Barlow Condensed (en `app/fonts/`, licencia OFL) para títulos y números, fuente del sistema para el texto, íconos SVG en línea (no emojis), escala de espacios 4/8/12/16/24.
 - Clics resueltos por `data-action` con un único manejador (evita la trampa 1). Los formularios abiertos guardan un **borrador en memoria**, así que un re-render (por ejemplo, completar otra tarjeta) no borra lo que estaba escrito.
 - Sin sincronización en la nube (solo uso el celular). El resguardo es el respaldo JSON.
 - `npm test` cubre: validación de rutinas, sugerencias, calculadora, máximo entre ciclos, export con nombre editado, respaldo y, en jsdom, los flujos de la sección 6.3 (guardar/completar sin peso, editar/restablecer nombre, calculadora, toast, borradores, historial, ajustes, persistencia, ids y `data-action` existentes).

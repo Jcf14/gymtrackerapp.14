@@ -100,6 +100,12 @@
     return o && o.name ? o.name : ex.name;
   }
 
+  // Nombre del ejercicio hecho en una semana concreta: la alternativa si se usó esa semana.
+  function slotName(data, day, idx, ex, week) {
+    const rec = data && data[slotKey(day, idx, week)];
+    return rec && rec.altUsed && ex.alt ? ex.alt : effectiveName(data, day, idx, ex);
+  }
+
   function normName(s) {
     return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
   }
@@ -149,28 +155,56 @@
     for (const c of Object.keys(routines)) {
       const r = routines[c], data = allData[c] || {};
       r.days.forEach((d) => d.exercises.forEach((ex, idx) => {
-        if (normName(effectiveName(data, d.key, idx, ex)) !== target) return;
         for (let w = 0; w < 4; w++) {
+          if (normName(slotName(data, d.key, idx, ex, w)) !== target) continue;
           const k = slotKey(d.key, idx, w), rec = data[k];
           const weight = rec ? parseNum(rec.weight) : NaN;
-          if (weight > 0) out.push({ cycle: Number(c), week: w, key: k, weight, reps: repsText(rec), weekShort: r.weekShort[w] });
+          if (!(weight > 0)) continue;
+          const repsArr = repsNums(rec);
+          out.push({
+            cycle: Number(c), week: w, key: k, day: d.key, weight, reps: repsText(rec), repsArr,
+            topReps: repsArr.length ? Math.max(...repsArr) : 0, date: rec.savedAt || null,
+            note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed, weekShort: r.weekShort[w],
+          });
         }
       }));
     }
     return out;
   }
 
+  // Orden cronológico: por fecha de guardado; sin fecha, por ciclo y semana.
+  function chrono(a, b) {
+    if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return a.cycle - b.cycle || a.week - b.week;
+  }
+
+  // ¿r supera a best? Más peso, o el mismo peso con más reps.
+  const beats = (r, best) => !best || r.weight > best.weight || (r.weight === best.weight && r.topReps > best.topReps);
+
   function findMax(records) {
     let best = null;
-    for (const r of records) {
-      if (!best || r.weight > best.weight || (r.weight === best.weight && (r.cycle > best.cycle || (r.cycle === best.cycle && r.week > best.week)))) best = r;
-    }
+    for (const r of [...records].sort(chrono)) if (beats(r, best) || (best && r.weight === best.weight && r.topReps === best.topReps)) best = r;
     return best;
   }
 
+  // Línea de récords: cada vez que se superó el máximo (el anterior queda en la lista).
+  function prHistory(records) {
+    const out = [];
+    let best = null;
+    for (const r of [...records].sort(chrono)) if (beats(r, best)) { out.push(r); best = r; }
+    return out;
+  }
+
+  function lastRecord(records) {
+    return records.length ? [...records].sort(chrono)[records.length - 1] : null;
+  }
+
   // Última semana anterior (del mismo ciclo y ejercicio) con peso guardado.
-  function prevWeight(data, day, idx, week) {
+  // Con ex, solo cuenta semanas en las que se hizo el mismo ejercicio (original o alternativa).
+  function prevWeight(data, day, idx, week, ex) {
+    const name = ex ? normName(slotName(data, day, idx, ex, week)) : null;
     for (let w = week - 1; w >= 0; w--) {
+      if (name && normName(slotName(data, day, idx, ex, w)) !== name) continue;
       const rec = data[slotKey(day, idx, w)];
       const weight = rec ? parseNum(rec.weight) : NaN;
       if (weight > 0) return { weight, week: w };
@@ -178,19 +212,109 @@
     return null;
   }
 
-  // Sugerencia de peso (CLAUDE.md §6.1). Devuelve { value, text } o null.
-  function suggest({ target, week, prev, max, unit, weekShort }) {
+  // ---------- Recomendación de peso (CLAUDE.md §3.4) ----------
+
+  // "3x8-12 c/pierna" → { lo: 8, hi: 12 } · "4x8" → { lo: 8, hi: 8 }
+  function repRange(target) {
+    const m = /\d+\s*[x×]\s*(\d+)(?:\s*-\s*(\d+))?/i.exec(String(target));
+    return m ? { lo: Number(m[1]), hi: Number(m[2] || m[1]) } : null;
+  }
+
+  function repsNums(rec) {
+    return rec ? (rec.reps || []).map(parseNum).filter((n) => n > 0) : [];
+  }
+
+  const pctDiff = (v, base) => (base > 0 ? Math.round(((v - base) / base) * 100) : null);
+
+  // Último S1 de un ciclo anterior (para comparar S1 contra S1 entre ciclos).
+  function lastCycleS1(records, cycle) {
+    const prev = records.filter((r) => r.week === 0 && r.cycle < cycle);
+    return prev.length ? prev.sort((a, b) => b.cycle - a.cycle)[0] : null;
+  }
+
+  // Qué se espera esta semana respecto de la anterior, dicho en simple.
+  function goalLabel(wDir, rDir) {
+    if (wDir === "down") return "Menos peso";
+    const reps = { up: "más reps", same: "mismas reps", down: "menos reps" }[rDir] || "";
+    if (wDir === "up") return rDir === "up" ? "Más peso y más reps" : `Más peso, ${reps}`;
+    if (rDir === "up") return "Mismo peso, más reps";
+    if (rDir === "down") return "Mismo peso, menos reps";
+    return "Mismo peso y reps";
+  }
+
+  // Compara el rango de reps de esta semana con el de la referencia.
+  function repsDir(cur, was) {
+    if (!cur || !was) return "same";
+    return cur.hi > was.hi ? "up" : cur.hi < was.hi ? "down" : "same";
+  }
+
+  // Devuelve { value, base, pct, mode, goal, text } o null.
+  // mode: "up" · "reps" · "same" · "deload" · "calibrate" (sin referencia directa: usar la 1ª serie)
+  function recommend({ target, prevTarget, week, prev, prevRec, lastS1, lastS1Target, max, unit, weekShort }) {
     const step = STEP[unit] || 5;
-    const wk = (i) => (weekShort && weekShort[i]) || `S${i + 1}`;
-    if (prev && isDeloadTarget(target))
-      return { value: roundStep(prev.weight * 0.55, unit), text: `Descarga: ~55% de ${wk(prev.week)} (${fmtNum(prev.weight)})` };
-    if (prev && hasPlusWeight(target))
-      return { value: prev.weight + step, text: `(+peso): ${wk(prev.week)} + ${fmtNum(step)}` };
-    if (week === 0 && max)
-      return { value: roundStep(max.weight * 0.9, unit), text: `~90% de tu máximo (${fmtNum(max.weight)})` };
-    if (prev) return { value: prev.weight, text: `Similar a ${wk(prev.week)}` };
-    if (max) return { value: roundStep(max.weight * 0.9, unit), text: `~90% de tu máximo (${fmtNum(max.weight)})` };
+    const wk = (i) => (weekShort && weekShort[i] ? String(weekShort[i]).replace(/\s*\(.*\)\s*$/, "") : `S${i + 1}`);
+    const out = (value, base, mode, rDir, text) => {
+      const wDir = value > base ? "up" : value < base ? "down" : "same";
+      return { value, base, pct: pctDiff(value, base), mode, goal: goalLabel(wDir, rDir), text };
+    };
+    const up = (base) => Math.max(base + step, roundStep(base * 1.05, unit));
+    const cur = repRange(target);
+    if (prev) {
+      const pw = prev.weight;
+      const was = repRange(prevTarget);
+      if (isDeloadTarget(target)) return out(roundStep(pw * 0.55, unit), pw, "deload", repsDir(cur, was), `Descarga: ~55% del peso de ${wk(prev.week)}, terminando con 4+ reps en reserva`);
+      if (hasPlusWeight(target)) return out(pw + step, pw, "up", repsDir(cur, was), `El plan pide subir: ${wk(prev.week)} + ${fmtNum(step)} ${unit}`);
+      if (cur && was && cur.hi < was.hi && cur.hi <= was.lo)
+        return out(up(pw), pw, "up", "down", `Rango más bajo que en ${wk(prev.week)} (${cur.lo}-${cur.hi}): más carga`);
+      if (cur) {
+        const reps = repsNums(prevRec);
+        if (reps.length && reps.every((r) => r >= cur.hi))
+          return out(pw + step, pw, "up", "down", `Llegaste a ${cur.hi} en todas: subí ${fmtNum(step)} ${unit} y volvé a ${cur.lo} reps`);
+        return out(pw, pw, "reps", "up", reps.length
+          ? `Hiciste ${reps.join("·")}: buscá ${cur.hi} en todas antes de subir peso`
+          : `Buscá ${cur.hi} reps en todas las series antes de subir peso`);
+      }
+      return out(pw, pw, "same", "same", `Igual que ${wk(prev.week)}`);
+    }
+    if (week === 0 && lastS1) {
+      if (cur && lastS1.repsArr.length && !lastS1.repsArr.every((r) => r >= cur.hi))
+        return out(lastS1.weight, lastS1.weight, "reps", "up", `En S1 del ciclo ${lastS1.cycle} hiciste ${lastS1.repsArr.join("·")}: buscá ${cur.hi} en todas`);
+      return out(up(lastS1.weight), lastS1.weight, "up", repsDir(cur, repRange(lastS1Target)), `S1 del ciclo ${lastS1.cycle} (${fmtNum(lastS1.weight)} ${unit}) + 5%`);
+    }
+    if (max) {
+      const r = out(roundStep(max.weight * 0.9, unit), max.weight, "calibrate", "same", "~90% de tu máximo: ajustalo con la 1ª serie según el RPE");
+      r.goal = "Calibrá el peso";
+      return r;
+    }
     return null;
+  }
+
+  // ---------- Índice de ejercicios (para el historial) ----------
+
+  // Un ejercicio por nombre (sin tildes ni mayúsculas), en todos los ciclos guardados.
+  function exerciseIndex(routines, allData, activeCycle) {
+    const map = new Map();
+    for (const c of Object.keys(routines).map(Number).sort((a, b) => b - a)) {
+      const r = routines[c], data = allData[c] || {};
+      r.days.forEach((d, di) => d.exercises.forEach((ex, idx) => {
+        const names = new Set([effectiveName(data, d.key, idx, ex), ...[0, 1, 2, 3].map((w) => slotName(data, d.key, idx, ex, w))]);
+        for (const name of names) {
+          const key = normName(name);
+          if (!map.has(key)) map.set(key, { key, name, pattern: ex.pattern, type: d.type, noWeight: !!ex.noWeight, days: new Set(), cycles: new Set(), order: Infinity });
+          const e = map.get(key);
+          e.cycles.add(c);
+          if (c === activeCycle) { e.days.add(d.key); e.order = Math.min(e.order, di * 100 + idx); }
+        }
+      }));
+    }
+    const list = [...map.values()];
+    for (const e of list) {
+      e.records = collectRecords(routines, allData, e.name);
+      e.max = findMax(e.records);
+      e.last = lastRecord(e.records);
+      e.group = e.pattern && /^core/i.test(e.pattern) ? "core" : e.type;
+    }
+    return list.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, "es"));
   }
 
   // ---------- Fechas y selección automática ----------
@@ -233,6 +357,8 @@
             const rec = data[slotKey(d.key, idx, w)] || {};
             return {
               week: routine.weekShort[w],
+              exercise: slotName(data, d.key, idx, ex, w),
+              altUsed: !!rec.altUsed,
               target: ex.targets[w],
               weight: rec.weight || "",
               weightMode: rec.weightMode || null,
@@ -268,9 +394,9 @@
   root.Gluteo = {
     DAY_KEYS, BARS, STEP,
     targetSetCount, isDeloadTarget, hasPlusWeight, validateRoutine,
-    dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, normName,
+    dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, normName,
     parseNum, roundStep, fmtNum, barWeight, calcBar, repsText,
-    collectRecords, findMax, prevWeight, suggest,
+    collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
     weekFromStart, autoDayKey,
     buildCycleExport, buildBackup, checkBackup,
   };
