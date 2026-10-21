@@ -95,8 +95,8 @@
         },
         {
           "pattern": null,
-          "name": "Press inclinado",
-          "alt": "Press inclinado con mancuernas",
+          "name": "Press banca inclinado con mancuernas",
+          "alt": null,
           "rest": "60-75s",
           "targets": ["3x10-12", "3x10-12 (+peso)", "3x8-10", "2x10 @RPE6"],
           "sets": [3, 3, 3, 2]
@@ -119,7 +119,7 @@
         },
         {
           "pattern": null,
-          "name": "Press francés",
+          "name": "Press francés con mancuerna",
           "alt": null,
           "rest": "45-60s",
           "targets": ["3x12", "3x10-12 (+peso)", "3x12-15", "2x12 (liviano)"],
@@ -248,7 +248,7 @@
         },
         {
           "pattern": null,
-          "name": "Curl martillo o inclinado",
+          "name": "Curl martillo",
           "alt": null,
           "rest": "45-60s",
           "targets": ["3x12 c/lado", "3x10-12 (+peso)", "3x12-15", "2x12 c/lado (liviano)"],
@@ -316,7 +316,7 @@
         },
         {
           "pattern": "Accesorio",
-          "name": "Elevación de talones (gemelos)",
+          "name": "Elevación de talones de pie",
           "alt": "Elevación de talones con mancuernas",
           "rest": "45-60s",
           "targets": ["4x15-20", "4x15-20", "4x20-25", "2x15 (liviano)"],
