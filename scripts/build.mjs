@@ -11,7 +11,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP = path.join(ROOT, "app");
 const DIST = path.join(ROOT, "dist");
 const RUTINA = path.join(ROOT, "rutinas", "ciclo-actual.json");
-const NOT_PRECACHED = new Set(["sw.js", "_headers"]);
+// index.html no se precarga por su nombre: Cloudflare lo redirige a "./", que sí se precarga.
+const NOT_PRECACHED = new Set(["sw.js", "_headers", "404.html", "index.html"]);
 
 async function walk(dir, base = dir) {
   const out = [];
@@ -50,7 +51,7 @@ const out = sw
   .replace('const VERSION = "dev"; // build:version', `const VERSION = "${version}"; // build:version`)
   .replace("const ASSETS = []; // build:assets", `const ASSETS = ${JSON.stringify(assets)}; // build:assets`);
 // Trampa conocida (CLAUDE.md §6.3 #2): comprobar que el reemplazo realmente ocurrió.
-if (!out.includes(`"${version}"`) || !out.includes('"./index.html"')) {
+if (!out.includes(`"${version}"`) || !out.includes('const ASSETS = ["./",')) {
   console.error("✗ No se pudo versionar sw.js (¿cambiaron las líneas marcadas con build:?).");
   process.exit(1);
 }

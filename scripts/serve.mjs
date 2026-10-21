@@ -13,6 +13,8 @@ const TYPES = {
 
 createServer(async (req, res) => {
   let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  // Igual que Cloudflare Pages: /index.html redirige a /.
+  if (p.endsWith("/index.html")) { res.writeHead(308, { Location: p.slice(0, -"index.html".length) }).end(); return; }
   if (p.endsWith("/")) p += "index.html";
   const file = path.join(DIST, p);
   if (!file.startsWith(DIST)) { res.writeHead(403).end(); return; }

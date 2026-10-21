@@ -53,8 +53,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes("/rutinas/")) { event.respondWith(networkFirst(req)); return; }
+  // Siempre "./": Cloudflare redirige /index.html → / (308), y Safari rechaza navegar con una redirección cacheada.
   if (req.mode === "navigate") {
-    event.respondWith(caches.match("./index.html").then((hit) => hit || fetch(req)));
+    event.respondWith(caches.match("./").then((hit) => hit || fetch(req)));
     return;
   }
   event.respondWith(cacheFirst(req));
