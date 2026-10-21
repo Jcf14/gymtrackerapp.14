@@ -47,7 +47,6 @@
     histFilter: "all",
     histEx: null,       // clave del ejercicio abierto en el historial
     sheet: false,       // false | "settings" | "glossary"
-    glossaryTerms: null,
     sheetFx: false,     // animar la entrada de la hoja en el próximo render
     fx: { view: true }, // efectos para el próximo render
   };
@@ -154,17 +153,6 @@
     { id: "alternativa", term: "Alternativa", text: "Ejercicio de reemplazo si la máquina o la barra están ocupadas. \"Usar esta semana\" lo marca solo en esa semana; \"Usar en todo el ciclo\" cambia el nombre en las 4 semanas." },
   ];
 
-  function glossaryFor(ex, week) {
-    const t = ex.targets[week];
-    const ids = ["rango", "sugerido", "maximo"];
-    if (/RPE/i.test(t)) ids.unshift("rpe", "reserva");
-    if (G.hasPlusWeight(t)) ids.push("peso");
-    if (week === 3) ids.push("descarga");
-    if (/puls/i.test(t)) ids.push("pulsos");
-    if (/\+\s*1\s*x/i.test(t)) ids.push("rematado");
-    if (/c\/(pierna|lado)/i.test(t)) ids.push("lado");
-    return ids;
-  }
 
   // ---------- Ayudas de render ----------
 
@@ -369,7 +357,7 @@
           <div class="goal">${esc(sug.goal)}</div>
           <p class="why">${esc(sug.text)}</p>
         </div>`
-      : `<div class="insight empty">
+      : `<div class="insight none">
           <div><div class="label">${icon("target")}Sugerido para hoy</div><div class="val">Calibrá con la 1ª serie</div></div>
           <p class="why">Todavía no hay registros de este ejercicio: elegí un peso que te deje en el RPE pedido.</p>
         </div>`;
@@ -412,9 +400,7 @@
       ${facts}
       <div class="tools">
         ${showAlt ? `<button class="tool-btn alt-btn${d.altOpen || altUsed ? " on" : ""}" data-action="toggle-alt" data-k="${k}">${icon("swap")}${altUsed ? "Usando alt." : "Alternativa"}</button>` : ""}
-        <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>
-        <button class="tool-btn glossary-btn" data-action="open-glossary" data-terms="${glossaryFor(ex, w).join(",")}">${icon("info")}¿Qué es?</button>
-      </div>
+        <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>      </div>
       ${altBox}
       ${editBox}
       <div class="field">
@@ -542,7 +528,7 @@
         <span class="label">${icon("trophy")}Máximo actual</span>
         ${m ? `<span class="pr-hero-val num">${fmt(m.weight)} <small>${u}</small>${m.topReps ? ` <span>× ${m.topReps}</span>` : ""}</span>
           <span class="sub">${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
-          : `<span class="pr-hero-val num empty">—</span><span class="sub">Todavía no hay pesos registrados.</span>`}
+          : `<span class="pr-hero-val num none">—</span><span class="sub">Todavía no hay pesos registrados.</span>`}
       </div>
       ${prs.length > 1 ? `<h2 class="section-title">Récords</h2><ul class="pr-list">${prRows}</ul>` : ""}
       <h2 class="section-title">Sesiones <span class="muted">${sessions.length}</span></h2>
@@ -569,11 +555,8 @@
   }
 
   function renderGlossary() {
-    const focus = S.glossaryTerms;
-    const items = focus ? GLOSSARY.filter((g) => focus.includes(g.id)) : GLOSSARY;
     return `${sheetHead("Glosario")}
-      ${focus ? `<p class="note">Términos de este ejercicio. <button class="link-btn glossary-all-btn" data-action="open-glossary">Ver todos</button></p>` : ""}
-      <dl class="glossary">${items.map((g) => `<div class="gl-item"><dt>${esc(g.term)}</dt><dd>${esc(g.text)}</dd></div>`).join("")}</dl>`;
+      <dl class="glossary">${GLOSSARY.map((g) => `<div class="gl-item"><dt>${esc(g.term)}</dt><dd>${esc(g.text)}</dd></div>`).join("")}</dl>`;
   }
 
   function renderSettings() {
@@ -847,7 +830,7 @@
       if (!saveData()) return;
       S.drafts[k].altOpen = false; render(); toast("Alternativa en todo el ciclo · se deshace con Editar nombre → Restablecer");
     },
-    "open-glossary"(el) { S.glossaryTerms = el.dataset.terms ? el.dataset.terms.split(",") : null; S.sheet = "glossary"; S.sheetFx = true; renderSheet(); },
+    "open-glossary"() { S.sheet = "glossary"; S.sheetFx = true; renderSheet(); },
     "open-settings"() { S.sheet = "settings"; S.sheetFx = true; renderSheet(); },
     "close-settings"() { S.sheet = false; renderSheet(); },
     "set-theme"(el) { S.theme = el.dataset.theme; store.set(KEYS.theme, S.theme); applyTheme(); renderSheet(); },

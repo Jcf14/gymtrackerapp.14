@@ -243,7 +243,7 @@ main { max-width: 600px; margin: 0 auto; padding: 8px 16px 16px; }
 }
 .insight.up { background: linear-gradient(135deg, var(--ok-soft), var(--primary-soft)); }
 .insight.reps { background: linear-gradient(135deg, var(--gold-soft), var(--primary-soft)); }
-.insight .label { font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 5px; }
+.insight .label { margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 5px; }
 .insight .label .ic { width: 14px; height: 14px; color: var(--lower); }
 .insight .val { font-family: var(--display); font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .insight .val small { font-size: 15px; font-weight: 600; color: var(--text-2); }
@@ -253,7 +253,8 @@ main { max-width: 600px; margin: 0 auto; padding: 8px 16px 16px; }
 .insight .delta .ic { width: 12px; height: 12px; stroke-width: 2.6; }
 .insight .goal { grid-column: 1 / -1; font-size: 14px; font-weight: 700; }
 .insight .why { grid-column: 1 / -1; font-size: 13px; color: var(--text-2); line-height: 1.4; }
-.insight.empty .val { font-size: 18px; font-family: var(--body); font-weight: 600; color: var(--text-2); }
+.insight.none { grid-template-columns: 1fr; }
+.insight.none .val { margin-top: 2px; font-size: 17px; font-family: var(--body); font-weight: 700; line-height: 1.3; color: var(--text); }
 .use-sug-btn {
   grid-row: 1 / span 2; grid-column: 2; align-self: center; border: 0; border-radius: 99px; padding: 9px 16px;
   background: var(--surface); color: var(--lower); font-size: 14px; font-weight: 700; box-shadow: var(--shadow-1);
@@ -372,7 +373,7 @@ textarea.text-input { resize: none; min-height: 52px; }
 .pr-hero-val { position: relative; font-size: 52px; font-weight: 700; line-height: 1; margin-top: 4px; }
 .pr-hero-val small { font-size: 20px; font-weight: 600; opacity: .75; }
 .pr-hero-val span { font-size: 30px; font-weight: 600; }
-.pr-hero-val.empty { opacity: .5; }
+.pr-hero-val.none { opacity: .5; }
 .pr-hero .sub { position: relative; font-size: 13px; color: rgba(255, 255, 255, .75); }
 .section-title { display: flex; align-items: baseline; gap: 6px; margin: 28px 4px 10px; font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
 .section-title .muted { font-size: 14px; font-weight: 500; }

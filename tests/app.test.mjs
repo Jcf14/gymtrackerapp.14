@@ -254,18 +254,16 @@ test("alternativa: usar esta semana, volver, y usar en todo el ciclo", async () 
   assert.deepEqual(t.errors, []);
 });
 
-test("glosario: botón general y términos del ejercicio", async () => {
+test("glosario: solo desde el botón ⓘ del encabezado", async () => {
   const t = await boot();
   t.click(".glossary-top-btn");
   assert.ok(t.$$(".gl-item").length >= 10);
   assert.match(t.$("#sheet").textContent, /RPE/);
   t.click(".close-settings-btn");
-  t.goTo(2, "A"); t.openCard(0); t.click(".glossary-btn");
-  const terms = t.$$(".gl-item dt").map((e) => e.textContent);
-  assert.ok(terms.includes("RPE") && terms.some((x) => /rematado/.test(x)));
-  assert.ok(!terms.includes("Pulsos"));
-  t.click(".glossary-all-btn");
-  assert.ok(t.$$(".gl-item").length >= 10);
+  assert.ok(t.$("#sheet").hidden);
+  t.goTo(2, "A"); t.openCard(0);
+  assert.equal(t.$(".glossary-btn"), null, "las tarjetas ya no tienen botón de glosario");
+  assert.equal(t.$$(".tools .tool-btn").length, 2);
   assert.deepEqual(t.errors, []);
 });
 
