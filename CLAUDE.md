@@ -303,7 +303,7 @@ Siempre:
 - **Historial:** lista de ejercicios de **todos los ciclos**, con buscador (ignora tildes) y filtros Todos / Pierna / Superior / Core. Cada fila muestra solo el máximo actual (peso × reps) y su fecha. Al tocar: máximo actual, **récords anteriores** (cada vez que se superó el máximo: más peso, o mismo peso con más reps) y todas las sesiones con sus notas.
 - **Alternativa:** "Usar esta semana" marca `altUsed` en ese registro (el peso cuenta para la alternativa, no para el original); "Usar en todo el ciclo" crea un override de nombre (se deshace con Renombrar → Restablecer).
 - **Glosario:** solo desde el botón ⓘ del encabezado (se sacó de cada tarjeta a pedido). Incluye RPE, reps en reserva, rango, semanas, descarga, (+peso), sugerido, máximo, pulsos, rematado, c/lado, por lado/total, alternativa. Textos sacados de la sección 3; si se agrega un término nuevo a las rutinas, sumarlo a `GLOSSARY` en app.js.
-- **Ajustes:** apariencia (Claro por defecto / Oscuro / Automático), unidad lb/kg (solo cambia etiquetas; no convierte valores guardados) y exportar datos.
+- **Ajustes:** apariencia (Claro por defecto / Oscuro / Automático), unidad **por defecto** lb/kg; cada ejercicio tiene su selector lb | kg junto al peso: al cambiarlo convierte el peso cargado (1 kg = 2,20462 lb, redondeo a 0,5), recuerda la elección, y siempre muestra la equivalencia ("≈ 97,5 kg"). Máximos, récords y sugerencias comparan en lb aunque se mezclen unidades; la calculadora usa la barra en la unidad del ejercicio (35 lb / 15 kg) y exportar datos.
 - **Aviso flotante ("toast")** al guardar: tiene que sobrevivir al re-render.
 - **Offline primero:** todo se guarda al instante en el dispositivo.
 
@@ -312,7 +312,8 @@ Siempre:
 Todos los valores se guardan como JSON (`JSON.stringify`).
 
 - `gluteo_tracker_ciclo-<N>` → un objeto por ciclo con:
-  - `"<día>_<idxEjercicio>_w<semana0-3>"` → `{ weight (string, peso total), weightMode ("perSide"|"total"), perSideDisplay (número o null), note, completed (bool), reps (array de strings), repsSame (bool), repsSameValue, altUsed (bool, se hizo la alternativa esa semana), savedAt (ISO o null) }`
+  - `"<día>_<idxEjercicio>_w<semana0-3>"` → `{ weight (string, peso total), weightMode ("perSide"|"total"), perSideDisplay (número o null), note, completed (bool), reps (array de strings), repsSame (bool), repsSameValue, altUsed (bool, se hizo la alternativa esa semana), unit ("lb"|"kg": la del peso guardado; si falta, `unitDefault` de la rutina), savedAt (ISO o null) }`
+  - `"unit_<día>_<idxEjercicio>"` → `"lb"` | `"kg"`: unidad elegida para ese ejercicio en el ciclo (si no hay, la unidad por defecto).
   - `"ovr_<día>_<idxEjercicio>"` → `{ name, savedAt }` (`name: null` = override borrado).
 - `gluteo_rutinas` → `{ "<N>": rutina }`: cada rutina cargada (del servidor o importada) queda guardada, así se pueden consultar ciclos anteriores sin conexión. `gluteo_ciclo_activo` → N.
 - `gluteo_unit` (`lb`/`kg`) · `gluteo_theme` (`light`/`dark`/`auto`; por defecto `light`) · `gluteo_last_day` · `gluteo_last_week` (`{ cycle, week }`) · `gluteo_last_backup` (ISO).

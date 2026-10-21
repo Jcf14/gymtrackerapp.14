@@ -156,3 +156,22 @@ test("respaldo: arma y valida", () => {
   assert.ok(G.checkBackup({ type: "otra cosa" }).length);
   assert.ok(G.checkBackup({ ...b, routines: { 3: fixture() } }).length);
 });
+
+test("unidades: conversión y máximo comparando lb con kg", () => {
+  assert.equal(G.round1(G.convert(100, "kg", "lb")), 220.5);
+  assert.equal(G.roundHalf(G.convert(215, "lb", "kg")), 97.5);
+  const r = fixture();
+  const data = {
+    A_0_w0: { weight: "215", reps: ["8"], unit: "lb", savedAt: "2026-10-01T10:00:00Z" },
+    A_0_w1: { weight: "100", reps: ["6"], unit: "kg", savedAt: "2026-10-08T10:00:00Z" },   // 220,5 lb
+    A_0_w2: { weight: "99", reps: ["9"], unit: "kg", savedAt: "2026-10-15T10:00:00Z" },    // 218,3 lb
+  };
+  const recs = G.collectRecords({ 9: r }, { 9: data }, r.days[0].exercises[0].name);
+  const max = G.findMax(recs);
+  assert.equal(max.weight, 100); assert.equal(max.unit, "kg");
+  assert.equal(G.prHistory(recs).length, 2);
+  // registros sin unidad (anteriores) se leen con la unidad de la rutina
+  assert.equal(G.collectRecords({ 9: r }, { 9: { A_0_w0: { weight: "200" } } }, r.days[0].exercises[0].name)[0].unit, "lb");
+  const out = G.buildCycleExport(r, data, "lb");
+  assert.equal(out.days[0].exercises[0].weeks[1].unit, "kg");
+});

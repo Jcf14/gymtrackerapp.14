@@ -344,3 +344,33 @@ test("peso con − / + y aviso de nuevo récord", async () => {
   assert.ok(t.$$(".card")[1].classList.contains("fx-pr"));
   assert.deepEqual(t.errors, []);
 });
+
+test("lb/kg por ejercicio: convierte, guarda la unidad y muestra la equivalencia", async () => {
+  const t = await boot();
+  t.goTo(0, "A"); t.openCard(0);
+  assert.ok(t.$('.ex-unit-btn[data-unit="lb"]').classList.contains("active"), "lb por defecto");
+  t.type(".weight-input", "215");
+  assert.match(t.$(".conv-hint").textContent, /≈ 97,5 kg/);
+  t.click('.ex-unit-btn[data-unit="kg"]');
+  assert.equal(t.$(".weight-input").value, "97.5");
+  assert.equal(t.$(".weight-box .unit").textContent, "kg");
+  assert.match(t.toast(), /Convertido: 97,5 kg/);
+  t.click(".step-up-btn");
+  assert.equal(t.$(".weight-input").value, "100", "en kg el paso es 2,5");
+  t.click(".save-entry-btn");
+  const d = t.data();
+  assert.equal(d.A_0_w0.unit, "kg");
+  assert.equal(d.A_0_w0.weight, "100");
+  assert.equal(d.unit_A_0, "kg");
+  assert.match(t.$(".ex-weight").textContent, /100 kg · ≈ 220,5 lb/);
+  // la semana siguiente queda en kg y la sugerencia también
+  t.goTo(1, "A");
+  assert.match(t.$(".ex-sug").textContent, /102,5 kg/);
+  // otro ejercicio sigue en lb
+  t.openCard(1);
+  assert.ok(t.$('.card.open .ex-unit-btn[data-unit="lb"]').classList.contains("active"));
+  // la calculadora usa la barra en kg
+  t.openCard(0); t.click(".calc-toggle-btn");
+  assert.match(t.$(".calc-bar-btn").textContent, /Mujer 15/);
+  assert.deepEqual(t.errors, []);
+});

@@ -169,15 +169,28 @@
     "Menos peso": "Menos peso", "Calibrá el peso": "Calibrar",
   };
 
-  // Recomendación de una tarjeta de la rutina (o null).
-  function recFor(day, ex, idx, w, name) {
+  // ---------- Unidad por ejercicio (lb por defecto) ----------
+
+  const unitKey = (day, idx) => `unit_${day}_${idx}`;
+  const exUnit = (day, idx) => S.data[unitKey(day, idx)] || S.unit;
+  // Unidad con la que se muestra una tarjeta: la del borrador, la del registro guardado o la preferida.
+  function cardUnit(day, idx, k, rec) {
+    if (S.drafts[k]) return S.drafts[k].unit;
+    return rec && G.parseNum(rec.weight) > 0 ? G.recUnit(rec, routine()) : exUnit(day, idx);
+  }
+  // Un registro (o marca) expresado en otra unidad, redondeado a 0,5.
+  const inUnit = (r, u) => (r ? { ...r, weight: G.roundHalf(G.convert(r.weight, r.unit || "lb", u)), unit: u } : r);
+  const convTxt = (w, u) => `≈ ${fmt(G.round1(G.convert(w, u, G.otherUnit(u))))} ${G.otherUnit(u)}`;
+
+  // Recomendación de una tarjeta de la rutina (o null), en la unidad u.
+  function recFor(day, ex, idx, w, name, u) {
     if (ex.noWeight) return null;
     const r = routine();
     const records = G.collectRecords(S.routines, allData(), name);
     const k = G.slotKey(day.key, idx, w);
     const others = records.filter((x) => !(x.cycle === S.cycle && x.key === k));
-    const prev = G.prevWeight(S.data, day.key, idx, w, ex);
-    const lastS1 = G.lastCycleS1(others, S.cycle);
+    const prev = inUnit(G.prevWeight(S.data, day.key, idx, w, ex, r.unitDefault), u);
+    const lastS1 = inUnit(G.lastCycleS1(others, S.cycle), u);
     let lastS1Target = null;
     if (lastS1) {
       const p = G.parseSlotKey(lastS1.key), lr = S.routines[lastS1.cycle];
@@ -185,11 +198,11 @@
       lastS1Target = ld && ld.exercises[p.idx] ? ld.exercises[p.idx].targets[0] : null;
     }
     return {
-      max: G.findMax(records),
+      max: inUnit(G.findMax(records), u),
       rec: G.recommend({
         target: ex.targets[w], prevTarget: prev ? ex.targets[prev.week] : null, week: w, prev,
         prevRec: prev ? S.data[G.slotKey(day.key, idx, prev.week)] : null,
-        lastS1, lastS1Target, max: G.findMax(others), unit: S.unit, weekShort: r.weekShort,
+        lastS1, lastS1Target, max: inUnit(G.findMax(others), u), unit: u, weekShort: r.weekShort,
       }),
     };
   }
@@ -276,21 +289,25 @@
   function weightSummary(rec) {
     const w = rec ? G.parseNum(rec.weight) : NaN;
     if (!(w > 0)) return "";
-    const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? `<span class="side"> · ${fmt(rec.perSideDisplay)}/lado</span>` : "";
-    return `<span class="ex-weight"><span><b>${fmt(w)}</b> ${S.unit}</span>${side}</span>`;
+    const u = G.recUnit(rec, routine());
+    const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? ` · ${fmt(rec.perSideDisplay)}/lado` : "";
+    return `<span class="ex-weight"><span><b>${fmt(w)}</b> ${u}</span><span class="side">${side} · ${convTxt(w, u)}</span></span>`;
   }
 
-  function recBadge(rec) {
+  function recBadge(rec, u) {
     if (!rec) return "";
     const cls = rec.mode === "deload" ? "down" : rec.mode === "reps" ? "reps" : rec.mode === "calibrate" ? "cal" : rec.value > rec.base ? "up" : "flat";
     const pct = rec.mode !== "calibrate" && rec.pct ? `${pctTxt(rec.pct)} · ` : "";
-    return `<span class="ex-sug ${cls}"><span><b>${fmt(rec.value)}</b> ${S.unit}</span> <em>${icon(dirIcon(rec))}${pct}${esc(SHORT_GOAL[rec.goal] || rec.goal)}</em></span>`;
+    return `<span class="ex-sug ${cls}"><span><b>${fmt(rec.value)}</b> ${u}</span> <em>${icon(dirIcon(rec))}${pct}${esc(SHORT_GOAL[rec.goal] || rec.goal)}</em></span>`;
   }
 
   function draftFor(k, rec, sets) {
     if (!S.drafts[k]) {
+      const p = G.parseSlotKey(k);
+      const unit = cardUnit(p.day, p.idx, k, rec);
       rec = rec || {};
       S.drafts[k] = {
+        unit,
         weight: rec.weight || "",
         weightMode: rec.weightMode || "total",
         perSideDisplay: rec.perSideDisplay ?? null,
@@ -321,8 +338,9 @@
     const altUsed = !!(rec && rec.altUsed && ex.alt);
     const open = S.open.has(idx);
     const done = !!(rec && rec.completed);
-    const info = recFor(day, ex, idx, w, name);
-    const right = weightSummary(rec) || (info && info.rec ? recBadge(info.rec) : "");
+    const u = cardUnit(day.key, idx, k, rec);
+    const info = recFor(day, ex, idx, w, name, u);
+    const right = weightSummary(rec) || (info && info.rec ? recBadge(info.rec, u) : "");
     const tagTxt = altUsed ? "alternativa" : name !== ex.name ? "editado" : "";
     const maxTxt = info && info.max ? `<span class="ex-max">${icon("trophy")}${fmt(info.max.weight)}${info.max.topReps ? `×${info.max.topReps}` : ""}</span>` : "";
     const head = `<div class="card-head" data-action="toggle-card" data-idx="${idx}">
@@ -339,9 +357,10 @@
   }
 
   function renderCardBody(day, ex, idx, k, rec, name, info) {
-    const w = S.week, u = S.unit;
+    const w = S.week;
     const sets = ex.sets[w];
     const d = draftFor(k, rec, sets);
+    const u = d.unit;
     const baseName = G.effectiveName(S.data, day.key, idx, ex);
     const altUsed = !!(rec && rec.altUsed && ex.alt);
     const showAlt = ex.alt && G.normName(baseName) !== G.normName(ex.alt);
@@ -392,19 +411,23 @@
       : `<div class="reps-grid">${Array.from({ length: sets }, (_, i) =>
           `<label class="rep-cell"><span>Serie ${i + 1}</span><input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}" placeholder="–" aria-label="Reps serie ${i + 1}"></label>`).join("")}</div>`;
 
-    const sideHint = d.weightMode === "perSide" && d.perSideDisplay != null
-      ? `<span class="perside-hint">= ${fmt(d.perSideDisplay)} ${u} por lado + barra</span>` : "<span></span>";
+    const wNow = G.parseNum(d.weight);
+    const hints = `<span class="weight-hints">${d.weightMode === "perSide" && d.perSideDisplay != null
+      ? `<span class="perside-hint">${fmt(d.perSideDisplay)} ${u} por lado + barra · </span>` : ""}<span class="conv-hint">${wNow > 0 ? convTxt(wNow, u) : ""}</span></span>`;
+    const unitSeg = `<div class="seg mini unit-toggle" role="group" aria-label="Unidad de este ejercicio">${["lb", "kg"].map((x) =>
+      `<button class="seg-btn ex-unit-btn${u === x ? " active" : ""}" data-action="set-ex-unit" data-unit="${x}" data-k="${k}">${x}</button>`).join("")}</div>`;
 
     return `<div class="card-body${FX.opened === idx ? " fx-open" : ""}">
       ${insight}
       ${facts}
       <div class="tools">
         ${showAlt ? `<button class="tool-btn alt-btn${d.altOpen || altUsed ? " on" : ""}" data-action="toggle-alt" data-k="${k}">${icon("swap")}${altUsed ? "Usando alt." : "Alternativa"}</button>` : ""}
-        <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>      </div>
+        <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>
+      </div>
       ${altBox}
       ${editBox}
       <div class="field">
-        <div class="field-head"><span class="field-label">Peso${ex.noWeight ? " (opcional)" : ""}</span></div>
+        <div class="field-head"><span class="field-label">Peso${ex.noWeight ? " (opcional)" : ""}</span>${unitSeg}</div>
         <div class="stepper">
           <button class="step-btn step-down-btn" data-action="step-weight" data-dir="-1" data-k="${k}" aria-label="Bajar peso">−</button>
           <div class="weight-box">
@@ -413,7 +436,7 @@
           </div>
           <button class="step-btn step-up-btn" data-action="step-weight" data-dir="1" data-k="${k}" aria-label="Subir peso">+</button>
         </div>
-        <div class="weight-extra">${sideHint}
+        <div class="weight-extra">${hints}
           ${ex.noWeight ? "" : `<button class="calc-toggle-btn" data-action="toggle-calc" data-k="${k}">${icon("calc")}${d.calcOpen ? "Cerrar calculadora" : "Calcular con barra"}</button>`}</div>
         ${d.calcOpen && !ex.noWeight ? renderCalc(k, d) : ""}
       </div>
@@ -431,7 +454,7 @@
   }
 
   function renderCalc(k, d) {
-    const u = S.unit;
+    const u = d.unit;
     const bars = [["women", `Mujer ${G.BARS.women[u]}`], ["men", `Hombre ${G.BARS.men[u]}`], ["custom", "Otra"]];
     const modes = [["perSide", "Por lado"], ["total", "Total"]];
     return `<div class="calc">
@@ -447,7 +470,7 @@
   }
 
   function calcResult(d) {
-    const bar = G.barWeight(d.calcBar, S.unit, d.calcCustom);
+    const bar = G.barWeight(d.calcBar, d.unit, d.calcCustom);
     const v = G.parseNum(d.calcValue);
     if (!(bar >= 0) || !(v >= 0)) return null;
     return G.calcBar(d.calcMode, v, bar);
@@ -456,8 +479,8 @@
   function calcResultText(d) {
     const res = calcResult(d);
     if (!res) return d.calcBar === "custom" && !(G.parseNum(d.calcCustom) >= 0) ? "Ingresá el peso de la barra" : "Ingresá el peso";
-    if (d.calcMode === "perSide") return `Total: ${fmt(res.total)} ${S.unit}`;
-    return res.perSide < 0 ? "El total es menor que la barra" : `Por lado: ${fmt(res.perSide)} ${S.unit}`;
+    if (d.calcMode === "perSide") return `Total: ${fmt(res.total)} ${d.unit}`;
+    return res.perSide < 0 ? "El total es menor que la barra" : `Por lado: ${fmt(res.perSide)} ${d.unit}`;
   }
 
   // ---------- Historial (por ejercicio, en todos los ciclos) ----------
@@ -492,7 +515,7 @@
       const sub = [e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"), days ? `Día ${days}` : ""].filter(Boolean).join(" · ");
       const right = e.noWeight && !m
         ? `<span class="hl-none">${e.last ? fmtDate(e.last.date) : "Sin peso"}</span>`
-        : m ? `<span class="hl-max"><b>${fmt(m.weight)}</b> ${S.unit}${m.topReps ? ` × ${m.topReps}` : ""}</span><span class="hl-date">${fmtDate(m.date)}</span>`
+        : m ? `<span class="hl-max"><b>${fmt(m.weight)}</b> ${m.unit}${m.topReps ? ` × ${m.topReps}` : ""}</span><span class="hl-date">${fmtDate(m.date)}</span>`
           : `<span class="hl-none">Sin registros</span>`;
       return `<li><button class="hist-item ${e.group}" data-action="hist-open" data-ex="${esc(e.key)}">
         <span class="hist-dot"></span>
@@ -502,23 +525,23 @@
   }
 
   function renderHistDetail(e) {
-    const u = S.unit;
     const prs = G.prHistory(e.records).reverse();
     const sessions = [...e.records].sort((a, b) => (a.date && b.date ? (a.date < b.date ? 1 : -1) : b.cycle - a.cycle || b.week - a.week));
     const m = e.max;
     const where = (r) => `Ciclo ${r.cycle} · ${esc(splitWeek(r.weekShort)[0])} · Día ${esc(r.day)}`;
     const prRows = prs.map((r, i) => {
       const before = prs[i + 1];
-      const delta = before ? (r.weight > before.weight ? `+${fmt(r.weight - before.weight)} ${u}` : `+${r.topReps - before.topReps} reps`) : "Primera";
+      const gain = before ? G.round1(r.weight - G.convert(before.weight, before.unit, r.unit)) : 0;
+      const delta = before ? (G.cmpW(r) > G.cmpW(before) ? `+${fmt(gain)} ${r.unit}` : `+${r.topReps - before.topReps} reps`) : "Primera";
       return `<li class="pr-row${i === 0 ? " current" : ""}"><span class="pr-badge">${icon("trophy")}</span>
-        <span class="pr-w num"><b>${fmt(r.weight)}</b> ${u}${r.topReps ? ` × ${r.topReps}` : ""}</span>
+        <span class="pr-w num"><b>${fmt(r.weight)}</b> ${r.unit}${r.topReps ? ` × ${r.topReps}` : ""}</span>
         <span class="pr-delta">${i === 0 ? "Actual" : delta}</span>
         <span class="pr-meta">${fmtDate(r.date, { day: "numeric", month: "short", year: "numeric" })} · ${where(r)}</span></li>`;
     }).join("");
     const sessRows = sessions.map((r) => `<li class="sess-row">
         <div class="sess-top">
           <span class="sess-when"><span class="sess-date">${fmtDate(r.date, { day: "numeric", month: "short" })}</span><span class="sess-where">${where(r)}${r.altUsed ? " · alternativa" : ""}</span></span>
-          <span class="sess-w num"><b>${fmt(r.weight)}</b> ${u}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
+          <span class="sess-w num"><b>${fmt(r.weight)}</b> ${r.unit}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
           <span class="ok">${r.completed ? icon("check") : ""}</span></div>
         ${r.note ? `<div class="sess-note">${icon("note")}${esc(r.note)}</div>` : ""}</li>`).join("");
     return `<button class="back-btn hist-back-btn" data-action="hist-back">${icon("back")}Historial</button>
@@ -526,8 +549,8 @@
         <h1 class="page-title detail">${esc(e.name)}</h1></div>
       <div class="pr-hero">
         <span class="label">${icon("trophy")}Máximo actual</span>
-        ${m ? `<span class="pr-hero-val num">${fmt(m.weight)} <small>${u}</small>${m.topReps ? ` <span>× ${m.topReps}</span>` : ""}</span>
-          <span class="sub">${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
+        ${m ? `<span class="pr-hero-val num">${fmt(m.weight)} <small>${m.unit}</small>${m.topReps ? ` <span>× ${m.topReps}</span>` : ""}</span>
+          <span class="sub">${convTxt(m.weight, m.unit)} · ${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
           : `<span class="pr-hero-val num none">—</span><span class="sub">Todavía no hay pesos registrados.</span>`}
       </div>
       ${prs.length > 1 ? `<h2 class="section-title">Récords</h2><ul class="pr-list">${prRows}</ul>` : ""}
@@ -572,9 +595,9 @@
     return `${sheetHead("Ajustes")}
       <div class="group"><span class="eyebrow">Apariencia</span><div class="seg">${themes.map(([v, l]) =>
         `<button class="seg-btn theme-btn${S.theme === v ? " active" : ""}" data-action="set-theme" data-theme="${v}">${l}</button>`).join("")}</div></div>
-      <div class="group"><span class="eyebrow">Unidad</span><div class="seg">${units.map(([v, l]) =>
+      <div class="group"><span class="eyebrow">Unidad por defecto</span><div class="seg">${units.map(([v, l]) =>
         `<button class="seg-btn unit-btn${S.unit === v ? " active" : ""}" data-action="set-unit" data-unit="${v}">${l}</button>`).join("")}</div>
-        <p class="note">Solo cambia las etiquetas: no convierte los valores guardados.</p></div>
+        <p class="note">Para ejercicios sin unidad elegida. Cada ejercicio puede cambiarla con el selector lb | kg junto al peso; lo ya guardado no cambia.</p></div>
       <div class="group"><span class="eyebrow">Ciclos</span><div class="group-card">${cycles}
         <label class="list-row file-btn">${icon("upload")}<span class="grow">Importar rutina (JSON)</span>
           <input type="file" class="visually-hidden import-routine-input" accept=".json,application/json" data-change="import-routine"></label></div></div>
@@ -690,6 +713,7 @@
       repsSame: d.repsSame,
       repsSameValue: d.repsSame ? same : "",
       altUsed: !!prev.altUsed,
+      unit: d.unit,
       savedAt: new Date().toISOString(),
     };
     if (!saveData()) return false;
@@ -772,7 +796,7 @@
       d.perSideDisplay = res.perSide;
       d.calcOpen = false;
       render();
-      toast(`Peso: ${fmt(res.total)} ${S.unit}`);
+      toast(`Peso: ${fmt(res.total)} ${d.unit}`);
     },
     "use-suggestion"(el) {
       const d = S.drafts[el.dataset.k];
@@ -787,15 +811,15 @@
       if (!saveEntry(k)) return;
       S.open.delete(idx);
       const now = G.collectRecords(S.routines, allData(), name).find((r) => r.cycle === S.cycle && r.key === k);
-      const isPR = before && now && (now.weight > before.weight || (now.weight === before.weight && now.topReps > before.topReps));
+      const isPR = before && now && (G.cmpW(now) > G.cmpW(before) || (G.cmpW(now) === G.cmpW(before) && now.topReps > before.topReps));
       if (isPR) S.fx.pr = k;
       render();
-      if (isPR) toast(`🏆 ¡Nuevo récord! ${fmt(now.weight)} ${S.unit}${now.topReps ? ` × ${now.topReps}` : ""}`, "pr");
+      if (isPR) toast(`🏆 ¡Nuevo récord! ${fmt(now.weight)} ${now.unit}${now.topReps ? ` × ${now.topReps}` : ""}`, "pr");
       else toast("Guardado ✓");
     },
     "step-weight"(el) {
       const k = el.dataset.k, d = S.drafts[k];
-      const step = G.STEP[S.unit] || 5, dir = Number(el.dataset.dir);
+      const step = G.STEP[d.unit] || 5, dir = Number(el.dataset.dir);
       let cur = G.parseNum(d.weight);
       if (!(cur >= 0)) {
         const sug = el.closest(".card-body").querySelector(".use-sug-btn");
@@ -807,6 +831,20 @@
       box.querySelector(".weight-input").value = d.weight;
       const hint = box.querySelector(".perside-hint");
       if (hint) hint.remove();
+      box.querySelector(".conv-hint").textContent = cur > 0 ? convTxt(Math.max(0, cur), d.unit) : "";
+    },
+    "set-ex-unit"(el) {
+      const k = el.dataset.k, d = S.drafts[k], to = el.dataset.unit;
+      if (d.unit === to) return;
+      const { dayObj, idx } = exFromKey(k);
+      const w = G.parseNum(d.weight);
+      if (w > 0) d.weight = String(G.roundHalf(G.convert(w, d.unit, to)));
+      d.weightMode = "total"; d.perSideDisplay = null; d.calcValue = "";
+      d.unit = to;
+      S.data[unitKey(dayObj.key, idx)] = to;
+      if (!saveData()) return;
+      render();
+      toast(w > 0 ? `Convertido: ${fmt(G.parseNum(d.weight))} ${to}` : `Este ejercicio en ${to}`);
     },
     "hist-open"(el) { S.histEx = el.dataset.ex; S.fx.view = true; render(); window.scrollTo(0, 0); },
     "hist-back"() { S.histEx = null; S.fx.view = true; render(); },
@@ -877,8 +915,11 @@
     else d[f] = el.value;
     if (f === "weight") {
       d.weightMode = "total"; d.perSideDisplay = null;
-      const hint = el.closest(".card").querySelector(".perside-hint");
+      const card = el.closest(".card");
+      const hint = card.querySelector(".perside-hint");
       if (hint) hint.remove();
+      const wv = G.parseNum(el.value), conv = card.querySelector(".conv-hint");
+      if (conv) conv.textContent = wv > 0 ? convTxt(wv, d.unit) : "";
     }
     if (f === "calcValue" || f === "calcCustom") {
       const out = document.querySelector(`[data-calc-result="${k}"]`);

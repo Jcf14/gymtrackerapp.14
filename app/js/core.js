@@ -128,6 +128,20 @@
     return String(r).replace(".", ",");
   }
 
+  // ---------- Unidades: cada registro guarda la suya; se compara en lb ----------
+
+  const LB_PER_KG = 2.20462;
+  const otherUnit = (u) => (u === "kg" ? "lb" : "kg");
+  function convert(w, from, to) {
+    if (from === to) return w;
+    return to === "kg" ? w / LB_PER_KG : w * LB_PER_KG;
+  }
+  const toLb = (w, unit) => convert(w, unit || "lb", "lb");
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const roundHalf = (n) => Math.round(n * 2) / 2;
+  // Unidad de un registro: la guardada, o la de la rutina (registros anteriores a esta función).
+  const recUnit = (rec, routine) => (rec && rec.unit) || (routine && routine.unitDefault) || "lb";
+
   function barWeight(bar, unit, custom) {
     if (bar === "custom") return parseNum(custom);
     return BARS[bar] ? BARS[bar][unit] : NaN;
@@ -161,8 +175,9 @@
           const weight = rec ? parseNum(rec.weight) : NaN;
           if (!(weight > 0)) continue;
           const repsArr = repsNums(rec);
+          const unit = recUnit(rec, r);
           out.push({
-            cycle: Number(c), week: w, key: k, day: d.key, weight, reps: repsText(rec), repsArr,
+            cycle: Number(c), week: w, key: k, day: d.key, weight, unit, weightLb: toLb(weight, unit), reps: repsText(rec), repsArr,
             topReps: repsArr.length ? Math.max(...repsArr) : 0, date: rec.savedAt || null,
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed, weekShort: r.weekShort[w],
           });
@@ -179,11 +194,13 @@
   }
 
   // ¿r supera a best? Más peso, o el mismo peso con más reps.
-  const beats = (r, best) => !best || r.weight > best.weight || (r.weight === best.weight && r.topReps > best.topReps);
+  // Peso comparable (en lb, redondeado para que 100 kg y 220,5 lb no difieran por decimales).
+  const cmpW = (r) => round1(r.weightLb !== undefined ? r.weightLb : r.weight);
+  const beats = (r, best) => !best || cmpW(r) > cmpW(best) || (cmpW(r) === cmpW(best) && r.topReps > best.topReps);
 
   function findMax(records) {
     let best = null;
-    for (const r of [...records].sort(chrono)) if (beats(r, best) || (best && r.weight === best.weight && r.topReps === best.topReps)) best = r;
+    for (const r of [...records].sort(chrono)) if (beats(r, best) || (best && cmpW(r) === cmpW(best) && r.topReps === best.topReps)) best = r;
     return best;
   }
 
@@ -201,13 +218,13 @@
 
   // Última semana anterior (del mismo ciclo y ejercicio) con peso guardado.
   // Con ex, solo cuenta semanas en las que se hizo el mismo ejercicio (original o alternativa).
-  function prevWeight(data, day, idx, week, ex) {
+  function prevWeight(data, day, idx, week, ex, defaultUnit) {
     const name = ex ? normName(slotName(data, day, idx, ex, week)) : null;
     for (let w = week - 1; w >= 0; w--) {
       if (name && normName(slotName(data, day, idx, ex, w)) !== name) continue;
       const rec = data[slotKey(day, idx, w)];
       const weight = rec ? parseNum(rec.weight) : NaN;
-      if (weight > 0) return { weight, week: w };
+      if (weight > 0) return { weight, week: w, unit: (rec && rec.unit) || defaultUnit || "lb" };
     }
     return null;
   }
@@ -361,6 +378,7 @@
               altUsed: !!rec.altUsed,
               target: ex.targets[w],
               weight: rec.weight || "",
+              unit: rec.weight ? recUnit(rec, routine) : null,
               weightMode: rec.weightMode || null,
               perSide: rec.perSideDisplay ?? null,
               reps: rec.reps || [],
@@ -396,6 +414,7 @@
     targetSetCount, isDeloadTarget, hasPlusWeight, validateRoutine,
     dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, normName,
     parseNum, roundStep, fmtNum, barWeight, calcBar, repsText,
+    LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
     collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
     weekFromStart, autoDayKey,
     buildCycleExport, buildBackup, checkBackup,
