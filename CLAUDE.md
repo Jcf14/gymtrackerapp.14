@@ -1,4 +1,4 @@
-# CLAUDE.md — Glúteo Tracker (PWA personal + generador de rutinas)
+# CLAUDE.md — Gym Tracker (PWA personal + generador de rutinas)
 
 > Instrucciones permanentes del proyecto. Leelas completas antes de hacer cualquier cosa.
 > Idioma de trabajo: español, directo y cercano. Si un dato no está en este archivo ni en HISTORIAL.md, no lo inventes: preguntalo.
@@ -249,7 +249,7 @@ Cada ciclo es un archivo `rutinas/ciclo-N.json`. Se basa en el arreglo `DAYS` de
 - `sets[i]` debe coincidir con el primer número de `targets[i]` (`"4x8 @RPE7"` → 4). Si hay serie de rematado se suma: `"3x4-6 @RPE9 + 1x15-20"` → 4.
 - **Convenciones de texto que la app interpreta** en `targets`:
   - `(+peso)` → sugiere subir ~5 lb respecto de la semana anterior.
-  - `(liviano)`, `@RPE5-6` o `@RPE6` → semana de descarga: sugiere ~55% del peso de la semana previa.
+  - `(liviano)` (o un paréntesis que empiece así, ej. `(liviano/asistido)`), `@RPE5-6` o `@RPE6` → semana de descarga: sugiere ~55% del peso de la semana previa.
   - La S4 de cualquier ejercicio sin `noWeight` **debe** incluir una de esas marcas, o la sugerencia de descarga no se activa.
   - `c/pierna`, `c/lado` y `+ N pulsos` son solo descriptivos.
 - Las claves de día son `A`–`E` y no cambian. El orden de los ejercicios dentro de un día **es parte de la clave de almacenamiento** (`A_0_w0` = día A, ejercicio 0, semana 1): no reordenar ni insertar ejercicios a mitad de un ciclo. Un ciclo nuevo usa un espacio de almacenamiento nuevo.

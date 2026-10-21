@@ -1,4 +1,4 @@
-/* app.js — interfaz de Glúteo Tracker.
+/* app.js — interfaz de Gym Tracker.
    Todo se guarda al instante en localStorage; la red solo se usa para traer la rutina vigente.
    Los clics se resuelven por data-action (un único manejador): nada de selectores compartidos. */
 (function () {

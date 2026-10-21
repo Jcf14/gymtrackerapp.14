@@ -1,6 +1,6 @@
 {
-  "name": "Glúteo Tracker",
-  "short_name": "Glúteo",
+  "name": "Gym Tracker",
+  "short_name": "Gym Tracker",
   "description": "Registro personal de entrenamientos por ciclo.",
   "lang": "es",
   "start_url": "./",

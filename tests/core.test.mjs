@@ -16,7 +16,7 @@ test("cuenta series del target, incluida la de rematado", () => {
 });
 
 test("detecta marcas de descarga y (+peso)", () => {
-  for (const t of ["2x10 @RPE6", "2x10 @RPE5-6", "2x10 (liviano)"]) assert.ok(G.isDeloadTarget(t), t);
+  for (const t of ["2x10 @RPE6", "2x10 @RPE5-6", "2x10 (liviano)", "2x10 (liviano/asistido)"]) assert.ok(G.isDeloadTarget(t), t);
   for (const t of ["3x8 @RPE7", "3x6 @RPE6-7", "4x5 @RPE9"]) assert.ok(!G.isDeloadTarget(t), t);
   assert.ok(G.hasPlusWeight("4x6-8 @RPE8 (+peso)"));
   assert.ok(!G.hasPlusWeight("4x6-8 @RPE8"));

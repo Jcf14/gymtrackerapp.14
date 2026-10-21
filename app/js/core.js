@@ -1,4 +1,4 @@
-/* core.js — lógica pura de Glúteo Tracker (sin DOM).
+/* core.js — lógica pura de Gym Tracker (sin DOM).
    La usan app.js, los tests y scripts/validar-rutina.mjs. */
 (function (root) {
   "use strict";
@@ -19,7 +19,7 @@
   }
 
   function isDeloadTarget(target) {
-    return /\(liviano\)|@\s*RPE\s*5\s*-\s*6|@\s*RPE\s*6(?![\d.-])/i.test(String(target));
+    return /\(liviano[^)]*\)|@\s*RPE\s*5\s*-\s*6|@\s*RPE\s*6(?![\d.-])/i.test(String(target));
   }
 
   function hasPlusWeight(target) {
@@ -77,7 +77,7 @@
             else if (n !== ex.sets[i]) errs.push(`${w}: S${i + 1} sets=${ex.sets[i]} pero "${t}" indica ${n}`);
           });
           if (!ex.noWeight && !isDeloadTarget(ex.targets[3]))
-            errs.push(`${w}: la S4 necesita "(liviano)", "@RPE5-6" o "@RPE6" para la sugerencia de descarga`);
+            errs.push(`${w}: la S4 necesita "(liviano…)", "@RPE5-6" o "@RPE6" para la sugerencia de descarga`);
         }
       });
     });
@@ -254,7 +254,7 @@
   }
 
   function checkBackup(b) {
-    if (!b || b.type !== "gluteo-backup" || b.version !== 1) return ["No es un respaldo de Glúteo Tracker"];
+    if (!b || b.type !== "gluteo-backup" || b.version !== 1) return ["No es un respaldo de Gym Tracker"];
     if (!b.routines || typeof b.routines !== "object" || !b.data || typeof b.data !== "object") return ["Respaldo incompleto"];
     const errs = [];
     for (const [c, r] of Object.entries(b.routines)) {
