@@ -33,6 +33,8 @@
   - **C — Glúteo #2 (unilateral):** sentadilla búlgara o step-up · hip thrust con banda + pulsos · peso muerto convencional · abducción de pie (cable/máquina) · curl femoral sentado · plancha lateral.
   - **D — Tirón:** dominadas/jalón · remo con barra · remo unilateral con mancuerna · face pull · curl de bíceps · curl martillo/inclinado · Pallof press.
   - **E — Glúteo #3 (metabólico):** prensa o zancadas caminando · hip thrust unipodal / puente a 1 pierna · hiperextensión 45° · patada de glúteo en polea · aducción en máquina · elevación de talones · dead bug.
+- **Lo que realmente hice (confirmado el 21/10/2026, donde el plan daba opciones):** A: abducción en **máquina** (sentada) · B: **press inclinado** (en lugar de fondos) y **press francés** · C: **sentadilla búlgara** y abducción de pie en **polea** · D: **jalón al pecho** (no logro dominadas) y curl de bíceps con **mancuernas** · E: **prensa de piernas** y **hip thrust unipodal**. La sentadilla trasera fue en **Smith**. Curl martillo o inclinado, implemento del press inclinado/francés y tipo de elevación de talones: **no registrado** (pendiente de confirmar).
+- **Preferencia:** abducción bilateral → máquina; unilateral → polea (si algún ciclo propone unilateral en máquina, también sirve, pero tiene que quedar definido).
 - **Cómo me fue (datos que tengo):**
   - Completé las 3 semanas y la descarga. No reporté lesiones ni dolor.
   - **Hip thrust Día A:** ~95 lb/lado + barra (225 lb) en las primeras semanas (estimado); **S3 pico: 100 lb/lado + barra = 235 lb total, 4–6 reps @RPE9.** Serie de rematado 15–20 reps: se recomendó ~125 lb totales; el valor real no está registrado.
@@ -46,7 +48,7 @@
   - Pregunté si de verdad seguía a Bret: era una adaptación, no su programa literal. Al ver sus láminas de la "regla de tercios" se **reestructuró**: de un split cuádriceps/isquios/glúteo a **3 días de glúteo completos**, cada uno con los 4 patrones.
   - Se agregó una columna de **alternativa** para ejercicios que dependen de máquina o barra.
   - Aclaraciones de calibración: en "4×6–8 @RPE7" el peso se ajusta, las reps no; los pulsos van al final de la serie, no en cada rep; el hip thrust del Día C va ~15–20% más liviano que el del Día A.
-- **Archivos:** no hay `ciclo-1.json` (era previo al formato). Reconstruible desde `Rutina_Puente_3_Semanas.md/.xlsx`.
+- **Archivos:** `rutinas/ciclo-1.json` (reconstruido a posteriori desde `Rutina_Puente_3_Semanas.md` y `Semana_Descarga.xlsx`; nombres corregidos a lo que realmente hice y unificados con el ciclo 2). Pesos: se cargan en la app desde ⚙ → Ciclos → Ciclo 1.
 
 ---
 
@@ -55,6 +57,7 @@
 - **Estado:** en curso a 21/10/2026. **Semana actual: confirmar** (estaba cerca del cierre de S3 / inicio de la descarga).
 - **Enfoque:** igual que el ciclo 1 pero con **variantes nuevas** de cada patrón (para no repetir lo ya adaptado), y con 4 semanas: 3 de progresión + 1 de descarga. Se reforzaron cuádriceps, isquios y pantorrillas.
 - **Estructura:** la misma semana tipo (A lun, B mar, C mié, D jue, E sáb). Ver `rutinas/ciclo-2.json`.
+- **Nombres unificados (21/10/2026):** para conectar el historial entre ciclos, la variante pasó al campo `protocol`: Sentadilla en Smith (pies adelante) · Hip thrust con barra libre (pausa 2 s arriba, Día A / pulsos al final y ~15–20% menos peso, Día C) · Abducción en máquina sentada (torso inclinado adelante) · Jalón al pecho (agarre neutro, algo ancho). Además: "Abducción de pie en cable" → "en polea" y "Sentadilla búlgara (mancuernas)" → "Sentadilla búlgara".
 - **Ejercicios principales:**
   - **A:** sentadilla en Smith (pies adelante) · hip thrust con barra libre y pausa de 2 s · RDL a una pierna · abducción de pie en cable · zancada reversa con déficit · elevación de talones de pie · plancha con elevación de pierna.
   - **B:** press inclinado con mancuernas · press Arnold · press de pecho en máquina (agarre neutro) · elevación lateral en polea · tríceps overhead con cuerda · press francés · plancha con desplazamiento.

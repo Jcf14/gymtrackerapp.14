@@ -19,7 +19,7 @@
       "exercises": [
         {
           "pattern": "Squat/Lunge (vertical)",
-          "name": "Sentadilla trasera (back squat)",
+          "name": "Sentadilla en Smith",
           "alt": "Prensa de piernas",
           "rest": "90-120s",
           "targets": ["4x8 @RPE7", "4x6-8 @RPE8", "3x4-6 @RPE9", "2x8 @RPE5-6"],
@@ -27,7 +27,7 @@
         },
         {
           "pattern": "Thrust/Bridge",
-          "name": "Hip Thrust con barra",
+          "name": "Hip thrust con barra libre",
           "alt": "Hip thrust en máquina",
           "rest": "90-120s",
           "targets": ["4x8-10 @RPE7", "4x6-8 @RPE8", "3x4-6 @RPE9 + 1x15-20", "2x10 @RPE6"],
@@ -43,7 +43,7 @@
         },
         {
           "pattern": "Abducción (frontal)",
-          "name": "Abducción de cadera (máquina/cable)",
+          "name": "Abducción en máquina sentada",
           "alt": "Abducción de pie con banda",
           "rest": "45-60s",
           "targets": ["3x15-20", "3x15-20 (+peso)", "3x20-25", "2x15 (liviano)"],
@@ -87,7 +87,7 @@
         },
         {
           "pattern": null,
-          "name": "Press militar mancuernas",
+          "name": "Press militar con mancuernas",
           "alt": null,
           "rest": "75-90s",
           "targets": ["3x10", "3x8-10", "3x8", "2x10 @RPE6"],
@@ -95,7 +95,7 @@
         },
         {
           "pattern": null,
-          "name": "Fondos en paralelas / press inclinado",
+          "name": "Press inclinado",
           "alt": "Press inclinado con mancuernas",
           "rest": "60-75s",
           "targets": ["3x10-12", "3x10-12 (+peso)", "3x8-10", "2x10 @RPE6"],
@@ -103,7 +103,7 @@
         },
         {
           "pattern": null,
-          "name": "Elevaciones laterales",
+          "name": "Elevación lateral con mancuernas",
           "alt": null,
           "rest": "45-60s",
           "targets": ["3x15", "3x15", "3x15-20", "2x15 (liviano)"],
@@ -119,7 +119,7 @@
         },
         {
           "pattern": null,
-          "name": "Press francés o extensión copa",
+          "name": "Press francés",
           "alt": null,
           "rest": "45-60s",
           "targets": ["3x12", "3x10-12 (+peso)", "3x12-15", "2x12 (liviano)"],
@@ -147,7 +147,7 @@
       "exercises": [
         {
           "pattern": "Squat/Lunge (unilateral)",
-          "name": "Sentadilla búlgara o step-up",
+          "name": "Sentadilla búlgara",
           "alt": null,
           "rest": "75-90s",
           "targets": ["3x10-12 c/pierna", "3x8-10 c/pierna (+peso)", "3x8 c/pierna @RPE8-9", "2x10 c/pierna (liviano)"],
@@ -155,7 +155,8 @@
         },
         {
           "pattern": "Thrust/Bridge (lockout)",
-          "name": "Hip thrust con banda + pulsos en el tope",
+          "name": "Hip thrust con barra libre",
+          "protocol": "Banda + pulsos al final de la serie",
           "alt": "Hip thrust con barra (sin banda)",
           "rest": "75-90s",
           "targets": ["3x12 + 10 pulsos", "3x10 + 10 pulsos (+banda)", "3x8 @RPE8 + 15 pulsos", "2x12 sin pulsos (liviano)"],
@@ -171,7 +172,7 @@
         },
         {
           "pattern": "Abducción (transversal)",
-          "name": "Abducción de cadera de pie (cable/máquina)",
+          "name": "Abducción de pie en polea",
           "alt": "Abducción de pie con banda",
           "rest": "45-60s",
           "targets": ["3x15 c/lado", "3x15 c/lado (+peso)", "3x15-20 c/lado", "2x15 c/lado (liviano)"],
@@ -179,8 +180,8 @@
         },
         {
           "pattern": "Accesorio isquios",
-          "name": "Curl femoral (leg curl)",
-          "alt": "Curl femoral con balón suizo",
+          "name": "Curl femoral sentado",
+          "alt": "Puente de isquios (talones en banco)",
           "rest": "45-60s",
           "targets": ["3x12-15", "3x12-15", "3x15", "2x12 (liviano)"],
           "sets": [3, 3, 3, 2]
@@ -207,7 +208,7 @@
       "exercises": [
         {
           "pattern": null,
-          "name": "Dominadas / jalón al pecho",
+          "name": "Jalón al pecho",
           "alt": "Remo en máquina",
           "rest": "90-120s",
           "targets": ["4x8-10", "4x6-8 (+peso)", "3x6-8 @RPE8", "2x10 (asistido o liviano)"],
@@ -239,7 +240,7 @@
         },
         {
           "pattern": null,
-          "name": "Curl de bíceps (barra/mancuerna)",
+          "name": "Curl de bíceps con mancuernas",
           "alt": null,
           "rest": "45-60s",
           "targets": ["3x12", "3x12", "3x12-15", "2x12 (liviano)"],
@@ -275,7 +276,7 @@
       "exercises": [
         {
           "pattern": "Squat/Lunge (bilateral)",
-          "name": "Prensa de piernas o zancadas caminando",
+          "name": "Prensa de piernas",
           "alt": "Sentadilla goblet con mancuerna",
           "rest": "75-90s",
           "targets": ["3x10-12", "3x10-12 (+peso)", "3x8-10", "2x10 (liviano)"],
@@ -283,7 +284,7 @@
         },
         {
           "pattern": "Thrust/Bridge (unilateral)",
-          "name": "Hip thrust unipodal o puente de glúteo a una pierna",
+          "name": "Hip thrust unipodal",
           "alt": null,
           "rest": "75-90s",
           "targets": ["3x10-12 c/lado", "3x10-12 c/lado (+peso)", "3x12 c/lado", "2x12 c/lado (liviano)"],
@@ -307,7 +308,7 @@
         },
         {
           "pattern": "Aducción (antagonista)",
-          "name": "Aducción de cadera (máquina)",
+          "name": "Aducción en máquina",
           "alt": "Aducción isométrica con mancuerna entre piernas",
           "rest": "45-60s",
           "targets": ["3x15-20", "3x15-20 (+peso)", "3x20", "2x15 (liviano)"],

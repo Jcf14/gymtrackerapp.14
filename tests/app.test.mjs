@@ -497,3 +497,39 @@ test("las sugerencias del ciclo nuevo usan el historial del ciclo cerrado (S1 co
   assert.match(t2.$$(".card")[0].querySelector(".ex-sug").textContent, /210 lb/, "S1 anterior 200 + 5%");
   assert.deepEqual(t2.errors, []);
 });
+
+test("protocolo: se muestra y las sugerencias no mezclan protocolos distintos", async () => {
+  const cur = structuredClone(FIXTURE);
+  cur.days[0].exercises[0].name = "Hip thrust con barra libre";
+  cur.days[0].exercises[0].protocol = "Pausa 2 s arriba en cada rep";
+  const old = structuredClone(FIXTURE); old.cycle = 8; old.name = "Viejo";
+  old.days[0].exercises[0].name = "Hip thrust con barra libre";          // sin protocolo
+  const storage = {
+    gluteo_rutinas: JSON.stringify({ 8: old }),
+    "gluteo_tracker_ciclo-8": JSON.stringify({ A_0_w0: { weight: "300", reps: ["8"], unit: "lb" } }),
+  };
+  const t = await boot({ storage, routine: cur });
+  t.goTo(0, "A");
+  const card = t.$$(".card")[0];
+  assert.match(card.querySelector(".ex-proto").textContent, /Pausa 2 s/);
+  assert.equal(card.querySelector(".ex-sug"), null, "no sugiere desde el hip thrust sin pausa");
+  assert.equal(card.querySelector(".ex-max"), null);
+  // pero el historial los muestra juntos, con el protocolo en cada sesión
+  t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
+  t.click('.tab[data-tab="historial"]');
+  const items = t.$$(".hist-item").filter((b) => /Hip thrust con barra libre/.test(b.textContent));
+  assert.equal(items.length, 1, "un solo ejercicio en el historial");
+  t.click(items[0]);
+  assert.equal(t.$$(".sess-row").length, 2);
+  assert.match(t.$("#root").textContent, /Pausa 2 s arriba en cada rep/);
+  assert.deepEqual(t.errors, []);
+});
+
+test("un ciclo ya cargado se actualiza si su JSON cambió en el servidor", async () => {
+  const old = structuredClone(FIXTURE); old.cycle = 8; old.name = "Viejo";
+  const fixed = structuredClone(old); fixed.days[0].exercises[1].name = "Sentadilla búlgara corregida";
+  const t = await boot({ storage: { gluteo_rutinas: JSON.stringify({ 8: old }) }, published: [fixed, FIXTURE] });
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(JSON.parse(t.w.localStorage.getItem("gluteo_rutinas"))[8].days[0].exercises[1].name, "Sentadilla búlgara corregida");
+  assert.deepEqual(t.errors, []);
+});

@@ -65,6 +65,7 @@
         if (!(ex.pattern === null || isStr(ex.pattern))) errs.push(`${w}: pattern debe ser texto o null`);
         if (!(ex.alt === null || isStr(ex.alt))) errs.push(`${w}: alt debe ser texto o null`);
         if (!isStr(ex.rest)) errs.push(`${w}: falta rest`);
+        if (ex.protocol !== undefined && !isStr(ex.protocol)) errs.push(`${w}: protocol debe ser un texto (u omitirse)`);
         if (ex.noWeight !== undefined && ex.noWeight !== true) errs.push(`${w}: noWeight solo puede ser true (u omitirse)`);
         const okTargets = Array.isArray(ex.targets) && ex.targets.length === 4 && ex.targets.every(isStr);
         const okSets = Array.isArray(ex.sets) && ex.sets.length === 4 && ex.sets.every((n) => Number.isInteger(n) && n >= 1);
@@ -105,6 +106,11 @@
     const rec = data && data[slotKey(day, idx, week)];
     return rec && rec.altUsed && ex.alt ? ex.alt : effectiveName(data, day, idx, ex);
   }
+
+  // Protocolo de la semana (pausa, pulsos…): el del ejercicio, salvo que se haya hecho la alternativa.
+  const slotProtocol = (rec, ex) => (rec && rec.altUsed && ex.alt ? "" : ex.protocol || "");
+  // ¿Dos marcas se hicieron con el mismo protocolo? (las sugerencias solo comparan entre iguales)
+  const sameProtocol = (a, b) => normName(a || "") === normName(b || "");
 
   function normName(s) {
     return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -211,6 +217,7 @@
             cycle: Number(c), week: w, key: k, day: d.key, weight, unit, weightLb: toLb(weight, unit), reps: repsText(rec), repsArr,
             topReps: repsArr.length ? Math.max(...repsArr) : 0, date: dayDate(r, data, d.key, w) || rec.savedAt || null, savedAt: rec.savedAt || null,
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed, weekShort: r.weekShort[w],
+            protocol: slotProtocol(rec, ex), target: ex.targets[w],
           });
         }
       }));
@@ -362,7 +369,7 @@
           if (!(weight > 0) && !hasReps && !rec.completed && !rec.note) continue;
           sessions.push({
             cycle: routine.cycle, week: w, weekShort: routine.weekShort[w], day: d.key,
-            exercise: slotName(data, d.key, idx, ex, w), pattern: ex.pattern, type: d.type, noWeight: !!ex.noWeight, target: ex.targets[w],
+            exercise: slotName(data, d.key, idx, ex, w), protocol: slotProtocol(rec, ex), pattern: ex.pattern, type: d.type, noWeight: !!ex.noWeight, target: ex.targets[w],
             date: dayDate(routine, data, d.key, w) || rec.savedAt || null,
             weight: weight > 0 ? weight : null, unit: weight > 0 ? recUnit(rec, routine) : null,
             reps: rec.reps || [], repsSame: !!rec.repsSame, repsSameValue: rec.repsSameValue || "",
@@ -385,6 +392,7 @@
         cycle: x.cycle, week: x.week, key: `hist:${x.cycle}:${x.day}:${x.week}`, day: x.day, weight: x.weight, unit, weightLb: toLb(x.weight, unit),
         reps: repsText(x), repsArr, topReps: repsArr.length ? Math.max(...repsArr) : 0, date: x.date || null, savedAt: null,
         note: x.note || "", completed: !!x.completed, altUsed: !!x.altUsed, weekShort: x.weekShort, target: x.target, archived: true,
+        protocol: x.protocol || "",
       };
     });
   }
@@ -527,7 +535,7 @@
   root.Gluteo = {
     DAY_KEYS, BARS, STEP,
     targetSetCount, isDeloadTarget, hasPlusWeight, validateRoutine,
-    dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, normName,
+    dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, sameProtocol, normName,
     parseNum, roundStep, fmtNum, barWeight, calcBar, repsText,
     LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
     collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,

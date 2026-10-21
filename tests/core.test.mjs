@@ -217,3 +217,15 @@ test("cerrar ciclo: pasa todo al historial y verifica los máximos", () => {
   const idx = G.exerciseIndex({}, {}, null, res.hist);
   assert.equal(idx.find((e) => e.name.startsWith("Hip thrust")).max.weight, 235);
 });
+
+test("protocolo: opcional, texto, y la alternativa no lo hereda", () => {
+  const r = fixture();
+  r.days[0].exercises[0].protocol = "Pausa 2 s";
+  assert.deepEqual(plain(G.validateRoutine(r)), []);
+  r.days[0].exercises[0].protocol = 3;
+  assert.match(G.validateRoutine(r).join(), /protocol debe ser un texto/);
+  const ex = { protocol: "Pausa", alt: "Con mancuerna" };
+  assert.equal(G.slotProtocol({}, ex), "Pausa");
+  assert.equal(G.slotProtocol({ altUsed: true }, ex), "");
+  assert.ok(G.sameProtocol("Pausa 2 s", "pausa 2 S"));
+});

@@ -19,7 +19,8 @@
       "exercises": [
         {
           "pattern": "Squat/Lunge (vertical)",
-          "name": "Sentadilla en Smith (pies adelante)",
+          "name": "Sentadilla en Smith",
+          "protocol": "Pies adelante",
           "alt": "Prensa de piernas",
           "rest": "90-120s",
           "targets": ["4x8 @RPE7", "4x6-8 @RPE8", "3x4-6 @RPE9", "2x8 @RPE5-6"],
@@ -27,7 +28,8 @@
         },
         {
           "pattern": "Thrust/Bridge",
-          "name": "Hip thrust con barra libre (pausa 2s arriba)",
+          "name": "Hip thrust con barra libre",
+          "protocol": "Pausa 2 s arriba en cada rep",
           "alt": "Hip thrust con mancuerna en banco",
           "rest": "90-120s",
           "targets": ["4x8-10 @RPE7", "4x6-8 @RPE8", "3x4-6 @RPE9 + 1x15-20", "2x10 @RPE6"],
@@ -43,7 +45,7 @@
         },
         {
           "pattern": "Abducción (frontal)",
-          "name": "Abducción de pie en cable",
+          "name": "Abducción de pie en polea",
           "alt": "Abducción de pie con banda",
           "rest": "45-60s",
           "targets": ["3x15-20", "3x15-20 (+peso)", "3x20-25", "2x15 (liviano)"],
@@ -155,7 +157,7 @@
       "exercises": [
         {
           "pattern": "Squat/Lunge (unilateral)",
-          "name": "Sentadilla búlgara (mancuernas)",
+          "name": "Sentadilla búlgara",
           "alt": "Zancada estática (split squat) con mancuernas",
           "rest": "75-90s",
           "targets": ["3x10 c/pierna", "3x8-10 c/pierna (+peso)", "3x8 c/pierna @RPE8-9", "2x10 c/pierna (liviano)"],
@@ -163,7 +165,8 @@
         },
         {
           "pattern": "Thrust/Bridge (lockout)",
-          "name": "Hip thrust con barra libre + pulsos (más liviano que Día A)",
+          "name": "Hip thrust con barra libre",
+          "protocol": "Pulsos al final de la serie · ~15–20% menos peso que el Día A",
           "alt": "Frog pump con mancuerna (reps altas)",
           "rest": "75-90s",
           "targets": ["3x12 + 10 pulsos", "3x10 + 10 pulsos (+peso)", "3x8 @RPE8 + 15 pulsos", "2x12 sin pulsos (liviano)"],
@@ -179,7 +182,8 @@
         },
         {
           "pattern": "Abducción (transversal)",
-          "name": "Abducción en máquina sentada (torso inclinado adelante)",
+          "name": "Abducción en máquina sentada",
+          "protocol": "Torso inclinado adelante",
           "alt": "Abducción en máquina sentada normal",
           "rest": "45-60s",
           "targets": ["3x15-20", "3x15-20 (+peso)", "3x20-25", "2x15 (liviano)"],
@@ -223,7 +227,8 @@
         },
         {
           "pattern": null,
-          "name": "Jalón al pecho agarre neutro (algo ancho)",
+          "name": "Jalón al pecho",
+          "protocol": "Agarre neutro, algo ancho",
           "alt": "Dominadas",
           "rest": "90-120s",
           "targets": ["3x10", "3x8-10", "3x8", "2x10 (liviano/asistido)"],

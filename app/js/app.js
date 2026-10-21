@@ -137,6 +137,7 @@
     up: '<path d="M7 17 17 7M9 7h8v8"/>',
     down: '<path d="M7 7l10 10M17 9v8H9"/>',
     flat: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    pause: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
     calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     ban: '<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -158,6 +159,7 @@
     { id: "rematado", term: "Serie de rematado (+ 1x15-20)", text: "Una serie extra de 15–20 reps con ~40–50% menos peso que las series pesadas. Solo en el hip thrust del Día A en S3." },
     { id: "lado", term: "c/pierna · c/lado", text: "Las reps se cuentan para cada pierna o lado por separado." },
     { id: "barra", term: "Por lado / total", text: "Por lado = los discos de un solo lado, sin la barra. Total = 2 × lado + barra. Barra de mujer: 35 lb (15 kg)." },
+    { id: "protocolo", term: "Protocolo", text: "Cómo se hace el ejercicio en este ciclo (pausa arriba, pulsos al final, pies adelante…). El nombre queda igual entre ciclos para ver toda la progresión junta en el historial; las sugerencias de peso solo comparan con marcas del mismo protocolo." },
     { id: "alternativa", term: "Alternativa", text: "Ejercicio de reemplazo si la máquina o la barra están ocupadas. \"Usar esta semana\" lo marca solo en esa semana; \"Usar en todo el ciclo\" cambia el nombre en las 4 semanas." },
   ];
 
@@ -202,8 +204,9 @@
   function recFor(day, ex, idx, w, name, u) {
     if (ex.noWeight) return null;
     const r = routine();
-    const records = recordsOf(name);
     const k = G.slotKey(day.key, idx, w);
+    const proto = G.slotProtocol(S.data[k], ex);
+    const records = recordsOf(name).filter((x) => G.sameProtocol(x.protocol, proto));
     const others = records.filter((x) => !(x.cycle === S.cycle && x.key === k));
     const prev = inUnit(G.prevWeight(S.data, day.key, idx, w, ex, r.unitDefault), u);
     const lastS1 = inUnit(G.lastCycleS1(others, S.cycle), u);
@@ -382,6 +385,7 @@
         <button class="done-btn${FX.done === k ? " fx-pop" : ""}" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">${icon("check")}</button>
         <div class="card-info">
           <div class="ex-name">${esc(name)}${tagTxt ? ` <span class="edited">· ${tagTxt}</span>` : ""}</div>
+          ${G.slotProtocol(rec, ex) ? `<div class="ex-proto">${icon("pause")}${esc(ex.protocol)}</div>` : ""}
           <div class="ex-sub"><span class="ex-target">${esc(prettyTarget(ex.targets[w]))}</span><span class="ex-rest">${icon("clock")}${esc(ex.rest)}</span>${maxTxt}</div>
           ${right ? `<div class="ex-line">${right}</div>` : ""}
         </div>
@@ -568,7 +572,7 @@
     const prs = G.prHistory(e.records).reverse();
     const sessions = [...e.records].sort((a, b) => (a.date && b.date ? (a.date < b.date ? 1 : -1) : b.cycle - a.cycle || b.week - a.week));
     const m = e.max;
-    const where = (r) => `Ciclo ${r.cycle} · ${esc(splitWeek(r.weekShort)[0])} · Día ${esc(r.day)}`;
+    const where = (r) => `Ciclo ${r.cycle} · ${esc(splitWeek(r.weekShort)[0])} · Día ${esc(r.day)}${r.protocol ? ` · ${esc(r.protocol)}` : ""}`;
     const prRows = prs.map((r, i) => {
       const before = prs[i + 1];
       const gain = before ? G.round1(r.weight - G.convert(before.weight, before.unit, r.unit)) : 0;
@@ -1109,6 +1113,18 @@
       const j = await res.json();
       if (!j || !Array.isArray(j.cycles)) return;
       S.remote = j.cycles.filter((c) => Number.isInteger(c.cycle));
+      let updated = false;
+      for (const c of S.remote) {
+        if (!S.routines[c.cycle] || G.isClosed(S.hist, c.cycle)) continue;
+        try {
+          const rr = await fetch(`rutinas/ciclo-${c.cycle}.json`, { cache: "no-store" });
+          if (!rr.ok) continue;
+          const r = await rr.json();
+          if (G.validateRoutine(r).length || r.cycle !== c.cycle) continue;
+          if (JSON.stringify(r) !== JSON.stringify(S.routines[c.cycle])) { S.routines[c.cycle] = r; updated = true; }
+        } catch { /* sin conexión */ }
+      }
+      if (updated) { store.set(KEYS.routines, S.routines); S.drafts = {}; render(); }
       if (S.sheet === "settings") renderSheet();
     } catch { /* sin conexión: no se muestran */ }
   }
@@ -1144,6 +1160,7 @@
       render();
     }
     registerSW();
+    loadRemoteIndex();
   }
 
   window.GluteoApp = { ready: boot().catch((err) => { console.error(err); throw err; }) };
