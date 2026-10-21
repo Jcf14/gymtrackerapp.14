@@ -48,6 +48,8 @@
     histEx: null,       // clave del ejercicio abierto en el historial
     sheet: false,       // false | "settings" | "glossary"
     glossaryTerms: null,
+    sheetFx: false,     // animar la entrada de la hoja en el próximo render
+    fx: { view: true }, // efectos para el próximo render
   };
 
   // ---------- Estado ----------
@@ -92,7 +94,7 @@
   function toast(msg, kind) {
     const el = $("#toast");
     el.textContent = msg;
-    el.className = `toast show${kind === "error" ? " error" : ""}`;
+    el.className = `toast show${kind ? ` ${kind}` : ""}`;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { el.className = "toast"; }, kind === "error" ? 3400 : 2400);
   }
@@ -130,6 +132,7 @@
     up: '<path d="M7 17 17 7M9 7h8v8"/>',
     down: '<path d="M7 7l10 10M17 9v8H9"/>',
     flat: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
   };
   const icon = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 
@@ -170,7 +173,13 @@
   const pad2 = (n) => String(n).padStart(2, "0");
   const fmtDate = (iso, opts) => (iso ? new Date(iso).toLocaleDateString("es", opts || { day: "2-digit", month: "2-digit" }) : "—");
   const pctTxt = (p) => (p === null || p === undefined ? "" : p > 0 ? `+${p}%` : p < 0 ? `−${Math.abs(p)}%` : "0%");
-  const dirIcon = (r) => (r.mode === "deload" ? "down" : r.value > r.base ? "up" : "flat");
+  const dirIcon = (r) => (r.mode === "deload" ? "down" : r.mode === "reps" ? "plus" : r.value > r.base ? "up" : "flat");
+  const prettyTarget = (t) => String(t).replace(/(\d)\s*x\s*(\d)/gi, "$1×$2").replace(/\s*@\s*RPE\s*/gi, " · RPE ");
+  const SHORT_GOAL = {
+    "Más peso, menos reps": "Más peso", "Más peso, mismas reps": "Más peso", "Más peso y más reps": "Peso y reps",
+    "Mismo peso, más reps": "Más reps", "Mismo peso, menos reps": "Menos reps", "Mismo peso y reps": "Igual",
+    "Menos peso": "Menos peso", "Calibrá el peso": "Calibrar",
+  };
 
   // Recomendación de una tarjeta de la rutina (o null).
   function recFor(day, ex, idx, w, name) {
@@ -199,13 +208,19 @@
 
   // ---------- Render principal ----------
 
+  let FX = {};   // efectos del render en curso: { view, opened, done, pr } (se consumen en cada render)
+
   function render() {
+    FX = S.fx; S.fx = {};
     const chip = $("#cycleChip");
     const r = routine();
     chip.hidden = !r;
     chip.textContent = r ? `Ciclo ${r.cycle}` : "";
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === S.tab));
-    $("#root").innerHTML = S.tab === "rutina" ? renderRutina() : renderHistorial();
+    const root = $("#root");
+    root.innerHTML = S.tab === "rutina" ? renderRutina() : renderHistorial();
+    root.classList.toggle("fx-view", !!FX.view);
+    if (FX.view) [...root.children].forEach((el, i) => el.style.setProperty("--i", i));
     renderSheet();
   }
 
@@ -231,51 +246,57 @@
     const r = routine();
     if (!r) return renderEmpty();
     const day = currentDay();
+    const doneOf = (d) => d.exercises.filter((_, i) => S.data[G.slotKey(d.key, i, S.week)]?.completed).length;
     const weeks = r.weekShort.map((w, i) => {
       const [main, sub] = splitWeek(w);
       return `<button class="seg-btn week-btn${i === S.week ? " active" : ""}" data-action="week" data-week="${i}">
         <span class="wk-num">${esc(main)}</span>${sub ? `<span class="wk-sub">${esc(sub)}</span>` : ""}</button>`;
     }).join("");
     const days = r.days.map((d) => {
-      const n = d.exercises.length;
-      const done = d.exercises.filter((_, i) => S.data[G.slotKey(d.key, i, S.week)]?.completed).length;
+      const n = d.exercises.length, done = doneOf(d);
       const abbr = d.label.split("·")[0].trim();
-      return `<button class="day-btn ${d.type}${d.key === day.key ? " active" : ""}" data-action="day" data-day="${d.key}" aria-label="${esc(d.dayName)}, día ${d.key}">
-        <i class="type-dot"></i><span class="day-name">${esc(abbr)}</span><span class="day-key">${esc(d.key)}</span>
-        <small>${done}/${n}</small><i class="day-bar"><b style="width:${Math.round((done / n) * 100)}%"></b></i></button>`;
+      return `<button class="day-btn ${d.type}${d.key === day.key ? " active" : ""}${done === n ? " complete" : ""}" data-action="day" data-day="${d.key}" aria-label="${esc(d.dayName)}, día ${d.key}">
+        <span class="day-name">${esc(abbr)}</span><span class="day-key">${esc(d.key)}</span><small>${done}/${n}</small></button>`;
     }).join("");
-    const n = day.exercises.length;
-    const done = day.exercises.filter((_, i) => S.data[G.slotKey(day.key, i, S.week)]?.completed).length;
+    const n = day.exercises.length, done = doneOf(day);
+    const C = 2 * Math.PI * 30;
+    const off = C * (1 - (n ? done / n : 0));
     const [main, sub] = splitTitle(day.title);
+    const chev = icon("chevron").replace('class="ic"', 'class="ic chev"');
     return `${backupNag()}
       <div class="seg weeks" role="tablist" aria-label="Semana">${weeks}</div>
       <div class="days" role="tablist" aria-label="Día">${days}</div>
-      <section class="hero">
-        <div class="eyebrow">${esc(day.dayName)} · ${esc(r.weeks[S.week])}</div>
-        <h1 class="hero-title">${esc(main)}</h1>
-        ${sub ? `<div class="hero-sub">${esc(sub)}</div>` : ""}
-        <div class="hero-meta">
-          <span class="tag ${day.type}">${day.type === "lower" ? "Tren inferior" : "Tren superior"}</span>
-          <div class="progress"><b style="width:${Math.round((done / n) * 100)}%"></b></div>
-          <span class="hero-count">${done}/${n}</span>
+      <section class="hero ${day.type}">
+        <div class="hero-top">
+          <div class="hero-text">
+            <div class="eyebrow">${esc(day.dayName)} · ${esc(r.weeks[S.week])}</div>
+            <h1 class="hero-title">${esc(main)}</h1>
+            ${sub ? `<div class="hero-sub">${esc(sub)}</div>` : ""}
+          </div>
+          <div class="ring" role="img" aria-label="${done} de ${n} completados">
+            <svg viewBox="0 0 72 72"><circle class="track" cx="36" cy="36" r="30"/>
+              <circle class="bar" cx="36" cy="36" r="30" style="--c:${C.toFixed(1)};stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${off.toFixed(1)}"/></svg>
+            <div class="ring-txt"><div><b>${done}/${n}</b><span>hechos</span></div></div>
+          </div>
         </div>
-        ${day.warmup ? `<div class="warmup">${icon("flame")}<div><b>Activación</b>${esc(day.warmup)}</div></div>` : ""}
+        ${day.warmup ? `<details class="warmup"><summary>${icon("flame")}Activación${chev}</summary><p>${esc(day.warmup)}</p></details>` : ""}
       </section>
+      <div class="section-head"><h2>Ejercicios</h2><span>${day.type === "lower" ? "Tren inferior" : "Tren superior"} · ${n}</span></div>
       <ol class="ex-list">${day.exercises.map((ex, i) => renderCard(day, ex, i)).join("")}</ol>`;
   }
 
   function weightSummary(rec) {
     const w = rec ? G.parseNum(rec.weight) : NaN;
     if (!(w > 0)) return "";
-    const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? ` · ${fmt(rec.perSideDisplay)}/lado` : "";
-    const reps = G.repsText(rec);
-    return `<span class="ex-weight"><b>${fmt(w)}</b> ${S.unit}${side}${reps ? ` · ${esc(reps)}` : ""}</span>`;
+    const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? `<span class="side"> · ${fmt(rec.perSideDisplay)}/lado</span>` : "";
+    return `<span class="ex-weight"><span><b>${fmt(w)}</b> ${S.unit}</span>${side}</span>`;
   }
 
   function recBadge(rec) {
     if (!rec) return "";
-    const cls = rec.mode === "deload" ? "down" : rec.mode === "calibrate" ? "cal" : rec.value > rec.base ? "up" : "flat";
-    return `<span class="ex-sug ${cls}">${icon(dirIcon(rec))}<b>${fmt(rec.value)}</b> ${S.unit}${rec.mode !== "calibrate" && rec.pct ? ` <em>${pctTxt(rec.pct)}</em>` : ""} · ${esc(rec.goal)}</span>`;
+    const cls = rec.mode === "deload" ? "down" : rec.mode === "reps" ? "reps" : rec.mode === "calibrate" ? "cal" : rec.value > rec.base ? "up" : "flat";
+    const pct = rec.mode !== "calibrate" && rec.pct ? `${pctTxt(rec.pct)} · ` : "";
+    return `<span class="ex-sug ${cls}"><span><b>${fmt(rec.value)}</b> ${S.unit}</span> <em>${icon(dirIcon(rec))}${pct}${esc(SHORT_GOAL[rec.goal] || rec.goal)}</em></span>`;
   }
 
   function draftFor(k, rec, sets) {
@@ -313,22 +334,20 @@
     const open = S.open.has(idx);
     const done = !!(rec && rec.completed);
     const info = recFor(day, ex, idx, w, name);
-    const line = weightSummary(rec) || (info && info.rec ? recBadge(info.rec) : "");
+    const right = weightSummary(rec) || (info && info.rec ? recBadge(info.rec) : "");
     const tagTxt = altUsed ? "alternativa" : name !== ex.name ? "editado" : "";
     const maxTxt = info && info.max ? `<span class="ex-max">${icon("trophy")}${fmt(info.max.weight)}${info.max.topReps ? `×${info.max.topReps}` : ""}</span>` : "";
     const head = `<div class="card-head" data-action="toggle-card" data-idx="${idx}">
-        <span class="ex-idx">${done ? icon("check") : pad2(idx + 1)}</span>
+        <button class="done-btn${FX.done === k ? " fx-pop" : ""}" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">${icon("check")}</button>
         <div class="card-info">
-          ${ex.pattern ? `<div class="pattern">${esc(ex.pattern)}</div>` : ""}
           <div class="ex-name">${esc(name)}${tagTxt ? ` <span class="edited">· ${tagTxt}</span>` : ""}</div>
-          <div class="ex-meta"><span class="ex-target">${esc(ex.targets[w])}</span>${maxTxt}</div>
-          ${line ? `<div class="ex-line">${line}</div>` : ""}
+          <div class="ex-sub"><span class="ex-target">${esc(prettyTarget(ex.targets[w]))}</span>${maxTxt}</div>
         </div>
-        <button class="done-btn" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">${icon("check")}</button>
+        ${right ? `<div class="ex-right">${right}</div>` : ""}
       </div>`;
-    const cls = `card ${day.type}${done ? " done" : ""}${open ? " open" : ""}`;
-    if (!open) return `<li class="${cls}">${head}</li>`;
-    return `<li class="${cls}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name, info)}</li>`;
+    const cls = `card ${day.type}${done ? " done" : ""}${open ? " open" : ""}${FX.pr === k ? " fx-pr" : ""}`;
+    if (!open) return `<li class="${cls}" style="--i:${idx}">${head}</li>`;
+    return `<li class="${cls}" style="--i:${idx}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name, info)}</li>`;
   }
 
   function renderCardBody(day, ex, idx, k, rec, name, info) {
@@ -342,26 +361,25 @@
     const sug = info && info.rec;
     const max = info && info.max;
 
-    const statRest = `<div class="stat"><span class="stat-label">${icon("clock")}Descanso</span>
-      <span class="stat-val">${esc(ex.rest)}</span><span class="stat-sub">${sets} series</span></div>`;
-    const statSug = sug
-      ? `<div class="stat sug ${sug.mode}"><span class="stat-label">${icon("target")}Sugerido</span>
-          <span class="stat-val">${fmt(sug.value)} <small>${u}</small>${sug.mode !== "calibrate" && sug.pct ? ` <em>${pctTxt(sug.pct)}</em>` : ""}</span>
-          <span class="stat-goal">${esc(sug.goal)}</span>
-          <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}">Usar</button></div>`
-      : `<div class="stat sug"><span class="stat-label">${icon("target")}Sugerido</span>
-          <span class="stat-val empty">—</span><span class="stat-goal">Calibrá con la 1ª serie</span></div>`;
-    const statMax = max
-      ? `<div class="stat"><span class="stat-label">${icon("trophy")}Máximo</span>
-          <span class="stat-val">${fmt(max.weight)} <small>${u}</small></span>
-          <span class="stat-sub">${max.topReps ? `${max.topReps} reps · ` : ""}${fmtDate(max.date)}</span></div>`
-      : `<div class="stat"><span class="stat-label">${icon("trophy")}Máximo</span>
-          <span class="stat-val empty">—</span><span class="stat-sub">Sin registros</span></div>`;
-    const stats = ex.noWeight
-      ? `<div class="stats two">${statRest}<div class="stat"><span class="stat-label">${icon("target")}Objetivo</span>
-          <span class="stat-val">${sets} <small>series</small></span><span class="stat-sub">Sin peso obligatorio</span></div></div>`
-      : `<div class="stats">${statRest}${statSug}${statMax}</div>`;
-    const why = sug ? `<p class="why">${icon("info")}<span>${esc(sug.text)}</span></p>` : "";
+    const insight = ex.noWeight ? "" : sug
+      ? `<div class="insight ${sug.mode}">
+          <div><div class="label">${icon("target")}Sugerido para hoy</div>
+            <div class="val">${fmt(sug.value)} <small>${u}</small>${sug.mode !== "calibrate" && sug.pct ? `<span class="delta">${icon(dirIcon(sug))}${pctTxt(sug.pct)}</span>` : ""}</div></div>
+          <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}">Usar</button>
+          <div class="goal">${esc(sug.goal)}</div>
+          <p class="why">${esc(sug.text)}</p>
+        </div>`
+      : `<div class="insight empty">
+          <div><div class="label">${icon("target")}Sugerido para hoy</div><div class="val">Calibrá con la 1ª serie</div></div>
+          <p class="why">Todavía no hay registros de este ejercicio: elegí un peso que te deje en el RPE pedido.</p>
+        </div>`;
+    const facts = `<div class="facts">
+        ${ex.pattern ? `<span>${icon("layers")}${esc(ex.pattern)}</span>` : ""}
+        <span>${icon("clock")}<b>${esc(ex.rest)}</b></span>
+        <span>${icon("list")}<b>${sets}</b> series</span>
+        ${max ? `<span class="fact-max">${icon("trophy")}Máximo <b>${fmt(max.weight)} ${u}</b>${max.topReps ? ` × ${max.topReps}` : ""} · ${fmtDate(max.date)}</span>`
+          : ex.noWeight ? "" : `<span class="fact-max">${icon("trophy")}Sin máximo todavía</span>`}
+      </div>`;
 
     const altBox = !(d.altOpen && showAlt) ? "" : altUsed
       ? `<div class="alt-box"><b>Esta semana hacés la alternativa</b>${esc(ex.alt)}
@@ -384,37 +402,39 @@
     const repsInputs = d.repsSame
       ? `<input class="num-input reps-same-input" inputmode="numeric" data-field="repsSameValue" data-k="${k}" value="${esc(d.repsSameValue)}" placeholder="Reps de cada serie">`
       : `<div class="reps-grid">${Array.from({ length: sets }, (_, i) =>
-          `<label class="rep-cell"><span>SERIE ${i + 1}</span><input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}" aria-label="Reps serie ${i + 1}"></label>`).join("")}</div>`;
+          `<label class="rep-cell"><span>Serie ${i + 1}</span><input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}" placeholder="–" aria-label="Reps serie ${i + 1}"></label>`).join("")}</div>`;
 
     const sideHint = d.weightMode === "perSide" && d.perSideDisplay != null
-      ? `<div class="perside-hint">= ${fmt(d.perSideDisplay)} ${u} por lado + barra</div>` : "";
+      ? `<span class="perside-hint">= ${fmt(d.perSideDisplay)} ${u} por lado + barra</span>` : "<span></span>";
 
-    return `<div class="card-body">
-      ${stats}
-      ${why}
+    return `<div class="card-body${FX.opened === idx ? " fx-open" : ""}">
+      ${insight}
+      ${facts}
       <div class="tools">
-        ${showAlt ? `<button class="tool-btn alt-btn${d.altOpen || altUsed ? " on" : ""}" data-action="toggle-alt" data-k="${k}">${icon("swap")}${altUsed ? "Usando alternativa" : "Alternativa"}</button>` : ""}
+        ${showAlt ? `<button class="tool-btn alt-btn${d.altOpen || altUsed ? " on" : ""}" data-action="toggle-alt" data-k="${k}">${icon("swap")}${altUsed ? "Usando alt." : "Alternativa"}</button>` : ""}
         <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>
         <button class="tool-btn glossary-btn" data-action="open-glossary" data-terms="${glossaryFor(ex, w).join(",")}">${icon("info")}¿Qué es?</button>
       </div>
       ${altBox}
       ${editBox}
       <div class="field">
-        <div class="field-head"><span class="field-label">Reps por serie</span>
-          <label class="check"><input type="checkbox" class="reps-same-check" data-field="repsSame" data-k="${k}"${d.repsSame ? " checked" : ""}> Todas iguales</label></div>
-        ${repsInputs}
-      </div>
-      <div class="field">
-        <div class="field-head"><span class="field-label">Peso${ex.noWeight ? " · opcional" : ""}</span></div>
-        <div class="weight-row">
+        <div class="field-head"><span class="field-label">Peso${ex.noWeight ? " (opcional)" : ""}</span></div>
+        <div class="stepper">
+          <button class="step-btn step-down-btn" data-action="step-weight" data-dir="-1" data-k="${k}" aria-label="Bajar peso">−</button>
           <div class="weight-box">
             <input class="num-input weight-input" inputmode="decimal" data-field="weight" data-k="${k}" value="${esc(d.weight)}" placeholder="0" aria-label="Peso total">
             <span class="unit">${u}</span>
           </div>
-          ${ex.noWeight ? "" : `<button class="tool-btn calc-toggle-btn${d.calcOpen ? " on" : ""}" data-action="toggle-calc" data-k="${k}">${icon("calc")}Barra</button>`}
+          <button class="step-btn step-up-btn" data-action="step-weight" data-dir="1" data-k="${k}" aria-label="Subir peso">+</button>
         </div>
-        ${sideHint}
+        <div class="weight-extra">${sideHint}
+          ${ex.noWeight ? "" : `<button class="calc-toggle-btn" data-action="toggle-calc" data-k="${k}">${icon("calc")}${d.calcOpen ? "Cerrar calculadora" : "Calcular con barra"}</button>`}</div>
         ${d.calcOpen && !ex.noWeight ? renderCalc(k, d) : ""}
+      </div>
+      <div class="field">
+        <div class="field-head"><span class="field-label">Reps por serie</span>
+          <label class="switch">Todas iguales<input type="checkbox" class="reps-same-check" data-field="repsSame" data-k="${k}"${d.repsSame ? " checked" : ""}></label></div>
+        ${repsInputs}
       </div>
       <div class="field">
         <div class="field-head"><span class="field-label">Nota</span></div>
@@ -483,13 +503,14 @@
     return `<ul class="hist-ul">${list.map((e) => {
       const m = e.max;
       const days = [...e.days].join(" · ");
+      const sub = [e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"), days ? `Día ${days}` : ""].filter(Boolean).join(" · ");
       const right = e.noWeight && !m
         ? `<span class="hl-none">${e.last ? fmtDate(e.last.date) : "Sin peso"}</span>`
         : m ? `<span class="hl-max"><b>${fmt(m.weight)}</b> ${S.unit}${m.topReps ? ` × ${m.topReps}` : ""}</span><span class="hl-date">${fmtDate(m.date)}</span>`
           : `<span class="hl-none">Sin registros</span>`;
       return `<li><button class="hist-item ${e.group}" data-action="hist-open" data-ex="${esc(e.key)}">
-        <span class="hl-info"><span class="pattern">${esc(e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"))}${days ? ` · ${esc(days)}` : ""}</span>
-          <span class="ex-name">${esc(e.name)}</span></span>
+        <span class="hist-dot"></span>
+        <span class="hl-info"><span class="ex-name">${esc(e.name)}</span><span class="hl-sub">${esc(sub)}</span></span>
         <span class="hl-right">${right}</span>${icon("chevron")}</button></li>`;
     }).join("")}</ul>`;
   }
@@ -499,15 +520,18 @@
     const prs = G.prHistory(e.records).reverse();
     const sessions = [...e.records].sort((a, b) => (a.date && b.date ? (a.date < b.date ? 1 : -1) : b.cycle - a.cycle || b.week - a.week));
     const m = e.max;
-    const where = (r) => `C${r.cycle} · ${esc(splitWeek(r.weekShort)[0])} · ${esc(r.day)}`;
+    const where = (r) => `Ciclo ${r.cycle} · ${esc(splitWeek(r.weekShort)[0])} · Día ${esc(r.day)}`;
     const prRows = prs.map((r, i) => {
       const before = prs[i + 1];
-      const delta = before ? (r.weight > before.weight ? `+${fmt(r.weight - before.weight)} ${u}` : `+${r.topReps - before.topReps} reps`) : "Primera marca";
-      return `<li class="pr-row${i === 0 ? " current" : ""}"><span class="pr-w num"><b>${fmt(r.weight)}</b> ${u}${r.topReps ? ` × ${r.topReps}` : ""}</span>
-        <span class="pr-meta">${fmtDate(r.date, { day: "2-digit", month: "short", year: "2-digit" })} · ${where(r)}</span><span class="pr-delta">${i === 0 ? "Actual" : delta}</span></li>`;
+      const delta = before ? (r.weight > before.weight ? `+${fmt(r.weight - before.weight)} ${u}` : `+${r.topReps - before.topReps} reps`) : "Primera";
+      return `<li class="pr-row${i === 0 ? " current" : ""}"><span class="pr-badge">${icon("trophy")}</span>
+        <span class="pr-w num"><b>${fmt(r.weight)}</b> ${u}${r.topReps ? ` × ${r.topReps}` : ""}</span>
+        <span class="pr-delta">${i === 0 ? "Actual" : delta}</span>
+        <span class="pr-meta">${fmtDate(r.date, { day: "numeric", month: "short", year: "numeric" })} · ${where(r)}</span></li>`;
     }).join("");
     const sessRows = sessions.map((r) => `<li class="sess-row">
-        <div class="sess-top"><span class="sess-date">${fmtDate(r.date)}</span><span class="sess-where">${where(r)}</span>
+        <div class="sess-top">
+          <span class="sess-when"><span class="sess-date">${fmtDate(r.date, { day: "numeric", month: "short" })}</span><span class="sess-where">${where(r)}${r.altUsed ? " · alternativa" : ""}</span></span>
           <span class="sess-w num"><b>${fmt(r.weight)}</b> ${u}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
           <span class="ok">${r.completed ? icon("check") : ""}</span></div>
         ${r.note ? `<div class="sess-note">${icon("note")}${esc(r.note)}</div>` : ""}</li>`).join("");
@@ -515,13 +539,13 @@
       <div class="page-head"><div class="eyebrow">${esc(e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"))}</div>
         <h1 class="page-title detail">${esc(e.name)}</h1></div>
       <div class="pr-hero">
-        <span class="stat-label">${icon("trophy")}Máximo actual</span>
+        <span class="label">${icon("trophy")}Máximo actual</span>
         ${m ? `<span class="pr-hero-val num">${fmt(m.weight)} <small>${u}</small>${m.topReps ? ` <span>× ${m.topReps}</span>` : ""}</span>
-          <span class="stat-sub">${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
-          : `<span class="pr-hero-val num empty">—</span><span class="stat-sub">Todavía no hay pesos registrados.</span>`}
+          <span class="sub">${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
+          : `<span class="pr-hero-val num empty">—</span><span class="sub">Todavía no hay pesos registrados.</span>`}
       </div>
-      ${prs.length > 1 ? `<h2 class="section-title">Récords anteriores</h2><ul class="pr-list">${prRows}</ul>` : ""}
-      <h2 class="section-title">Sesiones <span class="muted">(${sessions.length})</span></h2>
+      ${prs.length > 1 ? `<h2 class="section-title">Récords</h2><ul class="pr-list">${prRows}</ul>` : ""}
+      <h2 class="section-title">Sesiones <span class="muted">${sessions.length}</span></h2>
       ${sessions.length ? `<ul class="sess-list">${sessRows}</ul>` : `<p class="muted small">Sin sesiones con peso.</p>`}`;
   }
 
@@ -532,8 +556,10 @@
     if (!S.sheet) { sheet.hidden = true; sheet.innerHTML = ""; return; }
     sheet.hidden = false;
     const body = S.sheet === "glossary" ? renderGlossary() : renderSettings();
-    sheet.innerHTML = `<div class="sheet-backdrop" data-action="close-settings"></div>
-      <div class="sheet-panel" role="dialog" aria-label="${S.sheet === "glossary" ? "Glosario" : "Ajustes"}">
+    const fx = S.sheetFx ? " fx-sheet" : "";
+    S.sheetFx = false;
+    sheet.innerHTML = `<div class="sheet-backdrop${fx}" data-action="close-settings"></div>
+      <div class="sheet-panel${fx}" role="dialog" aria-label="${S.sheet === "glossary" ? "Glosario" : "Ajustes"}">
         <div class="sheet-grabber"></div>${body}</div>`;
   }
 
@@ -689,15 +715,15 @@
   }
 
   const actions = {
-    tab(el) { S.tab = el.dataset.tab; render(); window.scrollTo(0, 0); },
+    tab(el) { if (S.tab === el.dataset.tab && !S.histEx) return; S.tab = el.dataset.tab; S.histEx = null; S.fx.view = true; render(); window.scrollTo(0, 0); },
     week(el) {
-      S.week = Number(el.dataset.week); S.open = new Set();
+      S.week = Number(el.dataset.week); S.open = new Set(); S.fx.view = true;
       store.set(KEYS.lastWeek, { cycle: S.cycle, week: S.week }); render();
     },
-    day(el) { S.day = el.dataset.day; S.open = new Set(); store.set(KEYS.lastDay, S.day); render(); },
+    day(el) { S.day = el.dataset.day; S.open = new Set(); S.fx.view = true; store.set(KEYS.lastDay, S.day); render(); },
     "toggle-card"(el) {
       const i = Number(el.dataset.idx);
-      if (S.open.has(i)) S.open.delete(i); else S.open.add(i);
+      if (S.open.has(i)) S.open.delete(i); else { S.open.add(i); S.fx.opened = i; }
       render();
     },
     "toggle-done"(el) {
@@ -710,11 +736,12 @@
       }
       if (ex.noWeight || (rec && G.parseNum(rec.weight) > 0)) {
         S.data[k] = { ...emptyRecord(ex.sets[week]), ...rec, completed: true, savedAt: new Date().toISOString() };
+        S.fx.done = k;
         saveData(); render(); toast("Completado ✓"); return;
       }
       const d = S.drafts[k];
       if (d && G.parseNum(d.weight) > 0) {
-        if (saveEntry(k, true)) { S.open.delete(exFromKey(k).idx); render(); toast("Guardado y completado ✓"); }
+        if (saveEntry(k, true)) { S.open.delete(exFromKey(k).idx); S.fx.done = k; render(); toast("Guardado y completado ✓"); }
         return;
       }
       toast("Cargá y guardá el peso antes de completar", "error");
@@ -771,13 +798,35 @@
     },
     "save-entry"(el) {
       const k = el.dataset.k;
+      const { dayObj, idx, ex, week } = exFromKey(k);
+      const name = G.slotName(S.data, dayObj.key, idx, ex, week);
+      const before = G.findMax(G.collectRecords(S.routines, allData(), name).filter((r) => !(r.cycle === S.cycle && r.key === k)));
       if (!saveEntry(k)) return;
-      S.open.delete(exFromKey(k).idx);
+      S.open.delete(idx);
+      const now = G.collectRecords(S.routines, allData(), name).find((r) => r.cycle === S.cycle && r.key === k);
+      const isPR = before && now && (now.weight > before.weight || (now.weight === before.weight && now.topReps > before.topReps));
+      if (isPR) S.fx.pr = k;
       render();
-      toast("Guardado ✓");
+      if (isPR) toast(`🏆 ¡Nuevo récord! ${fmt(now.weight)} ${S.unit}${now.topReps ? ` × ${now.topReps}` : ""}`, "pr");
+      else toast("Guardado ✓");
     },
-    "hist-open"(el) { S.histEx = el.dataset.ex; render(); window.scrollTo(0, 0); },
-    "hist-back"() { S.histEx = null; render(); },
+    "step-weight"(el) {
+      const k = el.dataset.k, d = S.drafts[k];
+      const step = G.STEP[S.unit] || 5, dir = Number(el.dataset.dir);
+      let cur = G.parseNum(d.weight);
+      if (!(cur >= 0)) {
+        const sug = el.closest(".card-body").querySelector(".use-sug-btn");
+        cur = sug ? Number(sug.dataset.value) : 0;
+        if (!sug) cur += dir * step;
+      } else cur += dir * step;
+      d.weight = String(Math.max(0, cur)); d.weightMode = "total"; d.perSideDisplay = null;
+      const box = el.closest(".field");
+      box.querySelector(".weight-input").value = d.weight;
+      const hint = box.querySelector(".perside-hint");
+      if (hint) hint.remove();
+    },
+    "hist-open"(el) { S.histEx = el.dataset.ex; S.fx.view = true; render(); window.scrollTo(0, 0); },
+    "hist-back"() { S.histEx = null; S.fx.view = true; render(); },
     "hist-filter"(el) { S.histFilter = el.dataset.filter; render(); },
     "use-alt"(el) {
       const k = el.dataset.k, { ex, week } = exFromKey(k);
@@ -798,12 +847,12 @@
       if (!saveData()) return;
       S.drafts[k].altOpen = false; render(); toast("Alternativa en todo el ciclo · se deshace con Editar nombre → Restablecer");
     },
-    "open-glossary"(el) { S.glossaryTerms = el.dataset.terms ? el.dataset.terms.split(",") : null; S.sheet = "glossary"; renderSheet(); },
-    "open-settings"() { S.sheet = "settings"; renderSheet(); },
+    "open-glossary"(el) { S.glossaryTerms = el.dataset.terms ? el.dataset.terms.split(",") : null; S.sheet = "glossary"; S.sheetFx = true; renderSheet(); },
+    "open-settings"() { S.sheet = "settings"; S.sheetFx = true; renderSheet(); },
     "close-settings"() { S.sheet = false; renderSheet(); },
     "set-theme"(el) { S.theme = el.dataset.theme; store.set(KEYS.theme, S.theme); applyTheme(); renderSheet(); },
     "set-unit"(el) { S.unit = el.dataset.unit; store.set(KEYS.unit, S.unit); S.drafts = {}; render(); },
-    "set-cycle"(el) { loadCycle(el.dataset.cycle); render(); toast(`Ciclo ${S.cycle} activo`); },
+    "set-cycle"(el) { loadCycle(el.dataset.cycle); S.fx.view = true; render(); toast(`Ciclo ${S.cycle} activo`); },
     async "export-cycle"() {
       const r = routine();
       const ok = await deliverFile(`gluteo-ciclo-${r.cycle}-${today()}.json`, G.buildCycleExport(r, S.data, S.unit));

@@ -331,7 +331,7 @@ Todos los valores se guardan como JSON (`JSON.stringify`).
 
 ### 6.4 Decisiones de implementación
 
-- Estilo: Barlow Condensed (en `app/fonts/`, licencia OFL) para títulos y números, fuente del sistema para el texto, íconos SVG en línea (no emojis), escala de espacios 4/8/12/16/24.
+- Estilo (pedido: limpia, intuitiva, moderna, con efectos): estética de app de fitness iOS. Superficies sin bordes con sombras suaves, tarjeta del día con degradé azul y anillo de progreso, tira de días tipo calendario, peso con − / +, interruptor "Todas iguales", recuadro "Sugerido para hoy". Títulos en la fuente del sistema; números en Barlow Condensed (`app/fonts/`, licencia OFL); íconos SVG en línea (no emojis). Animaciones solo en lo que cambia (entrada de vista, apertura de tarjeta, pop del check, brillo de nuevo récord, hoja que sube), vía clases `fx-*` que se consumen en cada render; respetan "reducir movimiento".
 - Clics resueltos por `data-action` con un único manejador (evita la trampa 1). Los formularios abiertos guardan un **borrador en memoria**, así que un re-render (por ejemplo, completar otra tarjeta) no borra lo que estaba escrito.
 - Sin sincronización en la nube (solo uso el celular). El resguardo es el respaldo JSON.
 - `npm test` cubre: validación de rutinas, sugerencias, calculadora, máximo entre ciclos, export con nombre editado, respaldo y, en jsdom, los flujos de la sección 6.3 (guardar/completar sin peso, editar/restablecer nombre, calculadora, toast, borradores, historial, ajustes, persistencia, ids y `data-action` existentes).

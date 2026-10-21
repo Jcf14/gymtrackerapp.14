@@ -180,14 +180,14 @@ test("sugerencias: (+peso) en S2 y 55% en descarga", async () => {
   const t = await boot();
   t.goTo(0, "A"); t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
   t.goTo(1, "A"); t.openCard(0);
-  assert.match(t.$(".use-sug-btn").closest(".stat").textContent, /220 lb\s*\+2%/);
-  assert.match(t.$(".use-sug-btn").closest(".stat").textContent, /Más peso/);
+  assert.match(t.$(".use-sug-btn").closest(".insight").textContent, /220 lb\s*\+2%/);
+  assert.match(t.$(".use-sug-btn").closest(".insight").textContent, /Más peso/);
   t.click(".use-sug-btn");
   assert.equal(t.$(".weight-input").value, "220");
   t.click(".save-entry-btn");
   t.goTo(2, "A"); t.openCard(0); t.type(".weight-input", "235"); t.click(".save-entry-btn");
   t.goTo(3, "A"); t.openCard(0);
-  assert.match(t.$(".use-sug-btn").closest(".stat").textContent, /130 lb\s*−45%/);
+  assert.match(t.$(".use-sug-btn").closest(".insight").textContent, /130 lb\s*−45%/);
   assert.match(t.$(".why").textContent, /Descarga/);
   assert.match(t.$(".card-body").textContent, /Máximo\s*235 lb/);
   // la tarjeta plegada también muestra máximo y sugerencia
@@ -323,4 +323,26 @@ test("cada data-action del HTML generado tiene manejador", () => {
     const re = new RegExp(`(^|\\n)\\s*(async\\s+)?("${a}"|${a.replace(/-/g, "_")})\\s*\\(`);
     assert.match(actionsBlock, re, `falta el manejador de data-action="${a}"`);
   }
+});
+
+test("peso con − / + y aviso de nuevo récord", async () => {
+  const t = await boot();
+  t.goTo(0, "A"); t.openCard(1);
+  t.click(".step-up-btn");
+  assert.equal(t.$(".weight-input").value, "5", "sin sugerencia arranca en 0 + 5");
+  t.type(".weight-input", "200");
+  t.click(".step-up-btn"); t.click(".step-up-btn"); t.click(".step-down-btn");
+  assert.equal(t.$(".weight-input").value, "205");
+  t.click(".save-entry-btn");
+  assert.equal(t.data().A_1_w0.weight, "205");
+  assert.match(t.toast(), /Guardado/, "la primera marca no es récord");
+  t.goTo(1, "A"); t.openCard(1);
+  t.click(".step-up-btn");
+  assert.equal(t.$(".weight-input").value, "205", "con sugerencia, el primer toque usa la sugerencia");
+  t.click(".step-up-btn");
+  t.click(".save-entry-btn");
+  assert.match(t.toast(), /Nuevo récord! 210 lb/);
+  assert.ok(t.$("#toast").classList.contains("pr"));
+  assert.ok(t.$$(".card")[1].classList.contains("fx-pr"));
+  assert.deepEqual(t.errors, []);
 });
