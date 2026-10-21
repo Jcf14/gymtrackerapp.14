@@ -442,9 +442,9 @@
         </div></div>` : "";
 
     const repsInputs = d.repsSame
-      ? `<input class="num-input reps-same-input" inputmode="numeric" data-field="repsSameValue" data-k="${k}" value="${esc(d.repsSameValue)}" placeholder="Reps de cada serie">`
-      : `<div class="reps-grid">${Array.from({ length: sets }, (_, i) =>
-          `<label class="rep-cell"><span>Serie ${i + 1}</span><input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}" placeholder="–" aria-label="Reps serie ${i + 1}"></label>`).join("")}</div>`;
+      ? `<input class="num-input reps-same-input" inputmode="numeric" data-field="repsSameValue" data-k="${k}" value="${esc(d.repsSameValue)}" placeholder="reps" aria-label="Reps de cada serie"><span class="reg-x">× ${sets}</span>`
+      : Array.from({ length: sets }, (_, i) =>
+          `<input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}" placeholder="S${i + 1}" aria-label="Reps serie ${i + 1}">`).join("");
 
     const wNow = G.parseNum(d.weight);
     const hints = `<span class="weight-hints">${d.weightMode === "perSide" && d.perSideDisplay != null
@@ -461,28 +461,33 @@
       </div>
       ${altBox}
       ${editBox}
-      <div class="field">
-        <div class="field-head"><span class="field-label">Peso${ex.noWeight ? " (opcional)" : ""}</span>${unitSeg}</div>
-        <div class="stepper">
-          <button class="step-btn step-down-btn" data-action="step-weight" data-dir="-1" data-k="${k}" aria-label="Bajar peso">−</button>
-          <div class="weight-box">
-            <input class="num-input weight-input" inputmode="decimal" data-field="weight" data-k="${k}" value="${esc(d.weight)}" placeholder="0" aria-label="Peso total">
-            <span class="unit">${u}</span>
+      <div class="reg">
+        <div class="reg-title">Registro de hoy</div>
+        <div class="reg-row weight-row">
+          <span class="reg-label">Peso${ex.noWeight ? "<small>opcional</small>" : ""}</span>
+          <div class="reg-ctrl">
+            <div class="stepper">
+              <button class="step-btn step-down-btn" data-action="step-weight" data-dir="-1" data-k="${k}" aria-label="Bajar peso">−</button>
+              <div class="weight-box">
+                <input class="num-input weight-input" inputmode="decimal" data-field="weight" data-k="${k}" value="${esc(d.weight)}" placeholder="0" aria-label="Peso total">
+                <span class="unit">${u}</span>
+              </div>
+              <button class="step-btn step-up-btn" data-action="step-weight" data-dir="1" data-k="${k}" aria-label="Subir peso">+</button>
+            </div>
+            ${unitSeg}
           </div>
-          <button class="step-btn step-up-btn" data-action="step-weight" data-dir="1" data-k="${k}" aria-label="Subir peso">+</button>
         </div>
-        <div class="weight-extra">${hints}
-          ${ex.noWeight ? "" : `<button class="calc-toggle-btn" data-action="toggle-calc" data-k="${k}">${icon("calc")}${d.calcOpen ? "Cerrar calculadora" : "Calcular con barra"}</button>`}</div>
+        <div class="reg-sub">${hints}
+          ${ex.noWeight ? "" : `<button class="calc-toggle-btn" data-action="toggle-calc" data-k="${k}">${icon("calc")}${d.calcOpen ? "Cerrar" : "Calcular con barra"}</button>`}</div>
         ${d.calcOpen && !ex.noWeight ? renderCalc(k, d) : ""}
-      </div>
-      <div class="field">
-        <div class="field-head"><span class="field-label">Reps por serie</span>
-          <label class="switch">Todas iguales<input type="checkbox" class="reps-same-check" data-field="repsSame" data-k="${k}"${d.repsSame ? " checked" : ""}></label></div>
-        ${repsInputs}
-      </div>
-      <div class="field">
-        <div class="field-head"><span class="field-label">Nota</span></div>
-        <textarea class="text-input note-input" rows="2" data-field="note" data-k="${k}" placeholder="Cómo se sintió, molestias, ajustes…">${esc(d.note)}</textarea>
+        <div class="reg-row reps-row">
+          <span class="reg-label">Reps
+            <label class="switch mini">Iguales<input type="checkbox" class="reps-same-check" data-field="repsSame" data-k="${k}"${d.repsSame ? " checked" : ""}></label></span>
+          <div class="reg-ctrl reps-ctrl">${repsInputs}</div>
+        </div>
+        <div class="reg-row note-row">
+          <textarea class="text-input note-input" rows="1" data-field="note" data-k="${k}" placeholder="Nota (opcional)" aria-label="Nota: cómo se sintió, molestias, ajustes">${esc(d.note)}</textarea>
+        </div>
       </div>
       <button class="primary-btn save-entry-btn" data-action="save-entry" data-k="${k}">${icon("check")}Guardar</button>
     </div>`;
@@ -874,7 +879,7 @@
         if (!sug) cur += dir * step;
       } else cur += dir * step;
       d.weight = String(Math.max(0, cur)); d.weightMode = "total"; d.perSideDisplay = null;
-      const box = el.closest(".field");
+      const box = el.closest(".reg");
       box.querySelector(".weight-input").value = d.weight;
       const hint = box.querySelector(".perside-hint");
       if (hint) hint.remove();
@@ -1020,6 +1025,7 @@
     if (!d) return;
     if (f === "rep") d.reps[Number(el.dataset.i)] = el.value;
     else d[f] = el.value;
+    if (f === "note") { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
     if (f === "weight") {
       d.weightMode = "total"; d.perSideDisplay = null;
       const card = el.closest(".card");
