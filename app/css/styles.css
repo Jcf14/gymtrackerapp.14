@@ -584,3 +584,6 @@ textarea.text-input { resize: none; min-height: 44px; }
 .card-body .primary-btn { margin-top: 12px; padding: 12px; font-size: 15px; border-radius: 13px; }
 .ex-proto { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; padding: 2px 8px 2px 6px; border-radius: 99px; background: var(--primary-soft); color: var(--lower); font-size: 12px; font-weight: 600; }
 .ex-proto .ic { width: 13px; height: 13px; }
+.banner.warn { background: #FFF4E5; color: #7A4A00; box-shadow: none; align-items: flex-start; }
+.banner.warn .ic { color: #C77700; margin-top: 1px; }
+:root[data-theme="dark"] .banner.warn { background: #33270F; color: #F3D9A8; }

@@ -273,6 +273,16 @@
     </div>`;
   }
 
+  // En el celular, Safari y la app anclada al inicio guardan datos por separado: avisar si no es la app anclada.
+  function isStandalone() {
+    return navigator.standalone === true || (typeof matchMedia === "function" && matchMedia("(display-mode: standalone)").matches);
+  }
+  function browserNag() {
+    const mobile = navigator.maxTouchPoints > 0 || /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (!mobile || isStandalone()) return "";
+    return `<div class="banner inline warn">${icon("info")}<span><b>Estás en el navegador.</b> Lo que cargues acá no aparece en la app anclada al inicio (y al revés). Usá siempre la app del ícono.</span></div>`;
+  }
+
   function backupNag() {
     if (!hasAnyData()) return "";
     const last = store.get(KEYS.lastBackup, null);
@@ -320,7 +330,7 @@
             <div class="row-btns"><button class="chip-btn solid save-skip-btn" data-action="save-skip">Marcar no completado</button>
               <button class="chip-btn cancel-skip-btn" data-action="cancel-skip">Cancelar</button></div></div>`
         : "";
-    return `${backupNag()}
+    return `${browserNag()}${backupNag()}
       <div class="seg weeks" role="tablist" aria-label="Semana">${weeks}</div>
       <div class="days" role="tablist" aria-label="Día">${days}</div>
       <section class="hero ${day.type}${st ? " skipped" : ""}">

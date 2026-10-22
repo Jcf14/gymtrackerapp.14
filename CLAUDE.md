@@ -334,6 +334,7 @@ Todos los valores se guardan como JSON (`JSON.stringify`).
 2. **Ediciones fallidas en silencio:** un cambio que supuestamente agregaba la sincronización nunca llegó al archivo; el resto de la página quedó llamando a una función inexistente. Después de cada cambio, comprobar que el archivo realmente lo contiene.
 3. **Referencias a elementos inexistentes:** un `getElementById(...)` sobre un botón que no estaba en el HTML cortó todo el script y la app quedó en blanco. Verificar que cada id/clase referenciada exista.
 4. **Feedback que desaparece:** mostrar "Guardado ✓" dentro de la tarjeta y volver a renderizar al instante lo borraba. Usar un toast global.
+6. **Safari ≠ app anclada (22/10/2026):** cargué la semana 1 del ciclo 1 en Safari y después anclé la app al inicio: la app anclada arrancó vacía porque en iOS **no comparten almacenamiento**. Recuperación: en Safari → ⚙ Respaldo completo → en la app anclada ⚙ Restaurar respaldo. La app ahora avisa cuando se usa desde el navegador del celular. Ese mismo día apareció otro bug: al abrir, la app saltaba al ciclo vigente y al volver a un ciclo anterior mostraba una semana vacía (corregido: cada ciclo recuerda su semana).
 5. **Sin prueba no hay "listo":** el smoke test se hizo con jsdom (cargar la página, abrir una tarjeta, editar nombre, guardar peso, usar la calculadora, restablecer) y comprobar que no haya errores en consola.
 
 ### 6.4 Decisiones de implementación

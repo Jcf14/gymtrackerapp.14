@@ -581,3 +581,15 @@ test("cada ciclo recuerda su semana, y un ciclo ya terminado abre en la última 
   assert.ok(t.$('.week-btn[data-week="1"]').classList.contains("active"), "el ciclo 8 recuerda la suya");
   assert.deepEqual(t.errors, []);
 });
+
+test("aviso de navegador: en el celular fuera de la app anclada", async () => {
+  const t = await boot();
+  assert.equal(t.$(".banner.warn"), null, "en escritorio no molesta");
+  const t2 = await boot();
+  Object.defineProperty(t2.w.navigator, "maxTouchPoints", { value: 5, configurable: true });
+  t2.goTo(1, "A");
+  assert.match(t2.$(".banner.warn").textContent, /Estás en el navegador/);
+  Object.defineProperty(t2.w.navigator, "standalone", { value: true, configurable: true });
+  t2.goTo(0, "A");
+  assert.equal(t2.$(".banner.warn"), null, "en la app anclada no aparece");
+});
