@@ -236,7 +236,8 @@
         },
         {
           "pattern": null,
-          "name": "Remo unilateral con mancuerna (apoyado en banco)",
+          "name": "Remo unilateral con mancuerna",
+          "protocol": "Apoyado en banco",
           "alt": "Remo con mancuernas de pie (bilateral)",
           "rest": "60-75s",
           "targets": ["3x10-12 c/lado", "3x10-12 c/lado", "3x10 c/lado", "2x12 c/lado (liviano)"],
