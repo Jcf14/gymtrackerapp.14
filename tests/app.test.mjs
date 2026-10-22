@@ -533,3 +533,51 @@ test("un ciclo ya cargado se actualiza si su JSON cambió en el servidor", async
   assert.equal(JSON.parse(t.w.localStorage.getItem("gluteo_rutinas"))[8].days[0].exercises[1].name, "Sentadilla búlgara corregida");
   assert.deepEqual(t.errors, []);
 });
+
+test("si elegí un ciclo anterior, al reabrir la app sigue en ese ciclo y con sus datos", async () => {
+  const old = structuredClone(FIXTURE); old.cycle = 8; old.name = "Ciclo viejo";
+  const storage = {
+    gluteo_rutinas: JSON.stringify({ 8: old, 9: FIXTURE }),
+    gluteo_ciclo_activo: "8",
+    "gluteo_tracker_ciclo-8": JSON.stringify({ A_0_w0: { weight: "215", reps: ["8"], unit: "lb", completed: true } }),
+  };
+  const t = await boot({ storage });                    // el servidor publica el 9 como vigente
+  assert.equal(t.$("#cycleChip").textContent, "Ciclo 8", "no salta al ciclo vigente");
+  t.goTo(0, "A");
+  assert.match(t.$(".ex-weight").textContent, /215 lb/);
+  assert.deepEqual(t.errors, []);
+});
+
+test("un ciclo vigente NUEVO (que el celular no tenía) sí se abre solo", async () => {
+  const old = structuredClone(FIXTURE); old.cycle = 8; old.name = "Ciclo viejo";
+  const t = await boot({ storage: { gluteo_rutinas: JSON.stringify({ 8: old }), gluteo_ciclo_activo: "8" } });
+  assert.equal(t.$("#cycleChip").textContent, "Ciclo 9");
+  assert.match(t.toast(), /Ciclo 9 cargado/);
+});
+
+test("cada ciclo recuerda su semana, y un ciclo ya terminado abre en la última semana con datos", async () => {
+  const old = structuredClone(FIXTURE); old.cycle = 8; old.name = "Ciclo viejo";
+  const storage = {
+    gluteo_rutinas: JSON.stringify({ 8: old, 9: FIXTURE }),
+    gluteo_ciclo_activo: "9",
+    gluteo_last_week: JSON.stringify({ cycle: 9, week: 2 }),          // formato viejo: una sola semana
+    "gluteo_tracker_ciclo-8": JSON.stringify({
+      meta: { startDate: "2026-09-01" },                                 // terminó hace rato
+      A_0_w0: { weight: "215", reps: ["8"], unit: "lb" },
+      B_0_w0: { weight: "40", reps: ["10"], unit: "lb" },
+    }),
+  };
+  const t = await boot({ storage });
+  assert.equal(t.$("#cycleChip").textContent, "Ciclo 9");
+  assert.ok(t.$('.week-btn[data-week="2"]').classList.contains("active"), "migra la semana guardada en formato viejo");
+  t.click(".settings-btn");
+  t.click('.cycle-btn[data-cycle="8"]');
+  assert.ok(t.$("#sheet").hidden, "elegir un ciclo cierra Ajustes");
+  assert.ok(t.$('.week-btn[data-week="0"]').classList.contains("active"), "S1 (la última con datos), no S4 vacía");
+  t.goTo(1, "A");
+  t.click(".settings-btn"); t.click('.cycle-btn[data-cycle="9"]');
+  assert.ok(t.$('.week-btn[data-week="2"]').classList.contains("active"), "el ciclo 9 sigue en su semana");
+  t.click(".settings-btn"); t.click('.cycle-btn[data-cycle="8"]');
+  assert.ok(t.$('.week-btn[data-week="1"]').classList.contains("active"), "el ciclo 8 recuerda la suya");
+  assert.deepEqual(t.errors, []);
+});

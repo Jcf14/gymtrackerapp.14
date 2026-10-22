@@ -76,6 +76,26 @@
 
   function saveData() { return store.set(G.dataKey(S.cycle), S.data); }
 
+  // Última semana vista de cada ciclo: { "<N>": semana }. (Antes se guardaba una sola: { cycle, week }.)
+  function lastWeeks() {
+    const v = store.get(KEYS.lastWeek, null);
+    if (!v || typeof v !== "object") return {};
+    if ("cycle" in v && "week" in v) return { [v.cycle]: v.week };
+    return v;
+  }
+
+  // Semana al abrir un ciclo sin semana recordada: la que toca por fecha; si el ciclo ya terminó
+  // (o no tiene fecha), la última semana con datos, para no caer en una semana vacía.
+  function defaultWeek(r) {
+    const start = G.parseDate(G.cycleStart(r, S.data));
+    const today = new Date();
+    const days = start ? Math.floor((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - start) / 86400000) : null;
+    if (days !== null && days >= 0 && days < 28) return Math.floor(days / 7);
+    let last = -1;
+    for (const k of Object.keys(S.data)) { const p = G.parseSlotKey(k); if (p && p.week > last) last = p.week; }
+    return last >= 0 ? last : 0;
+  }
+
   function loadCycle(cycle) {
     S.cycle = Number(cycle);
     S.data = store.get(G.dataKey(S.cycle), {});
@@ -83,8 +103,8 @@
     S.open = new Set();
     S.histEx = null;
     const r = routine();
-    const lw = store.get(KEYS.lastWeek, null);
-    S.week = lw && lw.cycle === S.cycle ? lw.week : G.weekFromStart(G.cycleStart(r, S.data), new Date()) ?? 0;
+    const remembered = lastWeeks()[S.cycle];
+    S.week = Number.isInteger(remembered) ? remembered : defaultWeek(r);
     S.day = G.autoDayKey(r, new Date(), store.get(KEYS.lastDay, null));
     store.set(KEYS.active, S.cycle);
   }
@@ -781,7 +801,7 @@
     tab(el) { if (S.tab === el.dataset.tab && !S.histEx) return; S.tab = el.dataset.tab; S.histEx = null; S.fx.view = true; render(); window.scrollTo(0, 0); },
     week(el) {
       S.week = Number(el.dataset.week); S.open = new Set(); S.fx.view = true; S.skipOpen = false;
-      store.set(KEYS.lastWeek, { cycle: S.cycle, week: S.week }); render();
+      store.set(KEYS.lastWeek, { ...lastWeeks(), [S.cycle]: S.week }); render();
     },
     day(el) { S.day = el.dataset.day; S.open = new Set(); S.fx.view = true; S.skipOpen = false; store.set(KEYS.lastDay, S.day); render(); },
     "toggle-card"(el) {
@@ -988,7 +1008,7 @@
     "close-settings"() { S.sheet = false; renderSheet(); },
     "set-theme"(el) { S.theme = el.dataset.theme; store.set(KEYS.theme, S.theme); applyTheme(); renderSheet(); },
     "set-unit"(el) { S.unit = el.dataset.unit; store.set(KEYS.unit, S.unit); S.drafts = {}; render(); },
-    "set-cycle"(el) { loadCycle(el.dataset.cycle); S.fx.view = true; render(); toast(`Ciclo ${S.cycle} activo`); },
+    "set-cycle"(el) { loadCycle(el.dataset.cycle); S.sheet = false; S.tab = "rutina"; S.fx.view = true; render(); toast(`Ciclo ${S.cycle} activo`); },
     async "export-cycle"() {
       const r = routine();
       const ok = await deliverFile(`gluteo-ciclo-${r.cycle}-${today()}.json`, G.buildCycleExport(r, S.data, S.unit));
@@ -1094,7 +1114,8 @@
       store.set(KEYS.routines, S.routines);
       changed = true;
     }
-    if (S.cycle === null || r.cycle > S.cycle) {
+    // Solo se abre solo un ciclo vigente NUEVO; si elegí a propósito un ciclo anterior, se respeta.
+    if (S.cycle === null || (!prev && r.cycle > S.cycle)) {
       const wasEmpty = S.cycle === null;
       loadCycle(r.cycle);
       if (!wasEmpty) toast(`Ciclo ${r.cycle} cargado`);
