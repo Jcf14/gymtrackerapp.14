@@ -405,7 +405,7 @@
     const k = G.slotKey(day.key, idx, w);
     const rec = S.data[k] || null;
     const name = G.slotName(S.data, day.key, idx, ex, w);
-    const altUsed = !!(rec && rec.altUsed && ex.alt);
+    const altUsed = !!(rec && rec.altUsed && G.alts(ex).length);
     const open = S.open.has(idx);
     const done = !!(rec && rec.completed);
     const u = cardUnit(day.key, idx, k, rec);
@@ -444,8 +444,9 @@
     const d = draftFor(k, rec, sets);
     const u = d.unit;
     const baseName = G.effectiveName(S.data, day.key, idx, ex);
-    const altUsed = !!(rec && rec.altUsed && ex.alt);
-    const showAlt = ex.alt && G.normName(baseName) !== G.normName(ex.alt);
+    const altUsed = !!(rec && rec.altUsed && G.alts(ex).length);
+    const altList = G.alts(ex).map((name, i) => ({ name, i })).filter((a) => G.normName(a.name) !== G.normName(baseName));
+    const showAlt = altList.length > 0;
     const overridden = baseName !== ex.name;
     const sug = info && info.rec;
 
@@ -456,13 +457,14 @@
         </div>`
       : `<div class="insight none"><p class="why">${icon("info")}<span>Sin registros de este ejercicio: elegí un peso que te deje en el RPE pedido y ajustá con la 1ª serie.</span></p></div>`;
     const altBox = !(d.altOpen && showAlt) ? "" : altUsed
-      ? `<div class="alt-box"><b>Esta semana hacés la alternativa</b>${esc(ex.alt)}
+      ? `<div class="alt-box"><b>Esta semana hacés la alternativa</b>${esc(name)}
           <div class="row-btns"><button class="chip-btn undo-alt-btn" data-action="undo-alt" data-k="${k}">Volver a ${esc(baseName)}</button></div></div>`
-      : `<div class="alt-box"><b>Alternativa</b>${esc(ex.alt)}
+      : `<div class="alt-box"><b>${altList.length > 1 ? "Alternativas" : "Alternativa"}</b>${altList.map((a) => `<div class="alt-opt">
+          <div class="alt-name">${esc(a.name)}</div>
           <div class="row-btns">
-            <button class="chip-btn solid use-alt-btn" data-action="use-alt" data-k="${k}">Usar esta semana</button>
-            <button class="chip-btn use-alt-cycle-btn" data-action="use-alt-cycle" data-k="${k}">Usar en todo el ciclo</button>
-          </div></div>`;
+            <button class="chip-btn solid use-alt-btn" data-action="use-alt" data-i="${a.i}" data-k="${k}">Usar esta semana</button>
+            <button class="chip-btn use-alt-cycle-btn" data-action="use-alt-cycle" data-i="${a.i}" data-k="${k}">Usar en todo el ciclo</button>
+          </div></div>`).join("")}</div>`;
 
     const editBox = d.editOpen ? `<div class="edit-box">
         <input class="text-input" data-field="editName" data-k="${k}" value="${esc(d.editName)}" placeholder="Nombre del ejercicio" aria-label="Nuevo nombre">
@@ -843,6 +845,7 @@
       repsSame: d.repsSame,
       repsSameValue: d.repsSame ? same : "",
       altUsed: !!prev.altUsed,
+      ...(prev.altUsed ? { altIdx: prev.altIdx || 0 } : {}),
       unit: d.unit,
       savedAt: new Date().toISOString(),
     };
@@ -1002,19 +1005,19 @@
     "hist-filter"(el) { S.histFilter = el.dataset.filter; render(); },
     "use-alt"(el) {
       const k = el.dataset.k, { ex, week } = exFromKey(k);
-      S.data[k] = { ...(S.data[k] || { ...emptyRecord(ex.sets[week]), savedAt: null }), altUsed: true };
+      S.data[k] = { ...(S.data[k] || { ...emptyRecord(ex.sets[week]), savedAt: null }), altUsed: true, altIdx: Number(el.dataset.i) || 0 };
       if (!saveData()) return;
       S.drafts[k].altOpen = false; render(); toast("Esta semana: alternativa");
     },
     "undo-alt"(el) {
       const k = el.dataset.k;
-      if (S.data[k]) S.data[k].altUsed = false;
+      if (S.data[k]) { S.data[k].altUsed = false; delete S.data[k].altIdx; }
       if (!saveData()) return;
       S.drafts[k].altOpen = false; render(); toast("Volviste al ejercicio original");
     },
     "use-alt-cycle"(el) {
       const k = el.dataset.k, { dayObj, idx, ex } = exFromKey(k);
-      S.data[G.ovrKey(dayObj.key, idx)] = { name: ex.alt, savedAt: new Date().toISOString() };
+      S.data[G.ovrKey(dayObj.key, idx)] = { name: G.alts(ex)[Number(el.dataset.i) || 0], savedAt: new Date().toISOString() };
       for (let w = 0; w < 4; w++) { const r = S.data[G.slotKey(dayObj.key, idx, w)]; if (r) r.altUsed = false; }
       if (!saveData()) return;
       S.drafts[k].altOpen = false; render(); toast("Alternativa en todo el ciclo · se deshace con Editar nombre → Restablecer");

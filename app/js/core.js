@@ -63,7 +63,8 @@
         if (!ex || typeof ex !== "object") { errs.push(`${w}: no es un objeto`); return; }
         if (!isStr(ex.name)) errs.push(`${w}: falta name`);
         if (!(ex.pattern === null || isStr(ex.pattern))) errs.push(`${w}: pattern debe ser texto o null`);
-        if (!(ex.alt === null || isStr(ex.alt))) errs.push(`${w}: alt debe ser texto o null`);
+        if (!(ex.alt === null || isStr(ex.alt) || (Array.isArray(ex.alt) && ex.alt.length >= 1 && ex.alt.length <= 2 && ex.alt.every(isStr))))
+          errs.push(`${w}: alt debe ser texto, null o una lista de 1 o 2 textos`);
         if (!isStr(ex.rest)) errs.push(`${w}: falta rest`);
         if (ex.protocol !== undefined && !isStr(ex.protocol)) errs.push(`${w}: protocol debe ser un texto (u omitirse)`);
         if (ex.noWeight !== undefined && ex.noWeight !== true) errs.push(`${w}: noWeight solo puede ser true (u omitirse)`);
@@ -104,11 +105,15 @@
   // Nombre del ejercicio hecho en una semana concreta: la alternativa si se usó esa semana.
   function slotName(data, day, idx, ex, week) {
     const rec = data && data[slotKey(day, idx, week)];
-    return rec && rec.altUsed && ex.alt ? ex.alt : effectiveName(data, day, idx, ex);
+    const a = alts(ex);
+    return rec && rec.altUsed && a.length ? a[rec.altIdx || 0] || a[0] : effectiveName(data, day, idx, ex);
   }
 
+  // Alternativas de un ejercicio como lista (0, 1 o 2): otro ejercicio o el mismo con otro accesorio.
+  const alts = (ex) => (Array.isArray(ex.alt) ? ex.alt : ex.alt ? [ex.alt] : []);
+
   // Protocolo de la semana (pausa, pulsos…): el del ejercicio, salvo que se haya hecho la alternativa.
-  const slotProtocol = (rec, ex) => (rec && rec.altUsed && ex.alt ? "" : ex.protocol || "");
+  const slotProtocol = (rec, ex) => (rec && rec.altUsed && alts(ex).length ? "" : ex.protocol || "");
 
   function normName(s) {
     return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -533,7 +538,7 @@
   root.Gluteo = {
     DAY_KEYS, BARS, STEP,
     targetSetCount, isDeloadTarget, hasPlusWeight, validateRoutine,
-    dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, normName,
+    dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, alts, normName,
     parseNum, roundStep, fmtNum, barWeight, calcBar, repsText,
     LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
     collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,

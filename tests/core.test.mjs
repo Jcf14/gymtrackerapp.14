@@ -37,7 +37,7 @@ test("la validación detecta los errores del formato", () => {
   assert.match(errs, /S3 sets=3 pero .* indica 4/);
   assert.match(errs, /S4 necesita/);
   assert.match(errs, /targets debe tener exactamente 4/);
-  assert.match(errs, /alt debe ser texto o null/);
+  assert.match(errs, /alt debe ser texto, null o una lista/);
   assert.match(errs, /key repetida/);
 });
 
@@ -227,4 +227,16 @@ test("protocolo: opcional, texto, y la alternativa no lo hereda", () => {
   const ex = { protocol: "Pausa", alt: "Con mancuerna" };
   assert.equal(G.slotProtocol({}, ex), "Pausa");
   assert.equal(G.slotProtocol({ altUsed: true }, ex), "");
+});
+
+test("alt: texto, null o lista de 1–2", () => {
+  const r = fixture();
+  r.days[0].exercises[0].alt = ["A", "B"];
+  assert.deepEqual(plain(G.validateRoutine(r)), []);
+  r.days[0].exercises[0].alt = ["A", "B", "C"];
+  assert.match(G.validateRoutine(r).join(), /lista de 1 o 2/);
+  assert.deepEqual(plain(G.alts({ alt: "X" })), ["X"]);
+  assert.deepEqual(plain(G.alts({ alt: null })), []);
+  assert.equal(G.slotName({ A_0_w0: { altUsed: true, altIdx: 1 } }, "A", 0, { name: "N", alt: ["X", "Y"] }, 0), "Y");
+  assert.equal(G.slotName({ A_0_w0: { altUsed: true } }, "A", 0, { name: "N", alt: "X" }, 0), "X", "registros viejos sin altIdx");
 });

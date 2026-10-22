@@ -650,3 +650,23 @@ test("historial: unir dos ejercicios (ciclo abierto y ciclo cerrado)", async () 
   assert.equal(h.sessions[0].originalExercise, "Remo con agarre V");
   assert.deepEqual(t.errors, []);
 });
+
+test("dos alternativas: se elige cuál y su peso queda bajo ese nombre", async () => {
+  const r = structuredClone(FIXTURE);
+  r.days[0].exercises[0].alt = ["Hip thrust con mancuerna en banco", "Hip thrust en máquina"];
+  const t = await boot({ routine: r });
+  t.goTo(0, "A"); t.openCard(0); t.click(".alt-btn");
+  const opts = t.$$(".alt-opt");
+  assert.equal(opts.length, 2);
+  t.click(opts[1].querySelector(".use-alt-btn"));
+  assert.equal(t.data().A_0_w0.altIdx, 1);
+  assert.match(t.$(".ex-name").textContent, /Hip thrust en máquina · alternativa/);
+  t.type(".weight-input", "150"); t.click(".save-entry-btn");             // la tarjeta sigue abierta
+  assert.equal(t.data().A_0_w0.altIdx, 1, "guardar conserva cuál alternativa");
+  t.click('.tab[data-tab="historial"]');
+  assert.ok(t.$$(".hist-item").some((b) => /Hip thrust en máquina/.test(b.textContent) && /150 lb/.test(b.textContent)));
+  t.click('.tab[data-tab="rutina"]'); t.goTo(1, "A"); t.openCard(0); t.click(".alt-btn");
+  t.click(t.$$(".alt-opt")[0].querySelector(".use-alt-cycle-btn"));
+  assert.equal(t.data().ovr_A_0.name, "Hip thrust con mancuerna en banco");
+  assert.deepEqual(t.errors, []);
+});
