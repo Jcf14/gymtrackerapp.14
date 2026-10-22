@@ -354,19 +354,19 @@
       <ol class="ex-list">${day.exercises.map((ex, i) => renderCard(day, ex, i)).join("")}</ol>`;
   }
 
-  function weightSummary(rec) {
+  function weightLine(rec) {
     const w = rec ? G.parseNum(rec.weight) : NaN;
     if (!(w > 0)) return "";
     const u = G.recUnit(rec, routine());
-    const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? ` · ${fmt(rec.perSideDisplay)}/lado` : "";
-    return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u}</span><span class="side">${side} · ${convTxt(w, u)}</span></span>`;
+    const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? `${fmt(rec.perSideDisplay)}/lado · ` : "";
+    return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u}</span><span class="side"> · ${side}${convTxt(w, u)}</span></span>`;
   }
 
   function recBadge(rec, u) {
     if (!rec) return "";
     const cls = rec.mode === "deload" ? "down" : rec.mode === "reps" ? "reps" : rec.mode === "calibrate" ? "cal" : rec.value > rec.base ? "up" : "flat";
-    const pct = rec.mode !== "calibrate" && rec.pct ? `${pctTxt(rec.pct)} · ` : "";
-    return `<span class="ex-sug ${cls}"><span class="sug-lbl">Sugerido</span><span class="ex-val"><b>${fmt(rec.value)}</b> ${u}</span> <em>${icon(dirIcon(rec))}${pct}${esc(SHORT_GOAL[rec.goal] || rec.goal)}</em></span>`;
+    const pct = rec.mode !== "calibrate" && rec.pct ? pctTxt(rec.pct) : "";
+    return `<span class="ex-sug ${cls}"><span class="ex-val"><b>${fmt(rec.value)}</b> ${u}</span> ${pct ? `<em>${icon(dirIcon(rec))}${pct}</em><span class="sep"> · </span>` : ""}<span class="goal-s">${esc(SHORT_GOAL[rec.goal] || rec.goal)}</span></span>`;
   }
 
   function draftFor(k, rec, sets) {
@@ -381,7 +381,7 @@
         perSideDisplay: rec.perSideDisplay ?? null,
         note: rec.note || "",
         reps: Array.from({ length: sets }, (_, i) => (rec.reps && rec.reps[i]) || ""),
-        repsSame: !!rec.repsSame,
+        repsSame: (rec.reps || []).some((x) => String(x).trim() !== "") ? !!rec.repsSame : true,
         repsSameValue: rec.repsSameValue || "",
         calcOpen: false,
         calcBar: "women",
@@ -408,19 +408,30 @@
     const done = !!(rec && rec.completed);
     const u = cardUnit(day.key, idx, k, rec);
     const info = recFor(day, ex, idx, w, name, u);
-    const right = weightSummary(rec) || (info && info.rec ? recBadge(info.rec, u) : "");
     const tagTxt = altUsed ? "alternativa" : name !== ex.name ? "editado" : "";
-    const maxTxt = info && info.max ? `<span class="ex-max">${icon("trophy")}${fmt(info.max.weight)}${info.max.topReps ? `×${info.max.topReps}` : ""}</span>` : "";
+    const repsTxt = G.repsText(rec);
+    const saved = weightLine(rec);
+    const mid = saved || (rec && (rec.completed || repsTxt))
+      ? `<div class="cs cs-reg"><span class="cs-lbl">Registrado</span>${saved || `<span class="cs-val">${repsTxt ? esc(repsTxt) : "Hecho"}</span>`}${saved && repsTxt ? `<span class="cs-sub">reps ${esc(repsTxt)}</span>` : ""}</div>`
+      : info && info.rec
+        ? `<div class="cs cs-sug"><span class="cs-lbl">Sugerido</span>${recBadge(info.rec, u)}</div>`
+        : `<div class="cs"><span class="cs-lbl">Sugerido</span><span class="cs-val none">${ex.noWeight ? "Sin peso" : "Calibrá"}</span></div>`;
+    const best = info && info.max;
+    const recCol = ex.noWeight && !best ? "" : best
+      ? `<div class="cs cs-rec"><span class="cs-lbl">Récord</span><span class="cs-val ex-max">${icon("trophy")}${fmt(best.weight)}${best.topReps ? `<small>×${best.topReps}</small>` : ""}</span><span class="cs-sub">${fmtDate(best.date)}</span></div>`
+      : `<div class="cs cs-rec"><span class="cs-lbl">Récord</span><span class="cs-val none">—</span></div>`;
     const head = `<div class="card-head" data-action="toggle-card" data-idx="${idx}">
         <button class="done-btn${FX.done === k ? " fx-pop" : ""}" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">${icon("check")}</button>
         <div class="card-info">
           <div class="ex-name">${esc(name)}${tagTxt ? ` <span class="edited">· ${tagTxt}</span>` : ""}</div>
           ${G.slotProtocol(rec, ex) ? `<div class="ex-proto">${icon("pause")}${esc(ex.protocol)}</div>` : ""}
-          <div class="ex-sub"><span class="ex-target">${esc(prettyTarget(ex.targets[w]))}</span><span class="ex-rest">${icon("clock")}${esc(ex.rest)}</span>${maxTxt}</div>
-          ${right ? `<div class="ex-line">${right}</div>` : ""}
+          <div class="card-stats${recCol ? "" : " two"}">
+            <div class="cs cs-today"><span class="cs-lbl">Hoy</span><span class="cs-val ex-target">${esc(prettyTarget(ex.targets[w]))}</span><span class="cs-sub ex-rest">${icon("clock")}${esc(ex.rest)}</span></div>
+            ${mid}${recCol}
+          </div>
         </div>
       </div>`;
-    const cls = `card ${day.type}${done ? " done" : ""}${open ? " open" : ""}${FX.pr === k ? " fx-pr" : ""}`;
+    const cls = `card ${day.type}${done ? " done" : ""}${open ? " open" : ""}${FX.pr === k ? " fx-pr" : ""}${FX.saved === k ? " fx-saved" : ""}`;
     if (!open) return `<li class="${cls}" style="--i:${idx}">${head}</li>`;
     return `<li class="${cls}" style="--i:${idx}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name, info)}</li>`;
   }
@@ -435,26 +446,16 @@
     const showAlt = ex.alt && G.normName(baseName) !== G.normName(ex.alt);
     const overridden = baseName !== ex.name;
     const sug = info && info.rec;
-    const max = info && info.max;
 
     const insight = ex.noWeight ? "" : sug
       ? `<div class="insight ${sug.mode}">
-          <div><div class="label">${icon("target")}Sugerido para hoy</div>
-            <div class="val">${fmt(sug.value)} <small>${u}</small>${sug.mode !== "calibrate" && sug.pct ? `<span class="delta">${icon(dirIcon(sug))}${pctTxt(sug.pct)}</span>` : ""}</div></div>
-          <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}">Usar</button>
-          <div class="goal">${esc(sug.goal)}</div>
-          <p class="why">${esc(sug.text)}</p>
+          <p class="why">${icon("info")}<span><b>${esc(sug.goal)}.</b> ${esc(sug.text)}</span></p>
+          <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}">Usar ${fmt(sug.value)} ${u}</button>
         </div>`
-      : `<div class="insight none">
-          <div><div class="label">${icon("target")}Sugerido para hoy</div><div class="val">Calibrá con la 1ª serie</div></div>
-          <p class="why">Todavía no hay registros de este ejercicio: elegí un peso que te deje en el RPE pedido.</p>
-        </div>`;
+      : `<div class="insight none"><p class="why">${icon("info")}<span>Sin registros de este ejercicio: elegí un peso que te deje en el RPE pedido y ajustá con la 1ª serie.</span></p></div>`;
     const facts = `<div class="facts">
         ${ex.pattern ? `<span>${icon("layers")}${esc(ex.pattern)}</span>` : ""}
-        <span>${icon("clock")}<b>${esc(ex.rest)}</b></span>
         <span>${icon("list")}<b>${sets}</b> series</span>
-        ${max ? `<span class="fact-max">${icon("trophy")}Máximo <b>${fmt(max.weight)} ${u}</b>${max.topReps ? ` × ${max.topReps}` : ""} · ${fmtDate(max.date)}</span>`
-          : ex.noWeight ? "" : `<span class="fact-max">${icon("trophy")}Sin máximo todavía</span>`}
       </div>`;
 
     const altBox = !(d.altOpen && showAlt) ? "" : altUsed
@@ -523,7 +524,10 @@
           <textarea class="text-input note-input" rows="1" data-field="note" data-k="${k}" placeholder="Nota (opcional)" aria-label="Nota: cómo se sintió, molestias, ajustes">${esc(d.note)}</textarea>
         </div>
       </div>
-      <button class="primary-btn save-entry-btn" data-action="save-entry" data-k="${k}">${icon("check")}Guardar</button>
+      <div class="save-row">
+        <button class="secondary-btn save-entry-btn" data-action="save-entry" data-k="${k}">Solo guardar</button>
+        <button class="primary-btn save-done-btn" data-action="save-entry" data-complete="1" data-k="${k}">${icon("check")}${rec && rec.completed ? "Guardar" : "Guardar y marcar listo"}</button>
+      </div>
     </div>`;
   }
 
@@ -894,14 +898,20 @@
       const { dayObj, idx, ex, week } = exFromKey(k);
       const name = G.slotName(S.data, dayObj.key, idx, ex, week);
       const before = G.findMax(recordsOf(name).filter((r) => !(r.cycle === S.cycle && r.key === k)));
-      if (!saveEntry(k)) return;
+      const complete = el.dataset.complete ? true : undefined;
+      if (!saveEntry(k, complete)) return;
       S.open.delete(idx);
+      S.fx.saved = k;
+      if (complete) S.fx.done = k;
       const now = G.collectRecords(S.routines, allData(), name).find((r) => r.cycle === S.cycle && r.key === k);
       const isPR = before && now && (G.cmpW(now) > G.cmpW(before) || (G.cmpW(now) === G.cmpW(before) && now.topReps > before.topReps));
       if (isPR) S.fx.pr = k;
       render();
+      // la tarjeta guardada queda a la vista (y brilla) para no perderla
+      const card = document.querySelector(`.done-btn[data-k="${k}"]`);
+      if (card && card.scrollIntoView) card.closest(".card").scrollIntoView({ block: "center", behavior: "smooth" });
       if (isPR) toast(`🏆 ¡Nuevo récord! ${fmt(now.weight)} ${now.unit}${now.topReps ? ` × ${now.topReps}` : ""}`, "pr");
-      else toast("Guardado ✓");
+      else toast(complete ? "Guardado y listo ✓" : "Guardado ✓");
     },
     "step-weight"(el) {
       const k = el.dataset.k, d = S.drafts[k];

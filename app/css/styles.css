@@ -587,3 +587,49 @@ textarea.text-input { resize: none; min-height: 44px; }
 .banner.warn { background: #FFF4E5; color: #7A4A00; box-shadow: none; align-items: flex-start; }
 .banner.warn .ic { color: #C77700; margin-top: 1px; }
 :root[data-theme="dark"] .banner.warn { background: #33270F; color: #F3D9A8; }
+
+/* ---------- Tarjeta: HOY · SUGERIDO/REGISTRADO · RÉCORD ---------- */
+.card-stats { display: grid; grid-template-columns: 1.15fr 1fr .85fr; gap: 10px; margin-top: 10px; }
+.card-stats.two { grid-template-columns: 1.15fr 1fr; }
+.cs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cs + .cs { padding-left: 10px; box-shadow: inset 1px 0 0 var(--hairline); }
+.cs-lbl { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); }
+.cs-val { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.25; }
+.cs-val.none { color: var(--text-3); font-weight: 500; }
+.cs-sub { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.cs-sub .ic { width: 12px; height: 12px; color: var(--text-3); }
+.cs-today .cs-val { font-size: 13.5px; }
+.cs .ex-weight, .cs .ex-sug { flex-direction: column; align-items: flex-start; gap: 3px; }
+.cs .ex-weight b, .cs .ex-sug b, .cs-rec .cs-val { font-family: var(--display); font-size: 19px; font-weight: 700; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.cs .ex-weight .side { font-size: 11px; font-weight: 500; }
+.cs-reg .cs-lbl { color: var(--ok); }
+.cs-reg .ex-weight b { color: var(--text); }
+.cs .ex-sug b { color: var(--text-2); }
+.cs .ex-sug em { font-size: 10.5px; padding: 1px 6px 1px 4px; }
+.cs-rec .cs-val { display: inline-flex; align-items: baseline; gap: 2px; color: var(--text-2); }
+.cs-rec .cs-val .ic { width: 13px; height: 13px; color: var(--gold); align-self: center; }
+.cs-rec .cs-val small { font-size: 14px; font-weight: 600; }
+.card.done .cs-val, .card.done .ex-weight b { color: var(--text-2); }
+
+/* Cuerpo: el porqué de la sugerencia */
+.card-body .insight { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
+.card-body .insight .why { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 13px; color: var(--text); }
+.card-body .insight .why b { font-weight: 700; }
+.card-body .insight .why .ic { width: 15px; height: 15px; margin-top: 1px; color: var(--lower); }
+.card-body .use-sug-btn { align-self: flex-start; grid-row: auto; grid-column: auto; padding: 7px 14px; font-size: 13px; }
+.card-body .insight.none .why { color: var(--text-2); }
+
+/* Guardar: dos botones */
+.save-row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; margin-top: 12px; }
+.save-row .primary-btn, .save-row .secondary-btn { margin-top: 0; padding: 12px 8px; font-size: 14px; }
+
+/* La tarjeta recién guardada se resalta un momento */
+@keyframes saved-ring { 0% { box-shadow: 0 0 0 0 rgba(46, 109, 164, .55), var(--shadow-1); } 100% { box-shadow: 0 0 0 10px rgba(46, 109, 164, 0), var(--shadow-1); } }
+.card.fx-saved { animation: saved-ring 1s var(--ease) 2; }
+.ex-sug .sep { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.ex-sug { position: relative; }
+.ex-sug .goal-s { font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+.ex-sug.up .goal-s { color: var(--ok); }
+.ex-sug.down .goal-s { color: var(--lower); }
+.ex-sug.reps .goal-s { color: #9A7A12; }
+:root[data-theme="dark"] .ex-sug.reps .goal-s { color: var(--gold); }

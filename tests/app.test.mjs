@@ -95,6 +95,10 @@ test("no guarda ni completa sin peso; guarda con peso y reps", async () => {
   assert.deepEqual(t.data(), {});
 
   t.type(".weight-input", "215");
+  assert.ok(t.$(".reps-same-check").checked, "reps iguales por defecto");
+  assert.equal(t.$$(".rep-input").length, 0);
+  t.$(".reps-same-check").checked = false;
+  t.$(".reps-same-check").dispatchEvent(new t.w.Event("change", { bubbles: true }));
   t.$$(".rep-input").forEach((el, i) => { el.value = String(10 - i); el.dispatchEvent(new t.w.Event("input", { bubbles: true })); });
   t.type(".note-input", "  bastante pesadito ");
   t.click(".save-entry-btn");
@@ -186,21 +190,26 @@ test("calculadora: 90 por lado + barra de mujer = 215", async () => {
 test("sugerencias: (+peso) en S2 y 55% en descarga", async () => {
   const t = await boot();
   t.goTo(0, "A"); t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
-  t.goTo(1, "A"); t.openCard(0);
-  assert.match(t.$(".use-sug-btn").closest(".insight").textContent, /220 lb\s*\+2%/);
-  assert.match(t.$(".use-sug-btn").closest(".insight").textContent, /Más peso/);
+  t.goTo(1, "A");
+  // cabecera: cada dato con su etiqueta (HOY · SUGERIDO · RÉCORD)
+  const head = () => t.$$(".card")[0];
+  assert.match(head().querySelector(".cs-today").textContent, /Hoy\s*4×6-8 · RPE 8 \(\+peso\)/);
+  assert.match(head().querySelector(".cs-sug").textContent, /Sugerido\s*220 lb \S*\+2% · Más peso/);
+  assert.match(head().querySelector(".cs-rec").textContent, /Récord\s*215/);
+  t.openCard(0);
+  assert.match(t.$(".use-sug-btn").textContent, /Usar 220 lb/);
+  assert.match(t.$(".insight .why").textContent, /Más peso, menos reps/);
   t.click(".use-sug-btn");
   assert.equal(t.$(".weight-input").value, "220");
   t.click(".save-entry-btn");
+  assert.match(head().querySelector(".cs-reg").textContent, /Registrado\s*220 lb/, "registrado reemplaza a sugerido");
   t.goTo(2, "A"); t.openCard(0); t.type(".weight-input", "235"); t.click(".save-entry-btn");
-  t.goTo(3, "A"); t.openCard(0);
-  assert.match(t.$(".use-sug-btn").closest(".insight").textContent, /130 lb\s*−45%/);
-  assert.match(t.$(".why").textContent, /Descarga/);
-  assert.match(t.$(".card-body").textContent, /Máximo\s*235 lb/);
-  // la tarjeta plegada también muestra máximo y sugerencia
-  t.click(t.$$(".card-head")[0]);
+  t.goTo(3, "A");
   assert.match(t.$(".ex-max").textContent, /235/);
   assert.match(t.$(".ex-sug").textContent, /130 lb −45% · Menos peso/);
+  t.openCard(0);
+  assert.match(t.$(".use-sug-btn").textContent, /Usar 130 lb/);
+  assert.match(t.$(".why").textContent, /Descarga/);
 });
 
 test("borradores sobreviven al re-render de otra tarjeta", async () => {
@@ -592,4 +601,23 @@ test("aviso de navegador: en el celular fuera de la app anclada", async () => {
   Object.defineProperty(t2.w.navigator, "standalone", { value: true, configurable: true });
   t2.goTo(0, "A");
   assert.equal(t2.$(".banner.warn"), null, "en la app anclada no aparece");
+});
+
+test("'Guardar y marcar listo' completa; 'Solo guardar' no; la tarjeta queda marcada", async () => {
+  const t = await boot();
+  t.goTo(0, "A"); t.openCard(1);
+  t.type(".reps-same-input", "10"); t.type(".weight-input", "40");
+  assert.match(t.$(".save-done-btn").textContent, /Guardar y marcar listo/);
+  t.click(".save-done-btn");
+  const rec = t.data().A_1_w0;
+  assert.equal(rec.completed, true);
+  assert.deepEqual(rec.reps, ["10", "10", "10"]);
+  assert.match(t.toast(), /Guardado y listo/);
+  const card = t.$$(".card")[1];
+  assert.ok(card.classList.contains("fx-saved"), "la tarjeta guardada se resalta");
+  assert.equal(card.querySelector(".done-btn").getAttribute("aria-pressed"), "true");
+  assert.match(card.querySelector(".cs-reg").textContent, /40 lb.*reps 3×10/);
+  t.openCard(0); t.type(".weight-input", "200"); t.click(".save-entry-btn");
+  assert.equal(t.data().A_0_w0.completed, false);
+  assert.deepEqual(t.errors, []);
 });
