@@ -643,3 +643,23 @@ textarea.text-input { resize: none; min-height: 44px; }
 .merge-list { list-style: none; margin: 10px 0; padding: 0; max-height: 300px; overflow-y: auto; border-radius: var(--r); background: var(--surface-2); }
 .merge-list li + li .list-row { box-shadow: inset 0 1px 0 var(--surface-3); }
 .merge-empty { padding: 12px 14px; }
+
+/* Etiquetas bajo el nombre: patrón y protocolo */
+.ex-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; }
+.ex-tags .ex-proto { margin-top: 0; }
+.ex-pattern { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px; border-radius: 99px; background: var(--surface-2); color: var(--text-2); font-size: 12px; font-weight: 600; }
+.ex-pattern .ic { width: 13px; height: 13px; color: var(--text-3); }
+.card-body .insight { margin-top: 2px; }
+.card-body .tools { margin-top: 12px; }
+
+/* Calculadora de barra: solo ícono, en la fila del peso */
+.reg .calc-toggle-btn {
+  display: grid; place-items: center; width: 34px; height: 34px; margin: 0; padding: 0; border: 0; border-radius: 10px;
+  background: var(--surface-3); color: var(--text-2); transition: background .2s, color .2s, transform .15s var(--ease);
+}
+.reg .calc-toggle-btn .ic { width: 17px; height: 17px; }
+.reg .calc-toggle-btn:active { transform: scale(.92); }
+.reg .calc-toggle-btn.on { background: var(--primary-soft); color: var(--lower); }
+.reg .weight-row .reg-ctrl { gap: 6px; flex-wrap: nowrap; }
+.reg .weight-box { width: 72px; }
+.reg-sub:has(.weight-hints:empty), .reg-sub:has(.conv-hint:empty):not(:has(.perside-hint)) { padding-bottom: 4px; min-height: 0; }

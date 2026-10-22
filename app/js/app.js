@@ -427,7 +427,7 @@
         <button class="done-btn${FX.done === k ? " fx-pop" : ""}" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">${icon("check")}</button>
         <div class="card-info">
           <div class="ex-name">${esc(name)}${tagTxt ? ` <span class="edited">· ${tagTxt}</span>` : ""}</div>
-          ${G.slotProtocol(rec, ex) ? `<div class="ex-proto">${icon("pause")}${esc(ex.protocol)}</div>` : ""}
+          ${ex.pattern || G.slotProtocol(rec, ex) ? `<div class="ex-tags">${ex.pattern ? `<span class="ex-pattern">${icon("layers")}${esc(ex.pattern)}</span>` : ""}${G.slotProtocol(rec, ex) ? `<span class="ex-proto">${icon("pause")}${esc(ex.protocol)}</span>` : ""}</div>` : ""}
           <div class="card-stats${recCol ? "" : " two"}">
             <div class="cs cs-today"><span class="cs-lbl">Hoy</span><span class="cs-val ex-target">${esc(prettyTarget(ex.targets[w]))}</span><span class="cs-sub ex-rest">${icon("clock")}${esc(ex.rest)}</span></div>
             ${mid}${recCol}
@@ -456,11 +456,6 @@
           <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}">Usar ${fmt(sug.value)} ${u}</button>
         </div>`
       : `<div class="insight none"><p class="why">${icon("info")}<span>Sin registros de este ejercicio: elegí un peso que te deje en el RPE pedido y ajustá con la 1ª serie.</span></p></div>`;
-    const facts = `<div class="facts">
-        ${ex.pattern ? `<span>${icon("layers")}${esc(ex.pattern)}</span>` : ""}
-        <span>${icon("list")}<b>${sets}</b> series</span>
-      </div>`;
-
     const altBox = !(d.altOpen && showAlt) ? "" : altUsed
       ? `<div class="alt-box"><b>Esta semana hacés la alternativa</b>${esc(ex.alt)}
           <div class="row-btns"><button class="chip-btn undo-alt-btn" data-action="undo-alt" data-k="${k}">Volver a ${esc(baseName)}</button></div></div>`
@@ -492,7 +487,6 @@
 
     return `<div class="card-body${FX.opened === idx ? " fx-open" : ""}">
       ${insight}
-      ${facts}
       <div class="tools">
         ${showAlt ? `<button class="tool-btn alt-btn${d.altOpen || altUsed ? " on" : ""}" data-action="toggle-alt" data-k="${k}">${icon("swap")}${altUsed ? "Usando alt." : "Alternativa"}</button>` : ""}
         <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>
@@ -513,10 +507,10 @@
               <button class="step-btn step-up-btn" data-action="step-weight" data-dir="1" data-k="${k}" aria-label="Subir peso">+</button>
             </div>
             ${unitSeg}
+            ${ex.noWeight ? "" : `<button class="calc-toggle-btn${d.calcOpen ? " on" : ""}" data-action="toggle-calc" data-k="${k}" aria-label="${d.calcOpen ? "Cerrar calculadora de barra" : "Calculadora de barra"}" title="Calculadora de barra">${icon("calc")}</button>`}
           </div>
         </div>
-        <div class="reg-sub">${hints}
-          ${ex.noWeight ? "" : `<button class="calc-toggle-btn" data-action="toggle-calc" data-k="${k}">${icon("calc")}${d.calcOpen ? "Cerrar" : "Calcular con barra"}</button>`}</div>
+        <div class="reg-sub">${hints}</div>
         ${d.calcOpen && !ex.noWeight ? renderCalc(k, d) : ""}
         <div class="reg-row reps-row">
           <span class="reg-label">Reps
