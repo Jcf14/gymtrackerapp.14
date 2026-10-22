@@ -47,6 +47,8 @@
     histQuery: "",
     histFilter: "all",
     histEx: null,       // clave del ejercicio abierto en el historial
+    mergeOpen: false,   // selector "Unir con otro ejercicio" abierto
+    mergeQuery: "",
     sheet: false,       // false | "settings" | "glossary"
     sheetFx: false,
     skipOpen: false,    // formulario "No pude hacerlo" abierto
@@ -158,6 +160,7 @@
     down: '<path d="M7 7l10 10M17 9v8H9"/>',
     flat: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     pause: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
+    merge: '<path d="M7 4v5a6 6 0 0 0 6 6h5"/><path d="m15 12 3 3-3 3"/><path d="M7 20v-4"/>',
     calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     ban: '<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -602,6 +605,42 @@
     }).join("")}</ul>`;
   }
 
+  function renderMergeList(e) {
+    const q = G.normName(S.mergeQuery);
+    const list = histIndex().filter((x) => x.key !== e.key && (!q || G.normName(x.name).includes(q)));
+    if (!list.length) return `<li class="muted small merge-empty">No hay ejercicios que coincidan.</li>`;
+    return list.map((x) => `<li><button class="list-row merge-target-btn" data-action="merge-into" data-name="${esc(x.name)}">
+        <span class="grow">${esc(x.name)}<span class="sub">${x.max ? `Récord ${fmt(x.max.weight)} ${x.max.unit}${x.max.topReps ? ` × ${x.max.topReps}` : ""}` : "Sin registros"}</span></span></button></li>`).join("");
+  }
+
+  // Une dos ejercicios: lo que se llamaba "from" pasa a llamarse "to" en ciclos abiertos (override de nombre,
+  // reversible con Renombrar → Restablecer) y en el historial de ciclos cerrados (guarda el nombre original).
+  function mergeExercises(fromName, toName) {
+    const from = G.normName(fromName);
+    const now = new Date().toISOString();
+    let slots = 0, sessions = 0;
+    for (const c of Object.keys(S.routines)) {
+      const r = S.routines[c], data = dataOf(c);
+      let touched = false;
+      r.days.forEach((d) => d.exercises.forEach((ex, idx) => {
+        if (G.normName(G.effectiveName(data, d.key, idx, ex)) !== from) return;
+        data[G.ovrKey(d.key, idx)] = { name: G.normName(toName) === G.normName(ex.name) ? null : toName, savedAt: now, mergedFrom: fromName };
+        touched = true; slots++;
+      }));
+      if (touched) { if (Number(c) === S.cycle) saveData(); else store.set(G.dataKey(c), data); }
+    }
+    if (S.hist) {
+      for (const x of S.hist.sessions) {
+        if (G.normName(x.exercise) !== from) continue;
+        x.originalExercise = x.originalExercise || x.exercise;
+        x.exercise = toName; sessions++;
+      }
+      if (sessions) store.set(KEYS.history, S.hist);
+    }
+    S.drafts = {};
+    return { slots, sessions };
+  }
+
   function renderHistDetail(e) {
     const prs = G.prHistory(e.records).reverse();
     const sessions = [...e.records].sort((a, b) => (a.date && b.date ? (a.date < b.date ? 1 : -1) : b.cycle - a.cycle || b.week - a.week));
@@ -625,6 +664,14 @@
     return `<button class="back-btn hist-back-btn" data-action="hist-back">${icon("back")}Historial</button>
       <div class="page-head"><div class="eyebrow">${esc(e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"))}</div>
         <h1 class="page-title detail">${esc(e.name)}</h1></div>
+      ${S.mergeOpen ? `<div class="merge-box">
+          <div class="merge-title">¿Con qué ejercicio es el mismo?</div>
+          <p class="merge-hint">Todas las marcas de "${esc(e.name)}" pasan al que elijas y queda <b>ese</b> nombre.</p>
+          <label class="search">${icon("search")}<input type="search" class="search-input merge-search" data-search="merge" value="${esc(S.mergeQuery)}" placeholder="Buscar ejercicio" aria-label="Buscar ejercicio" autocomplete="off"></label>
+          <ul class="merge-list">${renderMergeList(e)}</ul>
+          <button class="chip-btn merge-cancel-btn" data-action="merge-cancel">Cancelar</button>
+        </div>`
+        : `<button class="chip-btn merge-btn" data-action="merge-open">${icon("merge")}Unir con otro ejercicio</button>`}
       <div class="pr-hero">
         <span class="label">${icon("trophy")}Máximo actual</span>
         ${m ? `<span class="pr-hero-val num">${fmt(m.weight)} <small>${m.unit}</small>${m.topReps ? ` <span>× ${m.topReps}</span>` : ""}</span>
@@ -942,8 +989,23 @@
       render();
       toast(w > 0 ? `Convertido: ${fmt(G.parseNum(d.weight))} ${to}` : `Este ejercicio en ${to}`);
     },
-    "hist-open"(el) { S.histEx = el.dataset.ex; S.fx.view = true; render(); window.scrollTo(0, 0); },
-    "hist-back"() { S.histEx = null; S.fx.view = true; render(); },
+    "hist-open"(el) { S.mergeOpen = false; S.histEx = el.dataset.ex; S.fx.view = true; render(); window.scrollTo(0, 0); },
+    "hist-back"() { S.histEx = null; S.mergeOpen = false; S.fx.view = true; render(); },
+    "merge-open"() { S.mergeOpen = true; S.mergeQuery = ""; render(); },
+    "merge-cancel"() { S.mergeOpen = false; render(); },
+    "merge-into"(el) {
+      const e = histIndex().find((x) => x.key === S.histEx);
+      const to = el.dataset.name;
+      if (!e || !to) return;
+      if (!confirm(`¿"${e.name}" y "${to}" son el mismo ejercicio?\n\nTodas las marcas pasan a "${to}" (historial, récords y sugerencias).`)) return;
+      const res = mergeExercises(e.name, to);
+      S.mergeOpen = false;
+      S.histEx = G.normName(to);
+      S.fx.view = true;
+      render();
+      toast(`Unidos ✓ · ahora es "${to}"`);
+      return res;
+    },
     "hist-filter"(el) { S.histFilter = el.dataset.filter; render(); },
     "use-alt"(el) {
       const k = el.dataset.k, { ex, week } = exFromKey(k);
@@ -1058,6 +1120,13 @@
   function onInput(e) {
     const el = e.target, f = el.dataset.field, k = el.dataset.k;
     if (el.dataset.skip === "reason") { S.skipReason = el.value; return; }
+    if (el.dataset.search === "merge") {
+      S.mergeQuery = el.value;
+      const e = histIndex().find((x) => x.key === S.histEx);
+      const list = document.querySelector(".merge-list");
+      if (e && list) list.innerHTML = renderMergeList(e);
+      return;
+    }
     if (el.dataset.search === "hist") {
       S.histQuery = el.value;
       const list = document.querySelector(".hist-list");

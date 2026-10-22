@@ -621,3 +621,32 @@ test("'Guardar y marcar listo' completa; 'Solo guardar' no; la tarjeta queda mar
   assert.equal(t.data().A_0_w0.completed, false);
   assert.deepEqual(t.errors, []);
 });
+
+test("historial: unir dos ejercicios (ciclo abierto y ciclo cerrado)", async () => {
+  const old = structuredClone(FIXTURE); old.cycle = 8; old.name = "Viejo";
+  const hist = { version: 1, cycles: [{ cycle: 7, name: "Cerrado" }], skipped: [],
+    sessions: [{ cycle: 7, week: 0, weekShort: "S1", day: "D", exercise: "Remo con agarre V", type: "upper", pattern: null, weight: 80, unit: "lb", reps: ["12"], date: "2026-08-01" }] };
+  const storage = {
+    gluteo_rutinas: JSON.stringify({ 8: old }),
+    gluteo_historial: JSON.stringify(hist),
+    "gluteo_tracker_ciclo-8": JSON.stringify({ ovr_B_0: { name: "Remo con agarre V" }, B_0_w0: { weight: "90", reps: ["10"], unit: "lb" } }),
+  };
+  const t = await boot({ storage });
+  t.click('.tab[data-tab="historial"]');
+  const item = () => t.$$(".hist-item").find((b) => /Remo con agarre V/.test(b.textContent));
+  t.click(item());
+  assert.equal(t.$$(".sess-row").length, 2, "ciclo 8 abierto + ciclo 7 cerrado");
+  t.click(".merge-btn");
+  t.type(".merge-search", "press");
+  const target = t.$$(".merge-target-btn").find((b) => /Press inclinado/.test(b.textContent));
+  assert.ok(target);
+  t.click(target);
+  assert.match(t.$(".page-title").textContent, /Press inclinado con mancuernas/);
+  assert.equal(item(), undefined, "ya no aparece por separado");
+  assert.equal(t.$$(".sess-row").length, 2, "sus marcas pasaron al elegido");
+  assert.equal(JSON.parse(t.w.localStorage.getItem("gluteo_tracker_ciclo-8")).ovr_B_0.name, null, "volvió al nombre original de la rutina");
+  const h = JSON.parse(t.w.localStorage.getItem("gluteo_historial"));
+  assert.equal(h.sessions[0].exercise, "Press inclinado con mancuernas");
+  assert.equal(h.sessions[0].originalExercise, "Remo con agarre V");
+  assert.deepEqual(t.errors, []);
+});
