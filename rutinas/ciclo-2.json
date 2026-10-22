@@ -165,7 +165,7 @@
         },
         {
           "pattern": "Thrust/Bridge (lockout)",
-          "name": "Hip thrust con barra libre",
+          "name": "Hip thrust con barra libre + pulsos",
           "protocol": "Pulsos al final de la serie · ~15–20% menos peso que el Día A",
           "alt": "Frog pump con mancuerna (reps altas)",
           "rest": "75-90s",

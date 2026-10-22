@@ -507,7 +507,7 @@ test("las sugerencias del ciclo nuevo usan el historial del ciclo cerrado (S1 co
   assert.deepEqual(t2.errors, []);
 });
 
-test("protocolo: se muestra y las sugerencias no mezclan protocolos distintos", async () => {
+test("protocolo: es solo descriptivo; mismo nombre = mismo récord y sugerencia", async () => {
   const cur = structuredClone(FIXTURE);
   cur.days[0].exercises[0].name = "Hip thrust con barra libre";
   cur.days[0].exercises[0].protocol = "Pausa 2 s arriba en cada rep";
@@ -521,9 +521,9 @@ test("protocolo: se muestra y las sugerencias no mezclan protocolos distintos", 
   t.goTo(0, "A");
   const card = t.$$(".card")[0];
   assert.match(card.querySelector(".ex-proto").textContent, /Pausa 2 s/);
-  assert.equal(card.querySelector(".ex-sug"), null, "no sugiere desde el hip thrust sin pausa");
-  assert.equal(card.querySelector(".ex-max"), null);
-  // pero el historial los muestra juntos, con el protocolo en cada sesión
+  assert.match(card.querySelector(".ex-max").textContent, /300/, "el récord del ciclo anterior se ve aunque cambie el protocolo");
+  assert.match(card.querySelector(".ex-sug").textContent, /300 lb.*Más reps/, "S1 anterior: 300 × 8, el rango pide hasta 10 → mismo peso, más reps");
+  // y el historial los muestra juntos, con el protocolo en cada sesión
   t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
   t.click('.tab[data-tab="historial"]');
   const items = t.$$(".hist-item").filter((b) => /Hip thrust con barra libre/.test(b.textContent));

@@ -155,8 +155,8 @@
         },
         {
           "pattern": "Thrust/Bridge (lockout)",
-          "name": "Hip thrust con barra libre",
-          "protocol": "Banda + pulsos al final de la serie",
+          "name": "Hip thrust con barra libre + pulsos",
+          "protocol": "Con banda · pulsos al final de la serie",
           "alt": "Hip thrust con barra (sin banda)",
           "rest": "75-90s",
           "targets": ["3x12 + 10 pulsos", "3x10 + 10 pulsos (+banda)", "3x8 @RPE8 + 15 pulsos", "2x12 sin pulsos (liviano)"],

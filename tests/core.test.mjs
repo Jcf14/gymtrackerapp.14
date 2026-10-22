@@ -227,5 +227,4 @@ test("protocolo: opcional, texto, y la alternativa no lo hereda", () => {
   const ex = { protocol: "Pausa", alt: "Con mancuerna" };
   assert.equal(G.slotProtocol({}, ex), "Pausa");
   assert.equal(G.slotProtocol({ altUsed: true }, ex), "");
-  assert.ok(G.sameProtocol("Pausa 2 s", "pausa 2 S"));
 });

@@ -182,7 +182,7 @@
     { id: "rematado", term: "Serie de rematado (+ 1x15-20)", text: "Una serie extra de 15–20 reps con ~40–50% menos peso que las series pesadas. Solo en el hip thrust del Día A en S3." },
     { id: "lado", term: "c/pierna · c/lado", text: "Las reps se cuentan para cada pierna o lado por separado." },
     { id: "barra", term: "Por lado / total", text: "Por lado = los discos de un solo lado, sin la barra. Total = 2 × lado + barra. Barra de mujer: 35 lb (15 kg)." },
-    { id: "protocolo", term: "Protocolo", text: "Cómo se hace el ejercicio en este ciclo (pausa arriba, pulsos al final, pies adelante…). El nombre queda igual entre ciclos para ver toda la progresión junta en el historial; las sugerencias de peso solo comparan con marcas del mismo protocolo." },
+    { id: "protocolo", term: "Protocolo", text: "Detalle de cómo se hace el ejercicio en este ciclo (pausa arriba, agarre neutro, pies adelante…). Es solo descriptivo: el mismo nombre es el mismo ejercicio para el historial, el récord y las sugerencias. Si una variante cambia mucho la carga (como el hip thrust con pulsos, más liviano), lleva otro nombre." },
     { id: "alternativa", term: "Alternativa", text: "Ejercicio de reemplazo si la máquina o la barra están ocupadas. \"Usar esta semana\" lo marca solo en esa semana; \"Usar en todo el ciclo\" cambia el nombre en las 4 semanas." },
   ];
 
@@ -228,8 +228,7 @@
     if (ex.noWeight) return null;
     const r = routine();
     const k = G.slotKey(day.key, idx, w);
-    const proto = G.slotProtocol(S.data[k], ex);
-    const records = recordsOf(name).filter((x) => G.sameProtocol(x.protocol, proto));
+    const records = recordsOf(name);
     const others = records.filter((x) => !(x.cycle === S.cycle && x.key === k));
     const prev = inUnit(G.prevWeight(S.data, day.key, idx, w, ex, r.unitDefault), u);
     const lastS1 = inUnit(G.lastCycleS1(others, S.cycle), u);

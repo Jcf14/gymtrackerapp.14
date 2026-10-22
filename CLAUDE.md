@@ -147,7 +147,7 @@ Estado inicial: el ciclo vigente es el **2**. Al migrar, duplicar `rutinas/ciclo
 
 - Cada ciclo nuevo **rota variantes dentro de cada patrón** (estímulo fresco) y conserva los "imprescindibles" de la sección 2. Respetar siempre la lista de "NO quiero".
 - Rotar, no reinventar: se mantienen la estructura de días, el orden de patrones, la progresión y el descanso; cambian las variantes.
-- **Nombres:** `name` es el movimiento base y se escribe **igual en todos los ciclos** (el historial y los récords agrupan por nombre exacto): "Hip thrust con barra libre", "Sentadilla en Smith", "Sentadilla búlgara", "Abducción en máquina sentada", "Abducción de pie en polea", "Jalón al pecho", "Aducción en máquina". Pausas, pulsos, banda, posición de pies o agarre van en `protocol`. Nunca poner opciones en el nombre ("X o Y", "X / Y"): una va en `name` y la otra en `alt`. Si el implemento cambia la carga (barra vs. mancuerna, máquina vs. polea), es otro ejercicio y lleva otro nombre.
+- **Nombres:** `name` es el movimiento base y se escribe **igual en todos los ciclos** (el historial y los récords agrupan por nombre exacto): "Hip thrust con barra libre", "Sentadilla en Smith", "Sentadilla búlgara", "Abducción en máquina sentada", "Abducción de pie en polea", "Jalón al pecho", "Aducción en máquina". Pausas, banda, posición de pies o agarre van en `protocol` (solo descriptivo). **Si una variante cambia tanto la carga que hay que seguirla aparte, lleva otro nombre**: hoy "Hip thrust con barra libre + pulsos" (Día C, ~15–20% más liviano) es distinto de "Hip thrust con barra libre" (Día A). Nunca poner opciones en el nombre ("X o Y", "X / Y"): una va en `name` y la otra en `alt`. Si el implemento cambia la carga (barra vs. mancuerna, máquina vs. polea), es otro ejercicio y lleva otro nombre.
 - Todo ejercicio que dependa de máquina, barra o banco fijo lleva **alternativa**; los de mancuerna o peso corporal llevan `"alt": null`.
 - Se pueden reutilizar variantes de ciclos anteriores después de 1–2 ciclos, usando el peso de referencia registrado.
 - Catálogo por patrón (`[C1]` / `[C2]` = ya usado en ciclo 1 / ciclo 2):
@@ -240,7 +240,7 @@ Cada ciclo es un archivo `rutinas/ciclo-N.json`. Se basa en el arreglo `DAYS` de
 | `exercises[].name` | texto | original | Nombre mostrado. |
 | `exercises[].alt` | texto o `null` | original | Alternativa si el equipo está ocupado. |
 | `exercises[].rest` | texto | original | Descanso sugerido, ej. `"90-120s"`. |
-| `exercises[].protocol` | texto (opcional) | **nuevo** | Cómo se hace en este ciclo: `"Pausa 2 s arriba en cada rep"`, `"Pulsos al final de la serie"`, `"Pies adelante"`. Se muestra en la tarjeta. Las sugerencias solo comparan marcas con el mismo protocolo; el historial agrupa por nombre. |
+| `exercises[].protocol` | texto (opcional) | **nuevo** | Cómo se hace en este ciclo: `"Pausa 2 s arriba en cada rep"`, `"Pulsos al final de la serie"`, `"Pies adelante"`. Se muestra en la tarjeta. **Solo descriptivo:** el mismo `name` es el mismo ejercicio para historial, récord y sugerencias. |
 | `exercises[].noWeight` | `true` (opcional) | original | No exige peso para guardar o completar (core / peso corporal). |
 | `exercises[].targets` | **4 textos** | original | Objetivo por semana (S1–S4). |
 | `exercises[].sets` | **4 números** | original | Series de trabajo por semana = casilleros de reps en la app. |

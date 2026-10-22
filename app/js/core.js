@@ -109,8 +109,6 @@
 
   // Protocolo de la semana (pausa, pulsos…): el del ejercicio, salvo que se haya hecho la alternativa.
   const slotProtocol = (rec, ex) => (rec && rec.altUsed && ex.alt ? "" : ex.protocol || "");
-  // ¿Dos marcas se hicieron con el mismo protocolo? (las sugerencias solo comparan entre iguales)
-  const sameProtocol = (a, b) => normName(a || "") === normName(b || "");
 
   function normName(s) {
     return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -535,7 +533,7 @@
   root.Gluteo = {
     DAY_KEYS, BARS, STEP,
     targetSetCount, isDeloadTarget, hasPlusWeight, validateRoutine,
-    dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, sameProtocol, normName,
+    dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, normName,
     parseNum, roundStep, fmtNum, barWeight, calcBar, repsText,
     LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
     collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
