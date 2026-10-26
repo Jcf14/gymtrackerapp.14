@@ -631,8 +631,8 @@
     return [...groups.keys()].map((k) => `<section class="hist-group"><div class="hist-sec">${esc(k)}</div>
       <ul class="hist-ul">${groups.get(k).map((e) => {
       const m = e.max;
-      const days = [...(e.days.size ? e.days : e.lastDay ? [e.lastDay] : [])].join(" · ");
-      const sub = [e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"), days ? `Día ${days}` : ""].filter(Boolean).join(" · ");
+      // sin día: en el historial un ejercicio puede haberse hecho en distintos días según el ciclo
+      const sub = e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna");
       const right = e.noWeight && !m
         ? `<span class="hl-none">${e.last ? fmtDate(e.last.date) : "Sin peso"}</span>`
         : m ? `<span class="hl-max"><b>${fmt(m.weight)}</b> ${m.unit}${m.topReps ? ` × ${m.topReps}` : ""}</span><span class="hl-date">${fmtDate(m.date)}</span>`
