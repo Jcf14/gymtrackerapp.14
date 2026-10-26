@@ -70,7 +70,7 @@
 - **Enfoque:** regla de tercios de Bret con rotación de variantes. Primera vez con el **BC Pyramid Protocol** de Bret en el hip thrust (Bret lo recomienda 2–3 veces al año).
 - **Estructura:** A lun · B mar · C mié · D jue · E sáb. Sesiones de 60–75 min. S1–S3 progresión + S4 descarga (la pirámide sigue también en S4).
 - **Ejercicios principales:**
-  - **A:** hip thrust pirámide (series de ~15, ~10, ~5 y ~20 con banda; pesos fijos las 4 semanas, sumando reps; arranque estimado ~200 / 230 / 250 / 145 lb) · Smith con pies adelante · **RDL con barra** · abducción en máquina sentada · extensión de cuádriceps · talones de pie · **crunch en polea**.
+  - **A:** hip thrust pirámide (series de ~15, ~10, ~5 y ~20 con banda; pesos fijos las 4 semanas, sumando reps; arranque estimado ~200 / 230 / 250 / 160 lb; la serie de 20 + banda ~20% menos que la primera, como en el ejemplo de Bret) · Smith con pies adelante · **RDL con barra** · abducción en máquina sentada · extensión de cuádriceps · talones de pie · **crunch en polea**.
   - **B:** press militar con mancuernas · press de pecho inclinado en máquina · **aperturas en polea** · laterales con mancuernas · laterales en polea a una mano · tríceps en polea · tríceps overhead con cuerda · **patada de tríceps** · rueda abdominal.
   - **C:** búlgara con **bajada en 3 s** · hip thrust con barra libre + banda + pulsos · **peso muerto convencional con barra** · abducción de pie en polea · curl femoral sentado · Pallof press (con peso).
   - **D:** jalón al pecho · **remo T en máquina** · **jalón unilateral en polea** · face pull · reverse pec deck · **curl con barra** · **curl inclinado** · dead bug.
