@@ -670,3 +670,11 @@ textarea.text-input { resize: none; min-height: 44px; }
 .hist-sec:first-child { margin-top: 4px; }
 .hist-sec .k { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--cta); color: #fff; font-family: var(--display); font-size: 14px; font-weight: 700; align-self: center; }
 .hist-sec .t { font-size: 13px; font-weight: 700; color: var(--text-2); }
+
+/* Peso por serie (pirámide) */
+.reg-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 12px; }
+.reg-sets .set-row .reg-label { font-size: 13.5px; }
+.reg-sets .set-row .reg-ctrl { flex-wrap: nowrap; gap: 6px; }
+.reg-sets .weight-box { width: 84px; height: 36px; border-radius: 10px; box-shadow: var(--shadow-1); overflow: hidden; }
+.reg-sets .weight-box .num-input { height: 36px; padding: 0 24px 0 6px; text-align: center; font-family: var(--display); font-size: 18px; font-weight: 700; border-radius: 10px; }
+.reg-sets .rep-input { width: 52px; }

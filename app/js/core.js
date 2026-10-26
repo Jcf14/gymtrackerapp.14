@@ -69,6 +69,9 @@
         if (ex.protocol !== undefined && !isStr(ex.protocol)) errs.push(`${w}: protocol debe ser un texto (u omitirse)`);
         if (ex.noWeight !== undefined && ex.noWeight !== true) errs.push(`${w}: noWeight solo puede ser true (u omitirse)`);
         if (ex.fixedLoad !== undefined && ex.fixedLoad !== true) errs.push(`${w}: fixedLoad solo puede ser true (u omitirse)`);
+        if (ex.perSetWeight !== undefined && ex.perSetWeight !== true) errs.push(`${w}: perSetWeight solo puede ser true (u omitirse)`);
+        if (ex.setLabels !== undefined && !(Array.isArray(ex.setLabels) && ex.setLabels.every(isStr) && Array.isArray(ex.sets) && ex.setLabels.length >= Math.max(...ex.sets)))
+          errs.push(`${w}: setLabels debe tener un texto por serie`);
         const okTargets = Array.isArray(ex.targets) && ex.targets.length === 4 && ex.targets.every(isStr);
         const okSets = Array.isArray(ex.sets) && ex.sets.length === 4 && ex.sets.every((n) => Number.isInteger(n) && n >= 1);
         if (!okTargets) errs.push(`${w}: targets debe tener exactamente 4 textos`);
@@ -219,7 +222,8 @@
           const unit = recUnit(rec, r);
           out.push({
             cycle: Number(c), week: w, key: k, day: d.key, weight, unit, weightLb: toLb(weight, unit), reps: repsText(rec), repsArr,
-            topReps: repsArr.length ? Math.max(...repsArr) : 0, date: dayDate(r, data, d.key, w) || rec.savedAt || null, savedAt: rec.savedAt || null,
+            setWeights: Array.isArray(rec.setWeights) ? rec.setWeights : null,
+            topReps: topRepsOf(rec, repsArr), date: dayDate(r, data, d.key, w) || rec.savedAt || null, savedAt: rec.savedAt || null,
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed, weekShort: r.weekShort[w],
             protocol: slotProtocol(rec, ex), target: ex.targets[w],
           });
@@ -240,6 +244,16 @@
   // Peso comparable (en lb, redondeado para que 100 kg y 220,5 lb no difieran por decimales).
   const cmpW = (r) => round1(r.weightLb !== undefined ? r.weightLb : r.weight);
   const beats = (r, best) => !best || cmpW(r) > cmpW(best) || (cmpW(r) === cmpW(best) && r.topReps > best.topReps);
+
+  // Reps del récord: con peso por serie, las de la serie más pesada; si no, la mejor serie.
+  function topRepsOf(rec, repsArr) {
+    if (Array.isArray(rec.setWeights) && rec.setWeights.length) {
+      const ws = rec.setWeights.map(parseNum);
+      const i = ws.indexOf(Math.max(...ws.filter((x) => x > 0)));
+      return parseNum((rec.reps || [])[i]) || 0;
+    }
+    return repsArr.length ? Math.max(...repsArr) : 0;
+  }
 
   function findMax(records) {
     let best = null;
@@ -382,6 +396,7 @@
             date: dayDate(routine, data, d.key, w) || rec.savedAt || null,
             weight: weight > 0 ? weight : null, unit: weight > 0 ? recUnit(rec, routine) : null,
             reps: rec.reps || [], repsSame: !!rec.repsSame, repsSameValue: rec.repsSameValue || "",
+            ...(Array.isArray(rec.setWeights) ? { setWeights: rec.setWeights } : {}),
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed,
           });
         }
@@ -399,7 +414,8 @@
       const unit = x.unit || "lb";
       return {
         cycle: x.cycle, week: x.week, key: `hist:${x.cycle}:${x.day}:${x.week}`, day: x.day, weight: x.weight, unit, weightLb: toLb(x.weight, unit),
-        reps: repsText(x), repsArr, topReps: repsArr.length ? Math.max(...repsArr) : 0, date: x.date || null, savedAt: null,
+        setWeights: Array.isArray(x.setWeights) ? x.setWeights : null,
+        reps: repsText(x), repsArr, topReps: topRepsOf(x, repsArr), date: x.date || null, savedAt: null,
         note: x.note || "", completed: !!x.completed, altUsed: !!x.altUsed, weekShort: x.weekShort, target: x.target, archived: true,
         protocol: x.protocol || "",
       };
@@ -517,6 +533,7 @@
               weightMode: rec.weightMode || null,
               perSide: rec.perSideDisplay ?? null,
               reps: rec.reps || [],
+              setWeights: Array.isArray(rec.setWeights) ? rec.setWeights : null,
               repsText: repsText(rec),
               note: rec.note || "",
               completed: !!rec.completed,

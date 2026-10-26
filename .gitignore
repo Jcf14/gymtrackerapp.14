@@ -2,3 +2,7 @@ node_modules/
 dist/
 .DS_Store
 Thumbs.db
+
+# Exports de la app: quedan solo en la compu (pedido 25/10/2026). El Excel sí se versiona.
+exports/*.json
+~$*

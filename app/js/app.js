@@ -227,6 +227,19 @@
   // Recomendación de una tarjeta de la rutina (o null), en la unidad u.
   function recFor(day, ex, idx, w, name, u) {
     if (ex.noWeight) return null;
+    if (ex.perSetWeight) {
+      const max = inUnit(G.findMax(recordsOf(name)), u);
+      for (let pw = w - 1; pw >= 0; pw--) {
+        const pr = S.data[G.slotKey(day.key, idx, pw)];
+        if (!pr || !Array.isArray(pr.setWeights) || !pr.setWeights.some((x) => G.parseNum(x) > 0)) continue;
+        const ws = pr.setWeights.map((x) => G.roundHalf(G.convert(G.parseNum(x) || 0, G.recUnit(pr, routine()), u)));
+        const top = Math.max(...ws);
+        const wkName = splitWeek(routine().weekShort[pw])[0];
+        return { max, rec: { value: top, base: top, pct: 0, mode: "reps", goal: "Mismo peso, más reps", setWeights: ws,
+          text: `Mismos pesos que en ${wkName} (${ws.map(fmt).join(" · ")} ${u}); sumá reps en cada serie` } };
+      }
+      return { max, rec: null };
+    }
     const r = routine();
     const k = G.slotKey(day.key, idx, w);
     const records = recordsOf(name);
@@ -361,6 +374,8 @@
     const w = rec ? G.parseNum(rec.weight) : NaN;
     if (!(w > 0)) return "";
     const u = G.recUnit(rec, routine());
+    if (Array.isArray(rec.setWeights) && rec.setWeights.length)
+      return `<span class="ex-weight"><span class="ex-val"><b>${rec.setWeights.map((x) => fmt(G.parseNum(x) || 0)).join("·")}</b> ${u}</span><span class="side"> · máx ${convTxt(w, u)}</span></span>`;
     const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? `${fmt(rec.perSideDisplay)}/lado · ` : "";
     return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u}</span><span class="side"> · ${side}${convTxt(w, u)}</span></span>`;
   }
@@ -369,7 +384,7 @@
     if (!rec) return "";
     const cls = rec.mode === "deload" ? "down" : rec.mode === "reps" ? "reps" : rec.mode === "calibrate" ? "cal" : rec.value > rec.base ? "up" : "flat";
     const pct = rec.mode !== "calibrate" && rec.pct ? pctTxt(rec.pct) : "";
-    return `<span class="ex-sug ${cls}"><span class="ex-val"><b>${fmt(rec.value)}</b> ${u}</span> ${pct ? `<em>${icon(dirIcon(rec))}${pct}</em><span class="sep"> · </span>` : ""}<span class="goal-s">${esc(SHORT_GOAL[rec.goal] || rec.goal)}</span></span>`;
+    return `<span class="ex-sug ${cls}"><span class="ex-val"><b>${rec.setWeights ? rec.setWeights.map(fmt).join("·") : fmt(rec.value)}</b> ${u}</span> ${pct ? `<em>${icon(dirIcon(rec))}${pct}</em><span class="sep"> · </span>` : ""}<span class="goal-s">${esc(SHORT_GOAL[rec.goal] || rec.goal)}</span></span>`;
   }
 
   function draftFor(k, rec, sets) {
@@ -386,6 +401,7 @@
         reps: Array.from({ length: sets }, (_, i) => (rec.reps && rec.reps[i]) || ""),
         repsSame: (rec.reps || []).some((x) => String(x).trim() !== "") ? !!rec.repsSame : true,
         repsSameValue: rec.repsSameValue || "",
+        setWeights: Array.from({ length: sets }, (_, i) => (rec.setWeights && rec.setWeights[i]) || ""),
         calcOpen: false,
         calcBar: "women",
         calcCustom: "",
@@ -454,7 +470,7 @@
     const insight = ex.noWeight ? "" : sug
       ? `<div class="insight ${sug.mode}">
           <p class="why">${icon("info")}<span><b>${esc(sug.goal)}.</b> ${esc(sug.text)}</span></p>
-          <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}">Usar ${fmt(sug.value)} ${u}</button>
+          <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}"${sug.setWeights ? ` data-setweights="${sug.setWeights.join(",")}"` : ""}>Usar ${sug.setWeights ? sug.setWeights.map(fmt).join(" · ") : fmt(sug.value)} ${u}</button>
         </div>`
       : `<div class="insight none"><p class="why">${icon("info")}<span>Sin registros de este ejercicio: elegí un peso que te deje en el RPE pedido y ajustá con la 1ª serie.</span></p></div>`;
     const altBox = !(d.altOpen && showAlt) ? "" : altUsed
@@ -495,7 +511,7 @@
       </div>
       ${altBox}
       ${editBox}
-      <div class="reg">
+      ${ex.perSetWeight ? renderSetRows(ex, k, d, sets, u, unitSeg) : `<div class="reg">
         <div class="reg-title">Registro de hoy</div>
         <div class="reg-row weight-row">
           <span class="reg-label">Peso${ex.noWeight ? "<small>opcional</small>" : ""}</span>
@@ -522,12 +538,30 @@
         <div class="reg-row note-row">
           <textarea class="text-input note-input" rows="1" data-field="note" data-k="${k}" placeholder="Nota (opcional)" aria-label="Nota: cómo se sintió, molestias, ajustes">${esc(d.note)}</textarea>
         </div>
-      </div>
+      </div>`}
       <div class="save-row">
         <button class="secondary-btn save-entry-btn" data-action="save-entry" data-k="${k}">Solo guardar</button>
         <button class="primary-btn save-done-btn" data-action="save-entry" data-complete="1" data-k="${k}">${icon("check")}${rec && rec.completed ? "Guardar" : "Guardar y marcar listo"}</button>
       </div>
     </div>`;
+  }
+
+  // Peso por serie (pirámide): una fila por serie con su etiqueta, peso y reps.
+  function renderSetRows(ex, k, d, sets, u, unitSeg) {
+    const rows = Array.from({ length: sets }, (_, i) => `<div class="reg-row set-row">
+        <span class="reg-label">${esc((ex.setLabels && ex.setLabels[i]) || `Serie ${i + 1}`)}<small>Serie ${i + 1} de ${sets}</small></span>
+        <div class="reg-ctrl">
+          <div class="weight-box"><input class="num-input set-weight-input" inputmode="decimal" data-field="setWeight" data-i="${i}" data-k="${k}" value="${esc(d.setWeights[i])}" placeholder="0" aria-label="Peso serie ${i + 1}"><span class="unit">${u}</span></div>
+          <span class="reg-x">×</span>
+          <input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}" placeholder="reps" aria-label="Reps serie ${i + 1}">
+        </div></div>`).join("");
+    return `<div class="reg reg-sets">
+        <div class="reg-title reg-title-row"><span>Registro de hoy · peso por serie</span>${unitSeg}</div>
+        ${rows}
+        <div class="reg-row note-row">
+          <textarea class="text-input note-input" rows="1" data-field="note" data-k="${k}" placeholder="Nota (opcional)" aria-label="Nota: cómo se sintió, molestias, ajustes">${esc(d.note)}</textarea>
+        </div>
+      </div>`;
   }
 
   function renderCalc(k, d) {
@@ -668,7 +702,7 @@
     const sessRows = sessions.map((r) => `<li class="sess-row">
         <div class="sess-top">
           <span class="sess-when"><span class="sess-date">${fmtDate(r.date, { day: "numeric", month: "short" })}</span><span class="sess-where">${where(r)}${r.altUsed ? " · alternativa" : ""}</span></span>
-          <span class="sess-w num"><b>${fmt(r.weight)}</b> ${r.unit}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
+          <span class="sess-w num"><b>${r.setWeights ? r.setWeights.map((x) => fmt(G.parseNum(x) || 0)).join("·") : fmt(r.weight)}</b> ${r.unit}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
           <span class="ok">${r.completed ? icon("check") : ""}</span></div>
         ${r.note ? `<div class="sess-note">${icon("note")}${esc(r.note)}</div>` : ""}</li>`).join("");
     return `<button class="back-btn hist-back-btn" data-action="hist-back">${icon("back")}Historial</button>
@@ -846,6 +880,7 @@
     const sets = ex.sets[week];
     const d = S.drafts[k];
     const prev = S.data[k] || {};
+    if (ex.perSetWeight) return savePerSet(k, ex, sets, d, prev, complete);
     const w = G.parseNum(d.weight);
     if (!ex.noWeight && !(w > 0)) { toast("Cargá el peso antes de guardar", "error"); return false; }
     if (String(d.weight).trim() !== "" && !(w > 0)) { toast("El peso no es un número válido", "error"); return false; }
@@ -859,6 +894,30 @@
       reps: d.repsSame ? Array(sets).fill(same) : d.reps.slice(0, sets).map((x) => String(x).trim()),
       repsSame: d.repsSame,
       repsSameValue: d.repsSame ? same : "",
+      altUsed: !!prev.altUsed,
+      ...(prev.altUsed ? { altIdx: prev.altIdx || 0 } : {}),
+      unit: d.unit,
+      savedAt: new Date().toISOString(),
+    };
+    if (!saveData()) return false;
+    delete S.drafts[k];
+    return true;
+  }
+
+  function savePerSet(k, ex, sets, d, prev, complete) {
+    const ws = d.setWeights.slice(0, sets).map((x) => G.parseNum(x));
+    if (!ex.noWeight && ws.some((x) => !(x > 0))) { toast("Cargá el peso de cada serie", "error"); return false; }
+    const top = Math.max(...ws.filter((x) => x > 0), 0);
+    S.data[k] = {
+      weight: top > 0 ? String(top) : "",
+      setWeights: ws.map((x) => (x > 0 ? String(x) : "")),
+      weightMode: "total",
+      perSideDisplay: null,
+      note: d.note.trim(),
+      completed: complete === undefined ? !!prev.completed : complete,
+      reps: d.reps.slice(0, sets).map((x) => String(x).trim()),
+      repsSame: false,
+      repsSameValue: "",
       altUsed: !!prev.altUsed,
       ...(prev.altUsed ? { altIdx: prev.altIdx || 0 } : {}),
       unit: d.unit,
@@ -895,7 +954,8 @@
         saveData(); render(); toast("Completado ✓"); return;
       }
       const d = S.drafts[k];
-      if (d && G.parseNum(d.weight) > 0) {
+      const ready = d && (ex.perSetWeight ? d.setWeights.slice(0, ex.sets[week]).every((x) => G.parseNum(x) > 0) : G.parseNum(d.weight) > 0);
+      if (ready) {
         if (saveEntry(k, true)) { S.open.delete(exFromKey(k).idx); S.fx.done = k; render(); toast("Guardado y completado ✓"); }
         return;
       }
@@ -948,7 +1008,8 @@
     },
     "use-suggestion"(el) {
       const d = S.drafts[el.dataset.k];
-      d.weight = el.dataset.value; d.weightMode = "total"; d.perSideDisplay = null;
+      if (el.dataset.setweights) el.dataset.setweights.split(",").forEach((x, i) => { d.setWeights[i] = x; });
+      else { d.weight = el.dataset.value; d.weightMode = "total"; d.perSideDisplay = null; }
       render();
     },
     "save-entry"(el) {
@@ -993,6 +1054,7 @@
       const { dayObj, idx } = exFromKey(k);
       const w = G.parseNum(d.weight);
       if (w > 0) d.weight = String(G.roundHalf(G.convert(w, d.unit, to)));
+      d.setWeights = d.setWeights.map((x) => (G.parseNum(x) > 0 ? String(G.roundHalf(G.convert(G.parseNum(x), d.unit, to))) : x));
       d.weightMode = "total"; d.perSideDisplay = null; d.calcValue = "";
       d.unit = to;
       S.data[unitKey(dayObj.key, idx)] = to;
@@ -1148,6 +1210,7 @@
     const d = S.drafts[k];
     if (!d) return;
     if (f === "rep") d.reps[Number(el.dataset.i)] = el.value;
+    else if (f === "setWeight") d.setWeights[Number(el.dataset.i)] = el.value;
     else d[f] = el.value;
     if (f === "note") { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
     if (f === "weight") {

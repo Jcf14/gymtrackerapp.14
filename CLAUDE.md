@@ -242,6 +242,7 @@ Cada ciclo es un archivo `rutinas/ciclo-N.json`. Se basa en el arreglo `DAYS` de
 | `exercises[].rest` | texto | original | Descanso sugerido, ej. `"90-120s"`. |
 | `exercises[].protocol` | texto (opcional) | **nuevo** | Cómo se hace en este ciclo: `"Pausa 2 s arriba en cada rep"`, `"Pulsos al final de la serie"`, `"Pies adelante"`. Se muestra en la tarjeta. **Solo descriptivo:** el mismo `name` es el mismo ejercicio para historial, récord y sugerencias. |
 | `exercises[].noWeight` | `true` (opcional) | original | No exige peso para guardar o completar (core / peso corporal). |
+| `exercises[].perSetWeight`, `setLabels` | `true` + lista de textos (opcional) | **nuevo** | Un peso distinto en cada serie (pirámide): en la tarjeta hay una fila por serie con su etiqueta, peso y reps. El registro guarda `setWeights`; el récord usa la serie más pesada con sus reps. |
 | `exercises[].fixedLoad` | `true` (opcional) | **nuevo** | Peso fijo todo el ciclo (pirámide de Bret): la sugerencia siempre es "mismo peso, más reps" y la S4 no necesita marca de descarga. |
 | `exercises[].targets` | **4 textos** | original | Objetivo por semana (S1–S4). |
 | `exercises[].sets` | **4 números** | original | Series de trabajo por semana = casilleros de reps en la app. |

@@ -56,7 +56,7 @@ const AZUL = "FF1F3C56", CELESTE = "FFE8EFF6", GRIS = "FFF3F5F8", ROJO = "FFFDEC
             ejercicio: w.exercise || ex.name,
             patron: ex.pattern || "",
             objetivo: w.target,
-            peso: peso > 0 ? peso : "",
+            peso: Array.isArray(w.setWeights) && w.setWeights.length ? w.setWeights.join(" · ") : peso > 0 ? peso : "",
             unidad: peso > 0 ? w.unit || e.unit : "",
             lado: w.perSide != null ? w.perSide : "",
             reps: w.repsText || "",

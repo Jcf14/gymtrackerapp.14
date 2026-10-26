@@ -682,3 +682,36 @@ test("historial agrupado por día y ordenado por nombre", async () => {
   assert.equal(t.$$(".hist-sec").length, 1, "con filtro solo queda el día B");
   assert.deepEqual(t.errors, []);
 });
+
+test("peso por serie (pirámide): un solo ejercicio, cada serie con su peso y reps", async () => {
+  const r = structuredClone(FIXTURE);
+  r.days[0].exercises[0] = {
+    pattern: "Thrust/Bridge (pirámide)", name: "Hip thrust pirámide", alt: null, rest: "120-180s",
+    fixedLoad: true, perSetWeight: true, setLabels: ["Serie de 15", "Serie de 10", "Serie de 5", "Serie de 20 + banda"],
+    targets: ["4x15/10/5/20 @RPE9", "4x16-18/11-12/6/21-22 @RPE9", "4x17-19/12-13/7/22-23 @RPE9", "4x18-20/13-14/8/23-24 @RPE9"], sets: [4, 4, 4, 4],
+  };
+  const t = await boot({ routine: r });
+  t.goTo(0, "A"); t.openCard(0);
+  assert.equal(t.$$(".set-weight-input").length, 4);
+  assert.match(t.$(".reg-sets").textContent, /Serie de 20 \+ banda/);
+  t.click(".save-entry-btn");
+  assert.match(t.toast(), /peso de cada serie/);
+  const fill = (sel, vals) => t.$$(sel).forEach((el, i) => { el.value = vals[i]; el.dispatchEvent(new t.w.Event("input", { bubbles: true })); });
+  fill(".set-weight-input", ["200", "230", "250", "145"]);
+  fill(".rep-input", ["15", "10", "5", "20"]);
+  t.click(".save-done-btn");
+  const rec = t.data().A_0_w0;
+  assert.deepEqual(rec.setWeights, ["200", "230", "250", "145"]);
+  assert.equal(rec.weight, "250"); assert.equal(rec.completed, true);
+  assert.match(t.$$(".card")[0].querySelector(".ex-weight").textContent, /200·230·250·145 lb/);
+  assert.match(t.$$(".card")[0].querySelector(".ex-max").textContent, /250.*×5/, "récord = serie más pesada con sus reps");
+  // semana 2: sugiere los mismos 4 pesos
+  t.goTo(1, "A");
+  assert.match(t.$$(".card")[0].querySelector(".ex-sug").textContent, /200·230·250·145 lb.*Más reps/);
+  t.openCard(0); t.click(".use-sug-btn");
+  assert.deepEqual(t.$$(".set-weight-input").map((e) => e.value), ["200", "230", "250", "145"]);
+  t.click('.tab[data-tab="historial"]');
+  t.click(t.$$(".hist-item").find((b) => /Hip thrust pirámide/.test(b.textContent)));
+  assert.match(t.$(".sess-w").textContent, /200·230·250·145/);
+  assert.deepEqual(t.errors, []);
+});

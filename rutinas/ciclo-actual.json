@@ -29,90 +29,31 @@
       "exercises": [
         {
           "pattern": "Thrust/Bridge (pirámide)",
-          "name": "Hip thrust pirámide · serie de 15",
-          "protocol": "Peso fijo 4 semanas · arranque ~200 lb",
+          "name": "Hip thrust pirámide",
+          "protocol": "Pirámide de Bret: 4 pesos fijos las 4 semanas, sumá reps · arranque ~200 / 230 / 250 / 145 lb",
           "alt": [
             "Hip thrust con mancuerna en banco"
           ],
           "rest": "120-180s",
           "fixedLoad": true,
+          "perSetWeight": true,
+          "setLabels": [
+            "Serie de 15",
+            "Serie de 10",
+            "Serie de 5",
+            "Serie de 20 + banda"
+          ],
           "targets": [
-            "1x15 @RPE9",
-            "1x16-18 @RPE9",
-            "1x17-19 @RPE9",
-            "1x18-20 @RPE9"
+            "4x15/10/5/20 @RPE9",
+            "4x16-18/11-12/6/21-22 @RPE9",
+            "4x17-19/12-13/7/22-23 @RPE9",
+            "4x18-20/13-14/8/23-24 @RPE9"
           ],
           "sets": [
-            1,
-            1,
-            1,
-            1
-          ]
-        },
-        {
-          "pattern": "Thrust/Bridge (pirámide)",
-          "name": "Hip thrust pirámide · serie de 10",
-          "protocol": "Peso fijo 4 semanas · arranque ~230 lb",
-          "alt": [
-            "Hip thrust con mancuerna en banco"
-          ],
-          "rest": "120-180s",
-          "fixedLoad": true,
-          "targets": [
-            "1x10 @RPE9",
-            "1x11-12 @RPE9",
-            "1x12-13 @RPE9",
-            "1x13-14 @RPE9"
-          ],
-          "sets": [
-            1,
-            1,
-            1,
-            1
-          ]
-        },
-        {
-          "pattern": "Thrust/Bridge (pirámide)",
-          "name": "Hip thrust pirámide · serie de 5",
-          "protocol": "Peso fijo 4 semanas · arranque ~250 lb",
-          "alt": [
-            "Hip thrust con mancuerna en banco"
-          ],
-          "rest": "120-180s",
-          "fixedLoad": true,
-          "targets": [
-            "1x5 @RPE9",
-            "1x6 @RPE9",
-            "1x7 @RPE9",
-            "1x8 @RPE9"
-          ],
-          "sets": [
-            1,
-            1,
-            1,
-            1
-          ]
-        },
-        {
-          "pattern": "Thrust/Bridge (pirámide)",
-          "name": "Hip thrust pirámide + banda · serie de 20",
-          "protocol": "Peso fijo 4 semanas · arranque ~145 lb · banda en las rodillas",
-          "alt": [
-            "Hip thrust con mancuerna en banco"
-          ],
-          "rest": "90-120s",
-          "fixedLoad": true,
-          "targets": [
-            "1x20 @RPE9",
-            "1x21-22 @RPE9",
-            "1x22-23 @RPE9",
-            "1x23-24 @RPE9"
-          ],
-          "sets": [
-            1,
-            1,
-            1,
-            1
+            4,
+            4,
+            4,
+            4
           ]
         },
         {
