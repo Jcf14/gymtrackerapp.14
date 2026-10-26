@@ -663,3 +663,4 @@ textarea.text-input { resize: none; min-height: 44px; }
 .reg .weight-row .reg-ctrl { gap: 6px; flex-wrap: nowrap; }
 .reg .weight-box { width: 72px; }
 .reg-sub:has(.weight-hints:empty), .reg-sub:has(.conv-hint:empty):not(:has(.perside-hint)) { padding-bottom: 4px; min-height: 0; }
+.ex-proto { border-radius: 10px; }
