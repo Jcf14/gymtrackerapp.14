@@ -186,15 +186,31 @@
   // Unidad de un registro: la guardada, o la de la rutina (registros anteriores a esta función).
   const recUnit = (rec, routine) => (rec && rec.unit) || (routine && routine.unitDefault) || "lb";
 
-  // Discos por lado para armar un peso total con la barra (discos del gym: 45, 25, 10, 5 y 2,5 lb).
-  // Se elige siempre el disco más grande que entra, así se usan los menos discos posibles.
-  const PLATES_LB = [45, 25, 10, 5, 2.5];
+  // Discos por lado para armar un peso total con la barra (discos del gym: 45, 35, 25, 10, 5 y 2,5 lb).
+  // Busca la combinación con menos discos (con el de 35, "el más grande que entre" no alcanza:
+  // 105 = 45+35+25, no 45+45+10+5). A igual cantidad, prefiere los discos más grandes.
+  const PLATES_LB = [45, 35, 25, 10, 5, 2.5];
   function platesFor(total, bar) {
     const side = (total - bar) / 2;
     if (!(side > 0)) return null;
-    let rest = side;
-    const plates = [];
-    for (const p of PLATES_LB) while (rest >= p - 1e-9) { plates.push(p); rest -= p; }
+    const units = Math.floor(side / 2.5 + 1e-9); // todo en pasos de 2,5 lb
+    const better = (a, b) => {
+      if (a.length !== b.length) return a.length < b.length;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i];
+      return false;
+    };
+    const best = [[]]; // best[u] = discos (de mayor a menor) que suman u × 2,5
+    for (let u = 1; u <= units; u++) {
+      best[u] = null;
+      for (const p of PLATES_LB) {
+        const prev = best[u - Math.round(p / 2.5)];
+        if (!prev) continue;
+        const cand = [...prev, p].sort((x, y) => y - x);
+        if (!best[u] || better(cand, best[u])) best[u] = cand;
+      }
+    }
+    const plates = best[units];
+    const rest = side - units * 2.5;
     return { side, plates, rest: Math.round(rest * 100) / 100 };
   }
 
