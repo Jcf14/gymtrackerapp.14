@@ -671,15 +671,16 @@ test("dos alternativas: se elige cuál y su peso queda bajo ese nombre", async (
   assert.deepEqual(t.errors, []);
 });
 
-test("historial agrupado por día y ordenado por nombre", async () => {
+test("historial: orden alfabético agrupado por letra (como contactos)", async () => {
   const t = await boot();
   t.click('.tab[data-tab="historial"]');
-  const secs = t.$$(".hist-sec").map((s) => `${s.querySelector(".k").textContent} ${s.querySelector(".t").textContent}`);
-  assert.deepEqual(secs, ["A Glúteo #1 — Sesgo Vertical", "B Tren superior — Empuje"]);
-  const firstGroup = [...t.$(".hist-sec").nextElementSibling.querySelectorAll(".hist-item .ex-name")].map((e) => e.textContent);
-  assert.deepEqual(firstGroup, [...firstGroup].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" })), "orden alfabético dentro del día");
+  const letters = t.$$(".hist-sec").map((x) => x.textContent);
+  assert.deepEqual(letters, ["H", "P", "S"]);
+  const names = t.$$(".hist-item .ex-name").map((e) => e.textContent);
+  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" })));
+  assert.equal(t.$$(".hist-group").length, 3, "cada letra en su propio grupo (para que la letra quede fija mientras se recorre)");
   t.click('.hist-filter-btn[data-filter="upper"]');
-  assert.equal(t.$$(".hist-sec").length, 1, "con filtro solo queda el día B");
+  assert.deepEqual(t.$$(".hist-sec").map((x) => x.textContent), ["P"]);
   assert.deepEqual(t.errors, []);
 });
 
