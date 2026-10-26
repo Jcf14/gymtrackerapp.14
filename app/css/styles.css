@@ -580,7 +580,7 @@ textarea.text-input { resize: none; min-height: 44px; }
 .switch.mini input:checked::after { transform: translateX(13px); }
 
 .note-row { padding: 8px 10px; }
-.reg .note-input { min-height: 38px; height: 38px; padding: 9px 11px; border-radius: 10px; font-size: 16px; line-height: 1.3; overflow: hidden; }
+.reg .note-input { min-height: 38px; height: 38px; max-height: 240px; padding: 9px 11px; border-radius: 10px; font-size: 16px; line-height: 1.3; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .card-body .primary-btn { margin-top: 12px; padding: 12px; font-size: 15px; border-radius: 13px; }
 .ex-proto { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; padding: 2px 8px 2px 6px; border-radius: 99px; background: var(--primary-soft); color: var(--lower); font-size: 12px; font-weight: 600; }
 .ex-proto .ic { width: 13px; height: 13px; }
@@ -681,3 +681,21 @@ textarea.text-input { resize: none; min-height: 44px; }
 .reg-sets .weight-box { width: 84px; height: 36px; border-radius: 10px; box-shadow: var(--shadow-1); overflow: hidden; }
 .reg-sets .weight-box .num-input { height: 36px; padding: 0 24px 0 6px; text-align: center; font-family: var(--display); font-size: 18px; font-weight: 700; border-radius: 10px; }
 .reg-sets .rep-input { width: 52px; }
+
+/* Discos por lado, barra y "no lo hice" */
+.plate-hint { padding: 0 14px 8px; margin-top: -4px; font-size: 12px; font-weight: 600; color: var(--lower); }
+.plate-hint:empty { display: none; }
+.reg-title-ctrls { display: inline-flex; gap: 6px; }
+.ex-weight .side.sets, .ex-sug .side.sets { display: block; font-size: 11px; font-weight: 500; color: var(--text-2); white-space: normal; line-height: 1.3; }
+.card.skipped { opacity: .72; }
+.cs-skip .cs-lbl { color: var(--danger); }
+.cs-skip .cs-val { font-size: 13px; color: var(--text-2); }
+.skip-ex-state { display: flex; align-items: center; gap: 8px; }
+.skip-ex-state .ic { width: 17px; height: 17px; color: var(--danger); flex: none; }
+.skip-ex-state span { flex: 1; }
+.skip-ex-box .skip-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.skip-ex-chip.on { background: var(--cta); color: #fff; }
+.skip-ex-input { background: var(--surface); }
+.sets-ctrls { justify-content: flex-start; gap: 8px; padding-top: 4px; }
+.sets-ctrls .ctrl-lbl { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.sets-ctrls .ctrl-lbl + .seg { margin-right: 8px; }

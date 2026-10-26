@@ -53,7 +53,7 @@ Estado: ciclo vigente = **3** (desde el 26/10/2026). Ciclos 1 y 2 cerrados: expo
 
 **Unidades y carga**
 - Libras por defecto (la app permite kg). Cargo la barra **por lado** ("90 lb por lado + barra de mujer"), así que la app necesita calculadora por lado/total.
-- Discos confirmados: 45, 25 y 5 lb. El salto mínimo en máquinas y mancuernas suele ser de 5 lb.
+- Discos confirmados: 45, 25, 5 y 2,5 lb. Barras: de mujer 35 lb (la habitual) y de hombre 45 lb (a veces la uso si la otra está ocupada). El salto mínimo en máquinas y mancuernas suele ser de 5 lb.
 
 **Lesiones / limitaciones:** ninguna reportada. Sudo mucho y los días de pierna pesada el cansancio "pega" (probé electrolitos; sin mareos ni calambres). Preguntarme por molestias al iniciar cada ciclo.
 
@@ -300,6 +300,9 @@ Siempre:
 - **Navegación:** pestañas "Rutina" / "Historial" en una barra inferior; arriba, botón ⓘ (glosario) y ⚙ (ajustes). En Rutina: selector de **semana** arriba y de **día** abajo (orden pedido por mí). Autodetecta el día por la fecha real (lun–jue y sáb); viernes y domingo respetan el último día visto.
 - **Tarjeta por ejercicio:** plegada: nombre, etiquetas (patrón y protocolo) y tres columnas con etiqueta para no confundir datos: **HOY** (objetivo de la semana + ⏱ descanso) · **SUGERIDO** (peso, % y qué se espera) o, si ya se registró, **REGISTRADO** (peso, equivalencia y reps) · **RÉCORD** (peso × reps y fecha, mismo protocolo). El círculo de completado se toca directo. Desplegada (sin repetir datos de la cabecera): el porqué de la sugerencia con botón "Usar N lb", alternativa, renombrar, registro (peso con − / +, lb | kg y el ícono 🧮 de la calculadora de barra en la misma fila; reps —**iguales por defecto**, distintas como opción—, nota) y dos botones: **"Guardar y marcar listo"** (principal) y "Solo guardar". Al guardar, la tarjeta queda a la vista y destella.
 - **Validación:** no se puede guardar ni completar sin peso, salvo `noWeight`.
+- **No lo hice:** en cada ejercicio, con motivo (Sin tiempo, Máquina ocupada, Cansancio, Molestia, Otro); queda como "No hecho" (`skipped`, `skipReason`), cuenta como resuelto para el día y va al export/Excel. Se deshace, y cargar peso lo saca de "no hecho".
+- **Discos por lado:** debajo de cada serie de la pirámide (con selector de barra 35 | 45 lb) y en la calculadora de barra: "Por lado 107,5 → 45 + 45 + 5 + 5 + 5 + 2,5", con los discos confirmados; si un peso no se arma, avisa cuánto falta.
+- **Notas:** el campo crece con el texto (hasta ~10 líneas, después scroll), también al reabrir la tarjeta.
 - **Reps por serie:** un casillero por serie, o "todas las series fueron iguales" (un solo campo).
 - **Calculadora de barra:** barra Mujer (35 lb / 15 kg), Hombre (45 lb / 20 kg) o personalizada; modo "por lado" o "total"; muestra el total o el equivalente por lado; "Usar este peso" lo vuelca al campo.
 - **Editar ejercicio:** reemplaza el nombre del ejercicio en ese espacio (todas las semanas); "Restablecer" vuelve al original.
@@ -310,7 +313,7 @@ Siempre:
 - **Unir ejercicios:** en el detalle de un ejercicio del historial, "Unir con otro ejercicio": elegís el otro y queda **su** nombre. En ciclos abiertos crea un override de nombre (`mergedFrom`, reversible con Renombrar → Restablecer); en ciclos cerrados cambia `exercise` de cada sesión y guarda `originalExercise`. Para nombres que difieren entre rutinas, preferir corregir los JSON (§3.6).
 - **Alternativa:** "Usar esta semana" marca `altUsed` en ese registro (el peso cuenta para la alternativa, no para el original); "Usar en todo el ciclo" crea un override de nombre (se deshace con Renombrar → Restablecer).
 - **Glosario:** solo desde el botón ⓘ del encabezado (se sacó de cada tarjeta a pedido). Incluye RPE, reps en reserva, rango, semanas, descarga, (+peso), sugerido, máximo, pulsos, rematado, c/lado, por lado/total, alternativa. Textos sacados de la sección 3; si se agrega un término nuevo a las rutinas, sumarlo a `GLOSSARY` en app.js.
-- **Ajustes:** apariencia (Claro por defecto / Oscuro / Automático), unidad **por defecto** lb/kg; cada ejercicio tiene su selector lb | kg junto al peso: al cambiarlo convierte el peso cargado (1 kg = 2,20462 lb, redondeo a 0,5), recuerda la elección, y siempre muestra la equivalencia ("≈ 97,5 kg"). Máximos, récords y sugerencias comparan en lb aunque se mezclen unidades; la calculadora usa la barra en la unidad del ejercicio (35 lb / 15 kg) y exportar datos.
+- **Ajustes:** apariencia (Claro por defecto / Oscuro / Automático), unidad **por defecto** lb/kg; cada ejercicio tiene su selector lb | kg junto al peso: al cambiarlo convierte el peso cargado (1 kg = 2,20462 lb, **redondeo a entero**: 33,1 → 33; 33,5 → 34), recuerda la elección, y siempre muestra la equivalencia ("≈ 97,5 kg"). Máximos, récords y sugerencias comparan en lb aunque se mezclen unidades; la calculadora usa la barra en la unidad del ejercicio (35 lb / 15 kg) y exportar datos.
 - **Aviso flotante ("toast")** al guardar: tiene que sobrevivir al re-render.
 - **Offline primero:** todo se guarda al instante en el dispositivo.
 

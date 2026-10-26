@@ -279,7 +279,7 @@ test("glosario: solo desde el botón ⓘ del encabezado", async () => {
   assert.ok(t.$("#sheet").hidden);
   t.goTo(2, "A"); t.openCard(0);
   assert.equal(t.$(".glossary-btn"), null, "las tarjetas ya no tienen botón de glosario");
-  assert.equal(t.$$(".tools .tool-btn").length, 2);
+  assert.equal(t.$$(".tools .tool-btn").length, 3, "alternativa, renombrar y no lo hice");
   assert.deepEqual(t.errors, []);
 });
 
@@ -366,19 +366,20 @@ test("lb/kg por ejercicio: convierte, guarda la unidad y muestra la equivalencia
   t.goTo(0, "A"); t.openCard(0);
   assert.ok(t.$('.ex-unit-btn[data-unit="lb"]').classList.contains("active"), "lb por defecto");
   t.type(".weight-input", "215");
-  assert.match(t.$(".conv-hint").textContent, /≈ 97,5 kg/);
+  assert.match(t.$(".conv-hint").textContent, /≈ 98 kg/, "equivalencia redondeada a entero");
   t.click('.ex-unit-btn[data-unit="kg"]');
-  assert.equal(t.$(".weight-input").value, "97.5");
+  assert.equal(t.$(".weight-input").value, "98");
   assert.equal(t.$(".weight-box .unit").textContent, "kg");
-  assert.match(t.toast(), /Convertido: 97,5 kg/);
+  assert.match(t.toast(), /Convertido: 98 kg/);
   t.click(".step-up-btn");
-  assert.equal(t.$(".weight-input").value, "100", "en kg el paso es 2,5");
+  assert.equal(t.$(".weight-input").value, "100.5", "en kg el paso es 2,5");
+  t.type(".weight-input", "100");
   t.click(".save-entry-btn");
   const d = t.data();
   assert.equal(d.A_0_w0.unit, "kg");
   assert.equal(d.A_0_w0.weight, "100");
   assert.equal(d.unit_A_0, "kg");
-  assert.match(t.$(".ex-weight").textContent, /100 kg · ≈ 220,5 lb/);
+  assert.match(t.$(".ex-weight").textContent, /100 kg · ≈ 220 lb/);
   // la semana siguiente queda en kg y la sugerencia también
   t.goTo(1, "A");
   assert.match(t.$(".ex-sug").textContent, /102,5 kg/);
@@ -704,15 +705,54 @@ test("peso por serie (pirámide): un solo ejercicio, cada serie con su peso y re
   const rec = t.data().A_0_w0;
   assert.deepEqual(rec.setWeights, ["200", "230", "250", "145"]);
   assert.equal(rec.weight, "250"); assert.equal(rec.completed, true);
-  assert.match(t.$$(".card")[0].querySelector(".ex-weight").textContent, /200·230·250·145 lb/);
+  assert.match(t.$$(".card")[0].querySelector(".ex-weight").textContent, /250 lbs*series: 200 · 230 · 250 · 145/);
   assert.match(t.$$(".card")[0].querySelector(".ex-max").textContent, /250.*×5/, "récord = serie más pesada con sus reps");
   // semana 2: sugiere los mismos 4 pesos
   t.goTo(1, "A");
-  assert.match(t.$$(".card")[0].querySelector(".ex-sug").textContent, /200·230·250·145 lb.*Más reps/);
+  assert.match(t.$$(".card")[0].querySelector(".ex-sug").textContent, /250 lb.*series: 200 · 230 · 250 · 145.*Más reps/);
   t.openCard(0); t.click(".use-sug-btn");
   assert.deepEqual(t.$$(".set-weight-input").map((e) => e.value), ["200", "230", "250", "145"]);
   t.click('.tab[data-tab="historial"]');
   t.click(t.$$(".hist-item").find((b) => /Hip thrust pirámide/.test(b.textContent)));
   assert.match(t.$(".sess-w").textContent, /200·230·250·145/);
+  assert.deepEqual(t.errors, []);
+});
+
+test("no lo hice: un ejercicio se marca como no hecho con motivo y se puede deshacer", async () => {
+  const t = await boot();
+  t.goTo(0, "A"); t.openCard(1);
+  t.click(".skip-ex-btn");
+  t.click('.skip-ex-chip[data-reason="Sin tiempo"]');
+  assert.equal(t.$(".skip-ex-input").value, "Sin tiempo");
+  t.click(".save-skip-ex-btn");
+  const rec = t.data().A_1_w0;
+  assert.equal(rec.skipped, true); assert.equal(rec.skipReason, "Sin tiempo"); assert.equal(rec.completed, false);
+  const card = t.$$(".card")[1];
+  assert.ok(card.classList.contains("skipped"));
+  assert.match(card.querySelector(".cs-skip").textContent, /No hecho\s*Sin tiempo/);
+  assert.match(t.$('.day-btn[data-day="A"] small').textContent, /1\/3/, "cuenta como listo para el día");
+  t.openCard(1); t.click(".undo-skip-ex-btn");
+  assert.equal(t.data().A_1_w0.skipped, undefined);
+  // cargar peso después también lo saca de "no hecho"
+  t.click(".skip-ex-btn"); t.click(".save-skip-ex-btn");                 // después de deshacer la tarjeta sigue abierta
+  t.openCard(1); t.type(".reps-same-input", "10"); t.type(".weight-input", "40"); t.click(".save-entry-btn");
+  assert.equal(t.data().A_1_w0.skipped, undefined);
+  assert.deepEqual(t.errors, []);
+});
+
+test("discos por lado en la pirámide, con barra de 35 o 45", async () => {
+  const r = structuredClone(FIXTURE);
+  r.days[0].exercises[0] = { pattern: "Thrust/Bridge (pirámide)", name: "Hip thrust pirámide", alt: null, rest: "120-180s", fixedLoad: true, perSetWeight: true,
+    setLabels: ["Serie de 15", "Serie de 10", "Serie de 5", "Serie de 20 + banda"], targets: ["4x15/10/5/20", "4x15/10/5/20", "4x15/10/5/20", "4x15/10/5/20"], sets: [4, 4, 4, 4] };
+  const t = await boot({ routine: r });
+  t.goTo(0, "A"); t.openCard(0);
+  const w = t.$$(".set-weight-input")[2];
+  w.value = "260"; w.dispatchEvent(new t.w.Event("input", { bubbles: true }));
+  assert.match(t.$$(".plate-hint")[2].textContent, /Por lado 112,5 → 45 \+ 45 \+ 5 \+ 5 \+ 5 \+ 5 \+ 2,5/);
+  t.click('.calc-bar-btn[data-bar="men"]');
+  assert.match(t.$$(".plate-hint")[2].textContent, /Por lado 107,5 → 45 \+ 45 \+ 5 \+ 5 \+ 5 \+ 2,5/);
+  const w2 = t.$$(".set-weight-input")[2];                           // el render reemplazó los campos
+  w2.value = "201"; w2.dispatchEvent(new t.w.Event("input", { bubbles: true }));
+  assert.match(t.$$(".plate-hint")[2].textContent, /faltan 0,5/);
   assert.deepEqual(t.errors, []);
 });

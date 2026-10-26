@@ -61,7 +61,7 @@ const AZUL = "FF1F3C56", CELESTE = "FFE8EFF6", GRIS = "FFF3F5F8", ROJO = "FFFDEC
             lado: w.perSide != null ? w.perSide : "",
             reps: w.repsText || "",
             hecho: w.completed ? "✓" : "",
-            nota: [w.note, w.altUsed ? "alternativa" : ""].filter(Boolean).join(" · "),
+            nota: [w.skipped ? `No hecho${w.skipReason ? `: ${w.skipReason}` : ""}` : "", w.note, w.altUsed ? "alternativa" : ""].filter(Boolean).join(" · "),
           });
           if (shade) row.eachCell({ includeEmpty: true }, (c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GRIS } }; });
           if (/S4/.test(w.week)) row.getCell("semana").font = { color: { argb: "FF2E6DA4" } };

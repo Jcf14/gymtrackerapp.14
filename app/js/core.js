@@ -186,6 +186,17 @@
   // Unidad de un registro: la guardada, o la de la rutina (registros anteriores a esta función).
   const recUnit = (rec, routine) => (rec && rec.unit) || (routine && routine.unitDefault) || "lb";
 
+  // Discos por lado para armar un peso total con la barra (discos confirmados en el gym: 45, 25, 5 y 2,5 lb).
+  const PLATES_LB = [45, 25, 5, 2.5];
+  function platesFor(total, bar) {
+    const side = (total - bar) / 2;
+    if (!(side > 0)) return null;
+    let rest = side;
+    const plates = [];
+    for (const p of PLATES_LB) while (rest >= p - 1e-9) { plates.push(p); rest -= p; }
+    return { side, plates, rest: Math.round(rest * 100) / 100 };
+  }
+
   function barWeight(bar, unit, custom) {
     if (bar === "custom") return parseNum(custom);
     return BARS[bar] ? BARS[bar][unit] : NaN;
@@ -389,7 +400,7 @@
           if (!rec) continue;
           const weight = parseNum(rec.weight);
           const hasReps = (rec.reps || []).some((x) => String(x).trim() !== "");
-          if (!(weight > 0) && !hasReps && !rec.completed && !rec.note) continue;
+          if (!(weight > 0) && !hasReps && !rec.completed && !rec.note && !rec.skipped) continue;
           sessions.push({
             cycle: routine.cycle, week: w, weekShort: routine.weekShort[w], day: d.key,
             exercise: slotName(data, d.key, idx, ex, w), protocol: slotProtocol(rec, ex), pattern: ex.pattern, type: d.type, noWeight: !!ex.noWeight, target: ex.targets[w],
@@ -397,6 +408,7 @@
             weight: weight > 0 ? weight : null, unit: weight > 0 ? recUnit(rec, routine) : null,
             reps: rec.reps || [], repsSame: !!rec.repsSame, repsSameValue: rec.repsSameValue || "",
             ...(Array.isArray(rec.setWeights) ? { setWeights: rec.setWeights } : {}),
+            ...(rec.skipped ? { skipped: true, skipReason: rec.skipReason || "" } : {}),
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed,
           });
         }
@@ -534,6 +546,8 @@
               perSide: rec.perSideDisplay ?? null,
               reps: rec.reps || [],
               setWeights: Array.isArray(rec.setWeights) ? rec.setWeights : null,
+              skipped: !!rec.skipped,
+              skipReason: rec.skipReason || "",
               repsText: repsText(rec),
               note: rec.note || "",
               completed: !!rec.completed,
@@ -565,7 +579,7 @@
     DAY_KEYS, BARS, STEP,
     targetSetCount, isDeloadTarget, hasPlusWeight, validateRoutine,
     dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, alts, normName,
-    parseNum, roundStep, fmtNum, barWeight, calcBar, repsText,
+    parseNum, roundStep, fmtNum, barWeight, calcBar, repsText, PLATES_LB, platesFor,
     LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
     collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
     weekFromStart, autoDayKey,

@@ -222,7 +222,17 @@
   }
   // Un registro (o marca) expresado en otra unidad, redondeado a 0,5.
   const inUnit = (r, u) => (r ? { ...r, weight: G.roundHalf(G.convert(r.weight, r.unit || "lb", u)), unit: u } : r);
-  const convTxt = (w, u) => `≈ ${fmt(G.round1(G.convert(w, u, G.otherUnit(u))))} ${G.otherUnit(u)}`;
+  const convTxt = (w, u) => `≈ ${fmt(Math.round(G.convert(w, u, G.otherUnit(u))))} ${G.otherUnit(u)}`;
+  // Discos por lado (solo en lb, con barra de mujer): "Por lado 95 → 45 + 25 + 25"
+  function plateTxt(total, u, bar) {
+    const t = G.parseNum(total);
+    const b = bar === "men" ? G.BARS.men.lb : G.BARS.women.lb;
+    if (u !== "lb" || !(t > b)) return "";
+    const pf = G.platesFor(t, b);
+    if (!pf) return "";
+    return `Por lado ${fmt(pf.side)} → ${pf.plates.length ? pf.plates.map(fmt).join(" + ") : "sin discos"}${pf.rest > 0 ? ` · faltan ${fmt(pf.rest)} (no se arma con estos discos)` : ""}`;
+  }
+  const EX_SKIP_REASONS = ["Sin tiempo", "Máquina ocupada", "Cansancio", "Molestia", "Otro"];
 
   // Recomendación de una tarjeta de la rutina (o null), en la unidad u.
   function recFor(day, ex, idx, w, name, u) {
@@ -275,6 +285,8 @@
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === S.tab));
     const root = $("#root");
     root.innerHTML = S.tab === "rutina" ? renderRutina() : renderHistorial();
+    // las notas largas se ven completas al reabrir la tarjeta (crecen hasta ~10 líneas y después hay scroll)
+    root.querySelectorAll(".note-input").forEach((ta) => { if (ta.value) ta.style.height = `${Math.min(ta.scrollHeight + 2, 240)}px`; });
     root.classList.toggle("fx-view", !!FX.view);
     if (FX.view) [...root.children].forEach((el, i) => el.style.setProperty("--i", i));
     renderSheet();
@@ -312,7 +324,7 @@
     const r = routine();
     if (!r) return renderEmpty();
     const day = currentDay();
-    const doneOf = (d) => d.exercises.filter((_, i) => S.data[G.slotKey(d.key, i, S.week)]?.completed).length;
+    const doneOf = (d) => d.exercises.filter((_, i) => { const r = S.data[G.slotKey(d.key, i, S.week)]; return r && (r.completed || r.skipped); }).length;
     const weeks = r.weekShort.map((w, i) => {
       const [main, sub] = splitWeek(w);
       return `<button class="seg-btn week-btn${i === S.week ? " active" : ""}" data-action="week" data-week="${i}">
@@ -359,7 +371,7 @@
           <div class="ring" role="img" aria-label="${done} de ${n} completados">
             <svg viewBox="0 0 72 72"><circle class="track" cx="36" cy="36" r="30"/>
               <circle class="bar" cx="36" cy="36" r="30" style="--c:${C.toFixed(1)};stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${off.toFixed(1)}"/></svg>
-            <div class="ring-txt"><div><b>${done}/${n}</b><span>hechos</span></div></div>
+            <div class="ring-txt"><div><b>${done}/${n}</b><span>listos</span></div></div>
           </div>
         </div>
         <div class="hero-actions">${dateChip}${!st && !S.skipOpen ? `<button class="hero-chip skip-btn" data-action="open-skip">${icon("ban")}No pude hacerlo</button>` : ""}</div>
@@ -375,7 +387,7 @@
     if (!(w > 0)) return "";
     const u = G.recUnit(rec, routine());
     if (Array.isArray(rec.setWeights) && rec.setWeights.length)
-      return `<span class="ex-weight"><span class="ex-val"><b>${rec.setWeights.map((x) => fmt(G.parseNum(x) || 0)).join("·")}</b> ${u}</span><span class="side"> · máx ${convTxt(w, u)}</span></span>`;
+      return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u}</span><span class="side sets">series: ${rec.setWeights.map((x) => fmt(G.parseNum(x) || 0)).join(" · ")}</span></span>`;
     const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? `${fmt(rec.perSideDisplay)}/lado · ` : "";
     return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u}</span><span class="side"> · ${side}${convTxt(w, u)}</span></span>`;
   }
@@ -384,7 +396,7 @@
     if (!rec) return "";
     const cls = rec.mode === "deload" ? "down" : rec.mode === "reps" ? "reps" : rec.mode === "calibrate" ? "cal" : rec.value > rec.base ? "up" : "flat";
     const pct = rec.mode !== "calibrate" && rec.pct ? pctTxt(rec.pct) : "";
-    return `<span class="ex-sug ${cls}"><span class="ex-val"><b>${rec.setWeights ? rec.setWeights.map(fmt).join("·") : fmt(rec.value)}</b> ${u}</span> ${pct ? `<em>${icon(dirIcon(rec))}${pct}</em><span class="sep"> · </span>` : ""}<span class="goal-s">${esc(SHORT_GOAL[rec.goal] || rec.goal)}</span></span>`;
+    return `<span class="ex-sug ${cls}"><span class="ex-val"><b>${fmt(rec.value)}</b> ${u}</span>${rec.setWeights ? `<span class="side sets">series: ${rec.setWeights.map(fmt).join(" · ")}</span>` : ""} ${pct ? `<em>${icon(dirIcon(rec))}${pct}</em><span class="sep"> · </span>` : ""}<span class="goal-s">${esc(SHORT_GOAL[rec.goal] || rec.goal)}</span></span>`;
   }
 
   function draftFor(k, rec, sets) {
@@ -430,7 +442,9 @@
     const tagTxt = altUsed ? "alternativa" : name !== ex.name ? "editado" : "";
     const repsTxt = G.repsText(rec);
     const saved = weightLine(rec);
-    const mid = saved || (rec && (rec.completed || repsTxt))
+    const mid = rec && rec.skipped
+      ? `<div class="cs cs-skip"><span class="cs-lbl">No hecho</span><span class="cs-val">${esc(rec.skipReason || "Sin motivo")}</span></div>`
+      : saved || (rec && (rec.completed || repsTxt))
       ? `<div class="cs cs-reg"><span class="cs-lbl">Registrado</span>${saved || `<span class="cs-val">${repsTxt ? esc(repsTxt) : "Hecho"}</span>`}${saved && repsTxt ? `<span class="cs-sub">reps ${esc(repsTxt)}</span>` : ""}</div>`
       : info && info.rec
         ? `<div class="cs cs-sug"><span class="cs-lbl">Sugerido</span>${recBadge(info.rec, u)}</div>`
@@ -450,7 +464,7 @@
           </div>
         </div>
       </div>`;
-    const cls = `card ${day.type}${done ? " done" : ""}${open ? " open" : ""}${FX.pr === k ? " fx-pr" : ""}${FX.saved === k ? " fx-saved" : ""}`;
+    const cls = `card ${day.type}${done ? " done" : ""}${rec && rec.skipped ? " skipped" : ""}${open ? " open" : ""}${FX.pr === k ? " fx-pr" : ""}${FX.saved === k ? " fx-saved" : ""}`;
     if (!open) return `<li class="${cls}" style="--i:${idx}">${head}</li>`;
     return `<li class="${cls}" style="--i:${idx}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name, info)}</li>`;
   }
@@ -508,9 +522,17 @@
       <div class="tools">
         ${showAlt ? `<button class="tool-btn alt-btn${d.altOpen || altUsed ? " on" : ""}" data-action="toggle-alt" data-k="${k}">${icon("swap")}${altUsed ? "Usando alt." : "Alternativa"}</button>` : ""}
         <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>
+        ${rec && rec.skipped ? "" : `<button class="tool-btn skip-ex-btn${d.skipOpen ? " on" : ""}" data-action="toggle-skip-ex" data-k="${k}">${icon("ban")}No lo hice</button>`}
       </div>
       ${altBox}
       ${editBox}
+      ${rec && rec.skipped ? `<div class="alt-box skip-ex-state">${icon("ban")}<span><b>No hecho</b>${esc(rec.skipReason || "Sin motivo")}</span>
+          <button class="chip-btn undo-skip-ex-btn" data-action="undo-skip-ex" data-k="${k}">Deshacer</button></div>`
+        : d.skipOpen ? `<div class="alt-box skip-ex-box"><b>¿Por qué no lo hiciste?</b>
+          <div class="skip-chips">${EX_SKIP_REASONS.map((x) => `<button class="chip-btn skip-ex-chip${d.skipReason === x ? " on" : ""}" data-action="skip-ex-reason" data-reason="${x}" data-k="${k}">${x}</button>`).join("")}</div>
+          <input class="text-input skip-ex-input" data-skipex="reason" data-k="${k}" value="${esc(d.skipReason || "")}" placeholder="Motivo (opcional)" aria-label="Motivo">
+          <div class="row-btns"><button class="chip-btn solid save-skip-ex-btn" data-action="save-skip-ex" data-k="${k}">Marcar como no hecho</button>
+            <button class="chip-btn" data-action="toggle-skip-ex" data-k="${k}">Cancelar</button></div></div>` : ""}
       ${ex.perSetWeight ? renderSetRows(ex, k, d, sets, u, unitSeg) : `<div class="reg">
         <div class="reg-title">Registro de hoy</div>
         <div class="reg-row weight-row">
@@ -554,9 +576,13 @@
           <div class="weight-box"><input class="num-input set-weight-input" inputmode="decimal" data-field="setWeight" data-i="${i}" data-k="${k}" value="${esc(d.setWeights[i])}" placeholder="0" aria-label="Peso serie ${i + 1}"><span class="unit">${u}</span></div>
           <span class="reg-x">×</span>
           <input class="num-input rep-input" inputmode="numeric" data-field="rep" data-i="${i}" data-k="${k}" value="${esc(d.reps[i])}" placeholder="reps" aria-label="Reps serie ${i + 1}">
-        </div></div>`).join("");
+        </div></div>
+        <div class="plate-hint" data-plates="${k}-${i}">${esc(plateTxt(d.setWeights[i], u, d.calcBar))}</div>`).join("");
+    const barSeg = u === "lb" ? `<div class="seg mini bar-toggle" role="group" aria-label="Barra">${[["women", "35 lb"], ["men", "45 lb"]].map(([v, l]) =>
+      `<button class="seg-btn calc-bar-btn${d.calcBar === v ? " active" : ""}" data-action="calc-bar" data-bar="${v}" data-k="${k}">${l}</button>`).join("")}</div>` : "";
     return `<div class="reg reg-sets">
-        <div class="reg-title reg-title-row"><span>Registro de hoy · peso por serie</span>${unitSeg}</div>
+        <div class="reg-title">Peso total por serie (con la barra)</div>
+        <div class="reg-row sets-ctrls">${barSeg ? `<span class="ctrl-lbl">Barra</span>${barSeg}` : ""}<span class="ctrl-lbl">Unidad</span>${unitSeg}</div>
         ${rows}
         <div class="reg-row note-row">
           <textarea class="text-input note-input" rows="1" data-field="note" data-k="${k}" placeholder="Nota (opcional)" aria-label="Nota: cómo se sintió, molestias, ajustes">${esc(d.note)}</textarea>
@@ -590,8 +616,9 @@
   function calcResultText(d) {
     const res = calcResult(d);
     if (!res) return d.calcBar === "custom" && !(G.parseNum(d.calcCustom) >= 0) ? "Ingresá el peso de la barra" : "Ingresá el peso";
-    if (d.calcMode === "perSide") return `Total: ${fmt(res.total)} ${d.unit}`;
-    return res.perSide < 0 ? "El total es menor que la barra" : `Por lado: ${fmt(res.perSide)} ${d.unit}`;
+    const plates = d.calcBar !== "custom" ? plateTxt(res.total, d.unit, d.calcBar) : "";
+    if (d.calcMode === "perSide") return `Total: ${fmt(res.total)} ${d.unit}${plates ? ` · ${plates.replace(/^Por lado [\d,.]+ → /, "discos: ")}` : ""}`;
+    return res.perSide < 0 ? "El total es menor que la barra" : `Por lado: ${fmt(res.perSide)} ${d.unit}${plates ? ` · ${plates.replace(/^Por lado [\d,.]+ → /, "discos: ")}` : ""}`;
   }
 
   // ---------- Historial (por ejercicio, en todos los ciclos) ----------
@@ -956,6 +983,28 @@
       }
       toast("Cargá y guardá el peso antes de completar", "error");
     },
+    "toggle-skip-ex"(el) { const d = S.drafts[el.dataset.k]; d.skipOpen = !d.skipOpen; render(); },
+    "skip-ex-reason"(el) {
+      const d = S.drafts[el.dataset.k];
+      d.skipReason = el.dataset.reason;
+      el.closest(".skip-ex-box").querySelectorAll(".skip-ex-chip").forEach((c) => c.classList.toggle("on", c === el));
+      const input = el.closest(".skip-ex-box").querySelector(".skip-ex-input");
+      if (input) input.value = d.skipReason;
+    },
+    "save-skip-ex"(el) {
+      const k = el.dataset.k, d = S.drafts[k];
+      const { ex, week, idx } = exFromKey(k);
+      S.data[k] = { ...emptyRecord(ex.sets[week]), ...(S.data[k] || {}), completed: false, skipped: true, skipReason: (d.skipReason || "").trim(), savedAt: new Date().toISOString() };
+      if (!saveData()) return;
+      delete S.drafts[k]; S.open.delete(idx); S.fx.saved = k;
+      render(); toast("Marcado como no hecho");
+    },
+    "undo-skip-ex"(el) {
+      const k = el.dataset.k;
+      if (S.data[k]) { delete S.data[k].skipped; delete S.data[k].skipReason; }
+      if (!saveData()) return;
+      render(); toast("Quitado: no hecho");
+    },
     "toggle-alt"(el) { const d = S.drafts[el.dataset.k]; d.altOpen = !d.altOpen; render(); },
     "toggle-edit"(el) {
       const k = el.dataset.k, d = S.drafts[k];
@@ -1048,8 +1097,8 @@
       if (d.unit === to) return;
       const { dayObj, idx } = exFromKey(k);
       const w = G.parseNum(d.weight);
-      if (w > 0) d.weight = String(G.roundHalf(G.convert(w, d.unit, to)));
-      d.setWeights = d.setWeights.map((x) => (G.parseNum(x) > 0 ? String(G.roundHalf(G.convert(G.parseNum(x), d.unit, to))) : x));
+      if (w > 0) d.weight = String(Math.round(G.convert(w, d.unit, to)));
+      d.setWeights = d.setWeights.map((x) => (G.parseNum(x) > 0 ? String(Math.round(G.convert(G.parseNum(x), d.unit, to))) : x));
       d.weightMode = "total"; d.perSideDisplay = null; d.calcValue = "";
       d.unit = to;
       S.data[unitKey(dayObj.key, idx)] = to;
@@ -1188,6 +1237,7 @@
   function onInput(e) {
     const el = e.target, f = el.dataset.field, k = el.dataset.k;
     if (el.dataset.skip === "reason") { S.skipReason = el.value; return; }
+    if (el.dataset.skipex === "reason") { const dd = S.drafts[el.dataset.k]; if (dd) dd.skipReason = el.value; return; }
     if (el.dataset.search === "merge") {
       S.mergeQuery = el.value;
       const e = histIndex().find((x) => x.key === S.histEx);
@@ -1205,9 +1255,13 @@
     const d = S.drafts[k];
     if (!d) return;
     if (f === "rep") d.reps[Number(el.dataset.i)] = el.value;
-    else if (f === "setWeight") d.setWeights[Number(el.dataset.i)] = el.value;
+    else if (f === "setWeight") {
+      d.setWeights[Number(el.dataset.i)] = el.value;
+      const hint = document.querySelector(`[data-plates="${k}-${el.dataset.i}"]`);
+      if (hint) hint.textContent = plateTxt(el.value, d.unit, d.calcBar);
+    }
     else d[f] = el.value;
-    if (f === "note") { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
+    if (f === "note") { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight + 2, 240)}px`; }
     if (f === "weight") {
       d.weightMode = "total"; d.perSideDisplay = null;
       const card = el.closest(".card");

@@ -81,7 +81,9 @@
   - Pedí más **hombro, espalda, tríceps y bíceps**; el pecho no me gusta pero no quiero descuidarlo → 2 ejercicios de pecho (~6 series/semana para mantener).
   - Core con peso 2 días (crunch en polea, Pallof). No tengo máquina para elevación de piernas colgado.
   - Hasta 2 alternativas por ejercicio (otro ejercicio o el mismo con otro accesorio).
-- **Cómo me fue:** no registrado todavía.
+- **Cómo me fue:**
+  - **S1 · Día A (26/10):** pirámide con **185 × 15 · 215 × 10 · 260 × 5 · 145 × 20 (con banda)**, todo con la **barra de 45 lb** (la de mujer estaba ocupada). Estos son los pesos fijos de la pirámide para S2–S4. El 260 × 5 iguala mi mejor marca de hip thrust (260 × 4 en el ciclo 2) con una rep más.
+  - **RDL con barra (Día A, S1): no lo hice** por falta de tiempo.
 - **Archivos:** `rutinas/ciclo-3.json` (= `ciclo-actual.json`).
 
 ---
