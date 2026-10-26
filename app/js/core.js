@@ -68,6 +68,7 @@
         if (!isStr(ex.rest)) errs.push(`${w}: falta rest`);
         if (ex.protocol !== undefined && !isStr(ex.protocol)) errs.push(`${w}: protocol debe ser un texto (u omitirse)`);
         if (ex.noWeight !== undefined && ex.noWeight !== true) errs.push(`${w}: noWeight solo puede ser true (u omitirse)`);
+        if (ex.fixedLoad !== undefined && ex.fixedLoad !== true) errs.push(`${w}: fixedLoad solo puede ser true (u omitirse)`);
         const okTargets = Array.isArray(ex.targets) && ex.targets.length === 4 && ex.targets.every(isStr);
         const okSets = Array.isArray(ex.sets) && ex.sets.length === 4 && ex.sets.every((n) => Number.isInteger(n) && n >= 1);
         if (!okTargets) errs.push(`${w}: targets debe tener exactamente 4 textos`);
@@ -78,7 +79,7 @@
             if (n === null) errs.push(`${w}: S${i + 1} "${t}" no indica series (ej. "3x10")`);
             else if (n !== ex.sets[i]) errs.push(`${w}: S${i + 1} sets=${ex.sets[i]} pero "${t}" indica ${n}`);
           });
-          if (!ex.noWeight && !isDeloadTarget(ex.targets[3]))
+          if (!ex.noWeight && !ex.fixedLoad && !isDeloadTarget(ex.targets[3]))
             errs.push(`${w}: la S4 necesita "(liviano…)", "@RPE5-6" o "@RPE6" para la sugerencia de descarga`);
         }
       });
@@ -309,7 +310,7 @@
 
   // Devuelve { value, base, pct, mode, goal, text } o null.
   // mode: "up" · "reps" · "same" · "deload" · "calibrate" (sin referencia directa: usar la 1ª serie)
-  function recommend({ target, prevTarget, week, prev, prevRec, lastS1, lastS1Target, max, unit, weekShort }) {
+  function recommend({ target, prevTarget, week, prev, prevRec, lastS1, lastS1Target, max, unit, weekShort, fixedLoad }) {
     const step = STEP[unit] || 5;
     const wk = (i) => (weekShort && weekShort[i] ? String(weekShort[i]).replace(/\s*\(.*\)\s*$/, "") : `S${i + 1}`);
     const out = (value, base, mode, rDir, text) => {
@@ -318,6 +319,11 @@
     };
     const up = (base) => Math.max(base + step, roundStep(base * 1.05, unit));
     const cur = repRange(target);
+    // Peso fijo (pirámide de Bret): el peso no cambia en todo el ciclo; se progresa sumando reps.
+    if (fixedLoad && prev) {
+      const reps = repsNums(prevRec);
+      return out(prev.weight, prev.weight, "reps", "up", `Peso fijo todo el ciclo: mismo peso que en ${wk(prev.week)}${reps.length ? ` (hiciste ${reps.join("·")})` : ""}; buscá ${cur ? cur.hi : "más"} reps`);
+    }
     if (prev) {
       const pw = prev.weight;
       const was = repRange(prevTarget);

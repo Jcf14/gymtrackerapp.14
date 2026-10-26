@@ -183,6 +183,7 @@
     { id: "lado", term: "c/pierna · c/lado", text: "Las reps se cuentan para cada pierna o lado por separado." },
     { id: "barra", term: "Por lado / total", text: "Por lado = los discos de un solo lado, sin la barra. Total = 2 × lado + barra. Barra de mujer: 35 lb (15 kg)." },
     { id: "protocolo", term: "Protocolo", text: "Detalle de cómo se hace el ejercicio en este ciclo (pausa arriba, agarre neutro, pies adelante…). Es solo descriptivo: el mismo nombre es el mismo ejercicio para el historial, el récord y las sugerencias. Si una variante cambia mucho la carga (como el hip thrust con pulsos, más liviano), lleva otro nombre." },
+    { id: "piramide", term: "Pirámide de Bret (hip thrust)", text: "4 series al principio de la sesión: ~15 reps, ~10 con más peso, ~5 con el peso más alto y ~20 con banda en las rodillas y menos peso. Los pesos NO cambian en las 4 semanas: se progresa sumando reps (meta de reps totales ~50 → 60 → 65 → 70). Lockout completo, sin reps sucias. Bret lo recomienda 2–3 veces al año." },
     { id: "alternativa", term: "Alternativa", text: "Ejercicio de reemplazo si la máquina o la barra están ocupadas. \"Usar esta semana\" lo marca solo en esa semana; \"Usar en todo el ciclo\" cambia el nombre en las 4 semanas." },
   ];
 
@@ -241,7 +242,7 @@
     return {
       max: inUnit(G.findMax(records), u),
       rec: G.recommend({
-        target: ex.targets[w], prevTarget: prev ? ex.targets[prev.week] : null, week: w, prev,
+        target: ex.targets[w], prevTarget: prev ? ex.targets[prev.week] : null, week: w, prev, fixedLoad: !!ex.fixedLoad,
         prevRec: prev ? S.data[G.slotKey(day.key, idx, prev.week)] : null,
         lastS1, lastS1Target, max: inUnit(G.findMax(others), u), unit: u, weekShort: r.weekShort,
       }),

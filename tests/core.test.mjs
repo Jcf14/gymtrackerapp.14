@@ -240,3 +240,16 @@ test("alt: texto, null o lista de 1–2", () => {
   assert.equal(G.slotName({ A_0_w0: { altUsed: true, altIdx: 1 } }, "A", 0, { name: "N", alt: ["X", "Y"] }, 0), "Y");
   assert.equal(G.slotName({ A_0_w0: { altUsed: true } }, "A", 0, { name: "N", alt: "X" }, 0), "X", "registros viejos sin altIdx");
 });
+
+test("peso fijo (pirámide): sin marca de descarga y siempre 'mismo peso, más reps'", () => {
+  const r = fixture();
+  const ex = r.days[0].exercises[0];
+  ex.fixedLoad = true;
+  ex.targets = ["1x5 @RPE9", "1x6 @RPE9", "1x7 @RPE9", "1x8 @RPE9"];
+  ex.sets = [1, 1, 1, 1];
+  assert.deepEqual(plain(G.validateRoutine(r)), [], "la S4 no necesita marca de descarga");
+  const x = G.recommend({ target: "1x8 @RPE9", prevTarget: "1x7 @RPE9", week: 3, prev: { weight: 250, week: 2 }, prevRec: { reps: ["7"] }, unit: "lb", fixedLoad: true });
+  assert.equal(x.value, 250); assert.equal(x.goal, "Mismo peso, más reps");
+  ex.fixedLoad = "si";
+  assert.match(G.validateRoutine(r).join(), /fixedLoad solo puede ser true/);
+});
