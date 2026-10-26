@@ -748,9 +748,9 @@ test("discos por lado en la pirámide, con barra de 35 o 45", async () => {
   t.goTo(0, "A"); t.openCard(0);
   const w = t.$$(".set-weight-input")[2];
   w.value = "260"; w.dispatchEvent(new t.w.Event("input", { bubbles: true }));
-  assert.match(t.$$(".plate-hint")[2].textContent, /Por lado 112,5 → 45 \+ 45 \+ 5 \+ 5 \+ 5 \+ 5 \+ 2,5/);
+  assert.match(t.$$(".plate-hint")[2].textContent, /Por lado 112,5 → 45 \+ 45 \+ 10 \+ 10 \+ 2,5/);
   t.click('.calc-bar-btn[data-bar="men"]');
-  assert.match(t.$$(".plate-hint")[2].textContent, /Por lado 107,5 → 45 \+ 45 \+ 5 \+ 5 \+ 5 \+ 2,5/);
+  assert.match(t.$$(".plate-hint")[2].textContent, /Por lado 107,5 → 45 \+ 45 \+ 10 \+ 5 \+ 2,5/);
   const w2 = t.$$(".set-weight-input")[2];                           // el render reemplazó los campos
   w2.value = "201"; w2.dispatchEvent(new t.w.Event("input", { bubbles: true }));
   assert.match(t.$$(".plate-hint")[2].textContent, /faltan 0,5/);

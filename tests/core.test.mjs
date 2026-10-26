@@ -254,9 +254,9 @@ test("peso fijo (pirámide): sin marca de descarga y siempre 'mismo peso, más r
   assert.match(G.validateRoutine(r).join(), /fixedLoad solo puede ser true/);
 });
 
-test("discos por lado: 45, 25, 5 y 2,5 lb", () => {
+test("discos por lado: 45, 25, 10, 5 y 2,5 lb (los menos discos posibles)", () => {
   assert.deepEqual(plain(G.platesFor(185, 45)), { side: 70, plates: [45, 25], rest: 0 });
   assert.deepEqual(plain(G.platesFor(215, 35)), { side: 90, plates: [45, 45], rest: 0 });
-  assert.deepEqual(plain(G.platesFor(200, 35)), { side: 82.5, plates: [45, 25, 5, 5, 2.5], rest: 0 });
+  assert.deepEqual(plain(G.platesFor(200, 35)), { side: 82.5, plates: [45, 25, 10, 2.5], rest: 0 });
   assert.equal(G.platesFor(30, 35), null);
 });

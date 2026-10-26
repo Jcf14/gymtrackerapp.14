@@ -186,8 +186,9 @@
   // Unidad de un registro: la guardada, o la de la rutina (registros anteriores a esta función).
   const recUnit = (rec, routine) => (rec && rec.unit) || (routine && routine.unitDefault) || "lb";
 
-  // Discos por lado para armar un peso total con la barra (discos confirmados en el gym: 45, 25, 5 y 2,5 lb).
-  const PLATES_LB = [45, 25, 5, 2.5];
+  // Discos por lado para armar un peso total con la barra (discos del gym: 45, 25, 10, 5 y 2,5 lb).
+  // Se elige siempre el disco más grande que entra, así se usan los menos discos posibles.
+  const PLATES_LB = [45, 25, 10, 5, 2.5];
   function platesFor(total, bar) {
     const side = (total - bar) / 2;
     if (!(side > 0)) return null;

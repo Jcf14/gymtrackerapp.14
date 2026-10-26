@@ -53,7 +53,7 @@ Estado: ciclo vigente = **3** (desde el 26/10/2026). Ciclos 1 y 2 cerrados: expo
 
 **Unidades y carga**
 - Libras por defecto (la app permite kg). Cargo la barra **por lado** ("90 lb por lado + barra de mujer"), así que la app necesita calculadora por lado/total.
-- Discos confirmados: 45, 25, 5 y 2,5 lb. Barras: de mujer 35 lb (la habitual) y de hombre 45 lb (a veces la uso si la otra está ocupada). El salto mínimo en máquinas y mancuernas suele ser de 5 lb.
+- Discos confirmados: 45, 25, 10, 5 y 2,5 lb (la app sugiere los menos discos posibles). Barras: de mujer 35 lb (la habitual) y de hombre 45 lb (a veces la uso si la otra está ocupada). El salto mínimo en máquinas y mancuernas suele ser de 5 lb.
 
 **Lesiones / limitaciones:** ninguna reportada. Sudo mucho y los días de pierna pesada el cansancio "pega" (probé electrolitos; sin mareos ni calambres). Preguntarme por molestias al iniciar cada ciclo.
 
@@ -301,7 +301,7 @@ Siempre:
 - **Tarjeta por ejercicio:** plegada: nombre, etiquetas (patrón y protocolo) y tres columnas con etiqueta para no confundir datos: **HOY** (objetivo de la semana + ⏱ descanso) · **SUGERIDO** (peso, % y qué se espera) o, si ya se registró, **REGISTRADO** (peso, equivalencia y reps) · **RÉCORD** (peso × reps y fecha, mismo protocolo). El círculo de completado se toca directo. Desplegada (sin repetir datos de la cabecera): el porqué de la sugerencia con botón "Usar N lb", alternativa, renombrar, registro (peso con − / +, lb | kg y el ícono 🧮 de la calculadora de barra en la misma fila; reps —**iguales por defecto**, distintas como opción—, nota) y dos botones: **"Guardar y marcar listo"** (principal) y "Solo guardar". Al guardar, la tarjeta queda a la vista y destella.
 - **Validación:** no se puede guardar ni completar sin peso, salvo `noWeight`.
 - **No lo hice:** en cada ejercicio, con motivo (Sin tiempo, Máquina ocupada, Cansancio, Molestia, Otro); queda como "No hecho" (`skipped`, `skipReason`), cuenta como resuelto para el día y va al export/Excel. Se deshace, y cargar peso lo saca de "no hecho".
-- **Discos por lado:** debajo de cada serie de la pirámide (con selector de barra 35 | 45 lb) y en la calculadora de barra: "Por lado 107,5 → 45 + 45 + 5 + 5 + 5 + 2,5", con los discos confirmados; si un peso no se arma, avisa cuánto falta.
+- **Discos por lado:** debajo de cada serie de la pirámide (con selector de barra 35 | 45 lb) y en la calculadora de barra: "Por lado 107,5 → 45 + 45 + 5 + 5 + 5 + 2,5", con los discos confirmados (45, 25, 10, 5, 2,5), usando los menos discos posibles; si un peso no se arma, avisa cuánto falta.
 - **Notas:** el campo crece con el texto (hasta ~10 líneas, después scroll), también al reabrir la tarjeta.
 - **Reps por serie:** un casillero por serie, o "todas las series fueron iguales" (un solo campo).
 - **Calculadora de barra:** barra Mujer (35 lb / 15 kg), Hombre (45 lb / 20 kg) o personalizada; modo "por lado" o "total"; muestra el total o el equivalente por lado; "Usar este peso" lo vuelca al campo.
