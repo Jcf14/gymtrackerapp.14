@@ -437,7 +437,8 @@
         const names = new Set([effectiveName(data, d.key, idx, ex), ...[0, 1, 2, 3].map((w) => slotName(data, d.key, idx, ex, w))]);
         for (const name of names) {
           const key = normName(name);
-          if (!map.has(key)) map.set(key, { key, name, pattern: ex.pattern, type: d.type, noWeight: !!ex.noWeight, days: new Set(), cycles: new Set(), order: Infinity });
+          // lastDay: día donde se hizo más recientemente (los ciclos se recorren del más nuevo al más viejo)
+          if (!map.has(key)) map.set(key, { key, name, pattern: ex.pattern, type: d.type, noWeight: !!ex.noWeight, days: new Set(), cycles: new Set(), order: Infinity, lastDay: d.key, lastDayCycle: c });
           const e = map.get(key);
           e.cycles.add(c);
           if (c === activeCycle) { e.days.add(d.key); e.order = Math.min(e.order, di * 100 + idx); }
@@ -447,8 +448,10 @@
     // Ejercicios que solo existen en ciclos cerrados.
     for (const x of (hist && hist.sessions) || []) {
       const key = normName(x.exercise);
-      if (!map.has(key)) map.set(key, { key, name: x.exercise, pattern: x.pattern, type: x.type, noWeight: !!x.noWeight, days: new Set(), cycles: new Set(), order: Infinity });
-      map.get(key).cycles.add(x.cycle);
+      if (!map.has(key)) map.set(key, { key, name: x.exercise, pattern: x.pattern, type: x.type, noWeight: !!x.noWeight, days: new Set(), cycles: new Set(), order: Infinity, lastDay: x.day, lastDayCycle: x.cycle });
+      const e = map.get(key);
+      e.cycles.add(x.cycle);
+      if (x.day && x.cycle > e.lastDayCycle) { e.lastDay = x.day; e.lastDayCycle = x.cycle; }
     }
     const list = [...map.values()];
     for (const e of list) {

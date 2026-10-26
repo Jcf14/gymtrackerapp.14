@@ -3,15 +3,19 @@
   "private": true,
   "type": "module",
   "description": "PWA personal para registrar entrenamientos por ciclo.",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test",
     "validar": "node scripts/validar-rutina.mjs",
     "iconos": "node scripts/iconos.mjs",
-    "serve": "node scripts/serve.mjs"
+    "serve": "node scripts/serve.mjs",
+    "historial": "node scripts/historial-xlsx.cjs ."
   },
   "devDependencies": {
+    "exceljs": "^4.4.0",
     "jsdom": "26.1.0"
   }
 }

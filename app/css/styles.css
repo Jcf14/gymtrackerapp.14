@@ -664,3 +664,9 @@ textarea.text-input { resize: none; min-height: 44px; }
 .reg .weight-box { width: 72px; }
 .reg-sub:has(.weight-hints:empty), .reg-sub:has(.conv-hint:empty):not(:has(.perside-hint)) { padding-bottom: 4px; min-height: 0; }
 .ex-proto { border-radius: 10px; }
+
+/* Historial agrupado por día */
+.hist-sec { display: flex; align-items: baseline; gap: 8px; margin: 18px 6px 8px; }
+.hist-sec:first-child { margin-top: 4px; }
+.hist-sec .k { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--cta); color: #fff; font-family: var(--display); font-size: 14px; font-weight: 700; align-self: center; }
+.hist-sec .t { font-size: 13px; font-weight: 700; color: var(--text-2); }

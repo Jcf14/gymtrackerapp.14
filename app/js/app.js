@@ -586,10 +586,24 @@
     const list = histIndex().filter((e) =>
       (S.histFilter === "all" || e.group === S.histFilter) && (!q || G.normName(e.name).includes(q)));
     if (!list.length) return `<p class="empty small">No hay ejercicios que coincidan.</p>`;
-    return `<ul class="hist-ul">${list.map((e) => {
+    // Agrupado por día (el del ciclo actual; si ya no está, el último en que se hizo) y por nombre dentro de cada día.
+    const dayOf = (e) => (e.days.size ? [...e.days].sort()[0] : e.lastDay || "");
+    const titleOf = (k) => {
+      for (const r of [routine(), ...cycleList().map((c) => S.routines[c])]) {
+        const d = r && r.days.find((x) => x.key === k);
+        if (d) return d.title;
+      }
+      return "";
+    };
+    const groups = new Map();
+    for (const e of list) { const k = dayOf(e); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); }
+    const keys = [...groups.keys()].sort((a, b) => (a || "~").localeCompare(b || "~"));
+    return keys.map((k) => `<div class="hist-sec"><span class="k">${k ? esc(k) : "·"}</span><span class="t">${k ? esc(titleOf(k) || `Día ${k}`) : "Otros"}</span></div>
+      <ul class="hist-ul">${groups.get(k).sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" })).map((e) => {
       const m = e.max;
       const days = [...e.days].join(" · ");
-      const sub = [e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"), days ? `Día ${days}` : ""].filter(Boolean).join(" · ");
+      // el día ya está en el título de la sección; solo se aclara si el ejercicio está en más de un día
+      const sub = [e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"), e.days.size > 1 ? `Días ${days}` : ""].filter(Boolean).join(" · ");
       const right = e.noWeight && !m
         ? `<span class="hl-none">${e.last ? fmtDate(e.last.date) : "Sin peso"}</span>`
         : m ? `<span class="hl-max"><b>${fmt(m.weight)}</b> ${m.unit}${m.topReps ? ` × ${m.topReps}` : ""}</span><span class="hl-date">${fmtDate(m.date)}</span>`
@@ -598,7 +612,7 @@
         <span class="hist-dot"></span>
         <span class="hl-info"><span class="ex-name">${esc(e.name)}</span><span class="hl-sub">${esc(sub)}</span></span>
         <span class="hl-right">${right}</span>${icon("chevron")}</button></li>`;
-    }).join("")}</ul>`;
+    }).join("")}</ul>`).join("");
   }
 
   function renderMergeList(e) {

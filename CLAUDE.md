@@ -28,11 +28,11 @@ Estructura del repo:
 /dist/                      ← salida del build (no se versiona); es lo único que se publica
 ```
 
-Comandos: `npm test` · `npm run validar` · `npm run build` · `npm run serve` (prueba local de `dist/`) · `npm run iconos`.
+Comandos: `npm test` · `npm run validar` · `npm run build` · `npm run serve` (prueba local de `dist/`) · `npm run iconos` · `npm run historial` (Excel de ciclos).
 
 **Publicación:** repo privado en GitHub → Cloudflare Pages (build command `npm run build`, output `dist`). El build valida todas las rutinas (si alguna falla, no publica), copia `app/` + `rutinas/ciclo-actual.json` y versiona el service worker. `CLAUDE.md`, `HISTORIAL.md` y `exports/` nunca se publican.
 
-Estado inicial: el ciclo vigente es el **2**. Al migrar, duplicar `rutinas/ciclo-actual.json` como `rutinas/ciclo-2.json`.
+Estado: ciclo vigente = **3** (desde el 26/10/2026). Ciclos 1 y 2 cerrados: exports en `exports/` y resumen en HISTORIAL.md.
 
 ---
 
@@ -168,7 +168,7 @@ Estado inicial: el ciclo vigente es el **2**. Al migrar, duplicar `rutinas/ciclo
 
 1. En la app: ⚙ → Ciclos → **Cerrar ciclo N**. Verifica que el máximo (peso y reps) de cada ejercicio quede en el historial, descarga el export, guarda el historial, comprueba la escritura y recién ahí borra el ciclo del celular (si algo no verifica, no borra nada). Pedirme ese export → guardarlo en `/exports/ciclo-N-export.json`.
 2. Resumir en `HISTORIAL.md`: pesos pico por ejercicio (con las reps de ese pico) y cómo me fue.
-3. Agregar **una hoja por ciclo** a `/exports/Historial_Bloques.xlsx` (semanas con fechas, pesos, reps, notas). Un solo Excel que crece; nada de un archivo por ciclo.
+3. Agregar **una hoja por ciclo** a `/exports/Historial_Bloques.xlsx` con `npm run historial` (lee `exports/ciclo-N-export.json` y solo agrega las hojas que faltan). Un solo Excel que crece; nada de un archivo por ciclo.
 
 ---
 
@@ -349,10 +349,8 @@ Todos los valores se guardan como JSON (`JSON.stringify`).
 
 ### 6.5 Pendientes
 
-1. Conseguir el JSON del ciclo 2 (`rutinas/ciclo-2.json`, copiado como `ciclo-actual.json`) o generar directamente el ciclo 3.
-2. Datos del ciclo 2 que están en el artifact: si se quieren en la app nueva, exportarlos (⚙ → Exportar datos del artifact) y escribir un importador. Como mínimo, guardarlos en `/exports/` para HISTORIAL.
-3. Primera publicación en Cloudflare Pages y prueba en el iPhone: instalar en la pantalla de inicio, modo avión, ícono, exportar a Archivos.
-4. Hoja del ciclo en `exports/Historial_Bloques.xlsx` al cerrar cada ciclo (§3.7).
+1. Probar en el iPhone real lo que todavía solo se probó en Chrome (modo avión con la app anclada, exportar a Archivos).
+2. Al cerrar el ciclo 3: export → `exports/ciclo-3-export.json`, HISTORIAL.md y `npm run historial`.
 
 ### 6.6 Paleta de la app (variables CSS del artifact)
 

@@ -670,3 +670,15 @@ test("dos alternativas: se elige cuál y su peso queda bajo ese nombre", async (
   assert.equal(t.data().ovr_A_0.name, "Hip thrust con mancuerna en banco");
   assert.deepEqual(t.errors, []);
 });
+
+test("historial agrupado por día y ordenado por nombre", async () => {
+  const t = await boot();
+  t.click('.tab[data-tab="historial"]');
+  const secs = t.$$(".hist-sec").map((s) => `${s.querySelector(".k").textContent} ${s.querySelector(".t").textContent}`);
+  assert.deepEqual(secs, ["A Glúteo #1 — Sesgo Vertical", "B Tren superior — Empuje"]);
+  const firstGroup = [...t.$(".hist-sec").nextElementSibling.querySelectorAll(".hist-item .ex-name")].map((e) => e.textContent);
+  assert.deepEqual(firstGroup, [...firstGroup].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" })), "orden alfabético dentro del día");
+  t.click('.hist-filter-btn[data-filter="upper"]');
+  assert.equal(t.$$(".hist-sec").length, 1, "con filtro solo queda el día B");
+  assert.deepEqual(t.errors, []);
+});
