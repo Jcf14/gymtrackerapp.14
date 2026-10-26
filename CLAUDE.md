@@ -22,7 +22,7 @@ Estructura del repo:
 /app/                       ← la PWA (index.html, css/, js/core.js = lógica pura, js/app.js = interfaz, sw.js, manifest, icons/)
 /rutinas/ciclo-N.json       ← una rutina por ciclo
 /rutinas/ciclo-actual.json  ← copia del ciclo vigente (es lo que carga la app)
-/exports/                   ← exports JSON de la app al cerrar cada ciclo + Historial_Bloques.xlsx
+/exports/                   ← exports JSON de la app al cerrar cada ciclo (solo en la compu, ignorados por git) + Historial_Bloques.xlsx (sí se versiona)
 /scripts/                   ← build.mjs, validar-rutina.mjs, iconos.mjs, serve.mjs
 /tests/                     ← node --test: core.test.mjs (lógica) y app.test.mjs (jsdom)
 /dist/                      ← salida del build (no se versiona); es lo único que se publica
