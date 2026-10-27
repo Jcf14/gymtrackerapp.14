@@ -590,7 +590,20 @@
       </div>`;
   }
 
-  function renderCalc(k, d) {
+  // Calculadora suelta (botón del encabezado): mismo formulario, sin ejercicio ni "Usar este peso".
+  const draftOf = (k) => (k === "tool" ? S.calcTool : S.drafts[k]);
+  const rerender = (k) => (k === "tool" ? renderSheet() : render());
+
+  function renderCalcTool() {
+    const d = S.calcTool;
+    return `${sheetHead("Calculadora de discos")}
+      <p class="note">Poné los discos de un lado y te da el total, o poné el total y te dice qué discos van de cada lado.</p>
+      <div class="seg small calc-unit-seg">${[["lb", "lb"], ["kg", "kg"]].map(([v, l]) =>
+        `<button class="seg-btn calc-unit-btn${d.unit === v ? " active" : ""}" data-action="calc-unit" data-unit="${v}">${l}</button>`).join("")}</div>
+      ${renderCalc("tool", d, false)}`;
+  }
+
+  function renderCalc(k, d, withUse = true) {
     const u = d.unit;
     const bars = [["women", `Mujer ${G.BARS.women[u]}`], ["men", `Hombre ${G.BARS.men[u]}`], ["custom", "Otra"]];
     const modes = [["perSide", "Por lado"], ["total", "Total"]];
@@ -602,7 +615,7 @@
         `<button class="seg-btn calc-mode-btn${d.calcMode === v ? " active" : ""}" data-action="calc-mode" data-mode="${v}" data-k="${k}">${l}</button>`).join("")}</div>
       <input class="num-input calc-value-input" inputmode="decimal" data-field="calcValue" data-k="${k}" value="${esc(d.calcValue)}" placeholder="${d.calcMode === "perSide" ? "Discos por lado" : "Peso total"} (${u})">
       <div class="calc-result" data-calc-result="${k}">${esc(calcResultText(d))}</div>
-      <button class="secondary-btn use-calc-btn" data-action="use-calc" data-k="${k}">Usar este peso</button>
+      ${withUse ? `<button class="secondary-btn use-calc-btn" data-action="use-calc" data-k="${k}">Usar este peso</button>` : ""}
     </div>`;
   }
 
@@ -755,11 +768,11 @@
     const sheet = $("#sheet");
     if (!S.sheet) { sheet.hidden = true; sheet.innerHTML = ""; return; }
     sheet.hidden = false;
-    const body = S.sheet === "glossary" ? renderGlossary() : renderSettings();
+    const body = S.sheet === "glossary" ? renderGlossary() : S.sheet === "calc" ? renderCalcTool() : renderSettings();
     const fx = S.sheetFx ? " fx-sheet" : "";
     S.sheetFx = false;
     sheet.innerHTML = `<div class="sheet-backdrop${fx}" data-action="close-settings"></div>
-      <div class="sheet-panel${fx}" role="dialog" aria-label="${S.sheet === "glossary" ? "Glosario" : "Ajustes"}">
+      <div class="sheet-panel${fx}" role="dialog" aria-label="${S.sheet === "glossary" ? "Glosario" : S.sheet === "calc" ? "Calculadora de discos" : "Ajustes"}">
         <div class="sheet-grabber"></div>${body}</div>`;
   }
 
@@ -1030,14 +1043,15 @@
       d.editOpen = false; render(); toast("Nombre original restablecido");
     },
     "toggle-calc"(el) { const d = S.drafts[el.dataset.k]; d.calcOpen = !d.calcOpen; render(); },
-    "calc-bar"(el) { S.drafts[el.dataset.k].calcBar = el.dataset.bar; render(); },
+    "calc-bar"(el) { draftOf(el.dataset.k).calcBar = el.dataset.bar; rerender(el.dataset.k); },
+    "calc-unit"(el) { const d = S.calcTool; if (d.unit !== el.dataset.unit) { d.unit = el.dataset.unit; d.calcValue = ""; d.calcCustom = ""; } renderSheet(); },
     "calc-mode"(el) {
-      const d = S.drafts[el.dataset.k];
+      const d = draftOf(el.dataset.k);
       if (d.calcMode === el.dataset.mode) return;
       const res = calcResult(d);
       d.calcMode = el.dataset.mode;
       if (res) d.calcValue = String(d.calcMode === "perSide" ? Math.max(0, res.perSide) : res.total);
-      render();
+      rerender(el.dataset.k);
     },
     "use-calc"(el) {
       const d = S.drafts[el.dataset.k];
@@ -1142,6 +1156,10 @@
       for (let w = 0; w < 4; w++) { const r = S.data[G.slotKey(dayObj.key, idx, w)]; if (r) r.altUsed = false; }
       if (!saveData()) return;
       S.drafts[k].altOpen = false; render(); toast("Alternativa en todo el ciclo · se deshace con Editar nombre → Restablecer");
+    },
+    "open-calc"() {
+      if (!S.calcTool) S.calcTool = { unit: S.unit, calcBar: "women", calcCustom: "", calcMode: "total", calcValue: "" };
+      S.sheet = "calc"; S.sheetFx = true; renderSheet();
     },
     "open-glossary"() { S.sheet = "glossary"; S.sheetFx = true; renderSheet(); },
     "open-settings"() { S.sheet = "settings"; S.sheetFx = true; renderSheet(); loadRemoteIndex(); },
@@ -1252,7 +1270,7 @@
       return;
     }
     if (!f || !k || el.type === "checkbox") return;
-    const d = S.drafts[k];
+    const d = draftOf(k);
     if (!d) return;
     if (f === "rep") d.reps[Number(el.dataset.i)] = el.value;
     else if (f === "setWeight") {

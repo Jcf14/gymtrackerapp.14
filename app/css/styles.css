@@ -699,3 +699,6 @@ textarea.text-input { resize: none; min-height: 44px; }
 .sets-ctrls { justify-content: flex-start; gap: 8px; padding-top: 4px; }
 .sets-ctrls .ctrl-lbl { font-size: 12px; font-weight: 600; color: var(--text-2); }
 .sets-ctrls .ctrl-lbl + .seg { margin-right: 8px; }
+
+/* Calculadora de discos suelta (botón del encabezado) */
+.calc-unit-seg { margin: 14px 0 12px; }

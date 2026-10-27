@@ -283,6 +283,35 @@ test("glosario: solo desde el botón ⓘ del encabezado", async () => {
   assert.deepEqual(t.errors, []);
 });
 
+test("calculadora de discos suelta (encabezado): por lado → total y total → discos", async () => {
+  const t = await boot();
+  t.click(".calc-top-btn");
+  assert.ok(!t.$("#sheet").hidden);
+  assert.match(t.$("#sheet").textContent, /Calculadora de discos/);
+  assert.equal(t.$("#sheet .use-calc-btn"), null, "sin ejercicio no hay \"Usar este peso\"");
+  // total → qué discos van de cada lado (barra de mujer por defecto)
+  t.type("#sheet .calc-value-input", "175");
+  assert.match(t.$("#sheet .calc-result").textContent, /Por lado: 70 lb · discos: 45 \+ 25/);
+  t.click('#sheet .calc-bar-btn[data-bar="men"]');
+  assert.match(t.$("#sheet .calc-result").textContent, /Por lado: 65 lb · discos: 45 \+ 10 \+ 10/);
+  // por lado → total
+  t.click('#sheet .calc-mode-btn[data-mode="perSide"]');
+  assert.equal(t.$("#sheet .calc-value-input").value, "65");
+  t.type("#sheet .calc-value-input", "90");
+  assert.match(t.$("#sheet .calc-result").textContent, /Total: 225 lb/);
+  // en kg usa la barra en kg y no inventa discos en libras
+  t.click('#sheet .calc-unit-btn[data-unit="kg"]');
+  assert.match(t.$("#sheet .calc-bar-btn").textContent, /Mujer 15/);
+  t.type("#sheet .calc-value-input", "40");
+  assert.match(t.$("#sheet .calc-result").textContent, /^Total: 100 kg$/);
+  // se cierra y al reabrir conserva lo último
+  t.click(".close-settings-btn");
+  assert.ok(t.$("#sheet").hidden);
+  t.click(".calc-top-btn");
+  assert.equal(t.$("#sheet .calc-value-input").value, "40");
+  assert.deepEqual(t.errors, []);
+});
+
 test("ajustes: tema, unidad, export y respaldo", async () => {
   const t = await boot();
   t.click(".settings-btn");
