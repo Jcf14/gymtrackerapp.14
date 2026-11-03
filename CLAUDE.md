@@ -54,7 +54,7 @@ Estado: ciclo vigente = **3** (desde el 26/10/2026). Ciclos 1 y 2 cerrados: expo
 **Unidades y carga**
 - Libras por defecto (la app permite kg). Cargo la barra **por lado** ("90 lb por lado + barra de mujer"), así que la app necesita calculadora por lado/total.
 - Discos confirmados: 45, 35, 25, 10, 5 y 2,5 lb (la app sugiere los menos discos posibles). Barras: de mujer 35 lb (la habitual) y de hombre 45 lb (a veces la uso si la otra está ocupada). El salto mínimo en máquinas y mancuernas suele ser de 5 lb.
-- **Poleas y máquinas de pila van de 5 en 5 kg** (5, 10, 15…): todas las poleas/cables (incluye jalón, face pull, Pallof, cuerda), la extensión de cuádriceps y el curl femoral sentado. Siempre los cargué en kg. En la rutina llevan `"unit": "kg", "step": 5`. Sin confirmar: abducción/aducción en máquina, reverse pec deck, press de pecho en máquina, remo T, curl femoral arrodillado.
+- **Poleas y máquinas de pila van de 5 en 5 kg** (5, 10, 15…): todas las poleas/cables (incluye jalón, face pull, Pallof, cuerda), la extensión de cuádriceps y el curl femoral sentado. Siempre los cargué en kg. En la rutina llevan `"unit": "kg", "step": 5`. Con discos (en lb, sin `step`): remo T y curl femoral arrodillado. Salto sin confirmar (dejarlos como están, sin `step`, hasta que lo confirme): abducción y aducción en máquina, reverse pec deck, press de pecho en máquina.
 
 **Lesiones / limitaciones:** ninguna reportada. Sudo mucho y los días de pierna pesada el cansancio "pega" (probé electrolitos; sin mareos ni calambres). Preguntarme por molestias al iniciar cada ciclo.
 
