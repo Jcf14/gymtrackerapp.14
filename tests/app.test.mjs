@@ -349,6 +349,14 @@ test("calculadora de discos suelta (encabezado): por lado → total y total → 
   assert.match(t.$("#sheet .calc-bar-btn").textContent, /Mujer 15/);
   t.type("#sheet .calc-value-input", "40");
   assert.match(t.$("#sheet .calc-result").textContent, /^Total: 100 kg$/);
+  // máquina cargada con discos, sin barra (elevación de talones): "Otra" con 0 → 120 total = 60 por lado
+  t.click('#sheet .calc-unit-btn[data-unit="lb"]');
+  t.click('#sheet .calc-bar-btn[data-bar="custom"]');
+  t.type("#sheet .calc-custom-input", "0");
+  t.click('#sheet .calc-mode-btn[data-mode="total"]');
+  t.type("#sheet .calc-value-input", "120");
+  assert.match(t.$("#sheet .calc-result").textContent, /^Por lado: 60 lb · discos: 35 \+ 25$/);
+  t.type("#sheet .calc-value-input", "40");
   // se cierra y al reabrir conserva lo último
   t.click(".close-settings-btn");
   assert.ok(t.$("#sheet").hidden);

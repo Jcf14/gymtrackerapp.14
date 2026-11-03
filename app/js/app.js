@@ -228,9 +228,11 @@
   const inUnit = (r, u) => (r ? { ...r, weight: G.roundHalf(G.convert(r.weight, r.unit || "lb", u)), unit: u } : r);
   const convTxt = (w, u) => `≈ ${fmt(Math.round(G.convert(w, u, G.otherUnit(u))))} ${G.otherUnit(u)}`;
   // Discos por lado (solo en lb, con barra de mujer): "Por lado 95 → 45 + 25 + 25"
-  function plateTxt(total, u, bar) {
+  // bar: "women" | "men" | "custom" (custom = peso escrito; 0 en máquinas que se cargan con discos sin barra)
+  function plateTxt(total, u, bar, custom) {
     const t = G.parseNum(total);
-    const b = bar === "men" ? G.BARS.men.lb : G.BARS.women.lb;
+    const b = bar === "men" ? G.BARS.men.lb : bar === "custom" ? G.parseNum(custom) : G.BARS.women.lb;
+    if (!(b >= 0)) return "";
     if (u !== "lb" || !(t > b)) return "";
     const pf = G.platesFor(t, b);
     if (!pf) return "";
@@ -629,7 +631,7 @@
     return `<div class="calc">
       <div class="seg small">${bars.map(([v, l]) =>
         `<button class="seg-btn calc-bar-btn${d.calcBar === v ? " active" : ""}" data-action="calc-bar" data-bar="${v}" data-k="${k}">${l}</button>`).join("")}</div>
-      ${d.calcBar === "custom" ? `<input class="num-input calc-custom-input" inputmode="decimal" data-field="calcCustom" data-k="${k}" value="${esc(d.calcCustom)}" placeholder="Peso de la barra (${u})">` : ""}
+      ${d.calcBar === "custom" ? `<input class="num-input calc-custom-input" inputmode="decimal" data-field="calcCustom" data-k="${k}" value="${esc(d.calcCustom)}" placeholder="Peso de la barra (${u}) · 0 si es máquina">` : ""}
       <div class="seg small">${modes.map(([v, l]) =>
         `<button class="seg-btn calc-mode-btn${d.calcMode === v ? " active" : ""}" data-action="calc-mode" data-mode="${v}" data-k="${k}">${l}</button>`).join("")}</div>
       <input class="num-input calc-value-input" inputmode="decimal" data-field="calcValue" data-k="${k}" value="${esc(d.calcValue)}" placeholder="${d.calcMode === "perSide" ? "Discos por lado" : "Peso total"} (${u})">
@@ -648,7 +650,7 @@
   function calcResultText(d) {
     const res = calcResult(d);
     if (!res) return d.calcBar === "custom" && !(G.parseNum(d.calcCustom) >= 0) ? "Ingresá el peso de la barra" : "Ingresá el peso";
-    const plates = d.calcBar !== "custom" ? plateTxt(res.total, d.unit, d.calcBar) : "";
+    const plates = plateTxt(res.total, d.unit, d.calcBar, d.calcCustom);
     if (d.calcMode === "perSide") return `Total: ${fmt(res.total)} ${d.unit}${plates ? ` · ${plates.replace(/^Por lado [\d,.]+ → /, "discos: ")}` : ""}`;
     return res.perSide < 0 ? "El total es menor que la barra" : `Por lado: ${fmt(res.perSide)} ${d.unit}${plates ? ` · ${plates.replace(/^Por lado [\d,.]+ → /, "discos: ")}` : ""}`;
   }
