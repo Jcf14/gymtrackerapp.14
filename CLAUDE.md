@@ -54,6 +54,7 @@ Estado: ciclo vigente = **3** (desde el 26/10/2026). Ciclos 1 y 2 cerrados: expo
 **Unidades y carga**
 - Libras por defecto (la app permite kg). Cargo la barra **por lado** ("90 lb por lado + barra de mujer"), así que la app necesita calculadora por lado/total.
 - Discos confirmados: 45, 35, 25, 10, 5 y 2,5 lb (la app sugiere los menos discos posibles). Barras: de mujer 35 lb (la habitual) y de hombre 45 lb (a veces la uso si la otra está ocupada). El salto mínimo en máquinas y mancuernas suele ser de 5 lb.
+- **Poleas y máquinas de pila van de 5 en 5 kg** (5, 10, 15…): todas las poleas/cables (incluye jalón, face pull, Pallof, cuerda), la extensión de cuádriceps y el curl femoral sentado. Siempre los cargué en kg. En la rutina llevan `"unit": "kg", "step": 5`. Sin confirmar: abducción/aducción en máquina, reverse pec deck, press de pecho en máquina, remo T, curl femoral arrodillado.
 
 **Lesiones / limitaciones:** ninguna reportada. Sudo mucho y los días de pierna pesada el cansancio "pega" (probé electrolitos; sin mareos ni calambres). Preguntarme por molestias al iniciar cada ciclo.
 
@@ -243,6 +244,7 @@ Cada ciclo es un archivo `rutinas/ciclo-N.json`. Se basa en el arreglo `DAYS` de
 | `exercises[].protocol` | texto (opcional) | **nuevo** | Cómo se hace en este ciclo: `"Pausa 2 s arriba en cada rep"`, `"Pulsos al final de la serie"`, `"Pies adelante"`. Se muestra en la tarjeta. **Solo descriptivo:** el mismo `name` es el mismo ejercicio para historial, récord y sugerencias. |
 | `exercises[].noWeight` | `true` (opcional) | original | No exige peso para guardar o completar (core / peso corporal). |
 | `exercises[].perSetWeight`, `setLabels` | `true` + lista de textos (opcional) | **nuevo** | Un peso distinto en cada serie (pirámide): en la tarjeta hay una fila por serie con su etiqueta, peso y reps. El registro guarda `setWeights`; el récord usa la serie más pesada con sus reps. |
+| `exercises[].unit`, `step` | `"lb"`/`"kg"` + número (opcional) | **nuevo** | Unidad por defecto de ese ejercicio y paso de su pila (poleas y máquinas: `"unit": "kg", "step": 5`). El − / + va de a `step`, y sugerencias, descarga y "qué falta para el récord" caen siempre en un casillero de la pila. `step` necesita `unit`. Si cambio la tarjeta a la otra unidad, vuelve al paso normal. |
 | `exercises[].fixedLoad` | `true` (opcional) | **nuevo** | Peso fijo todo el ciclo (pirámide de Bret): la sugerencia siempre es "mismo peso, más reps" y la S4 no necesita marca de descarga. |
 | `exercises[].targets` | **4 textos** | original | Objetivo por semana (S1–S4). |
 | `exercises[].sets` | **4 números** | original | Series de trabajo por semana = casilleros de reps en la app. |

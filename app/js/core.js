@@ -69,6 +69,9 @@
         if (ex.protocol !== undefined && !isStr(ex.protocol)) errs.push(`${w}: protocol debe ser un texto (u omitirse)`);
         if (ex.noWeight !== undefined && ex.noWeight !== true) errs.push(`${w}: noWeight solo puede ser true (u omitirse)`);
         if (ex.fixedLoad !== undefined && ex.fixedLoad !== true) errs.push(`${w}: fixedLoad solo puede ser true (u omitirse)`);
+        if (ex.unit !== undefined && ex.unit !== "lb" && ex.unit !== "kg") errs.push(`${w}: unit debe ser "lb" o "kg" (u omitirse)`);
+        if (ex.step !== undefined && !(typeof ex.step === "number" && ex.step > 0)) errs.push(`${w}: step debe ser un número mayor que 0 (u omitirse)`);
+        if (ex.step !== undefined && ex.unit === undefined) errs.push(`${w}: step necesita unit (el paso es en esa unidad)`);
         if (ex.perSetWeight !== undefined && ex.perSetWeight !== true) errs.push(`${w}: perSetWeight solo puede ser true (u omitirse)`);
         if (ex.setLabels !== undefined && !(Array.isArray(ex.setLabels) && ex.setLabels.every(isStr) && Array.isArray(ex.sets) && ex.setLabels.length >= Math.max(...ex.sets)))
           errs.push(`${w}: setLabels debe tener un texto por serie`);
@@ -131,8 +134,8 @@
     return /^\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
   }
 
-  function roundStep(v, unit) {
-    const s = STEP[unit] || 5;
+  // s: paso propio del ejercicio (pila de polea o máquina de 5 en 5 kg); si no, el de la unidad.
+  function roundStep(v, unit, s = STEP[unit] || 5) {
     return Math.max(s, Math.round(v / s) * s);
   }
 
@@ -364,40 +367,44 @@
   // se traduce en el salto de peso que corresponde, no en un +5% fijo que se queda corto.
   const e1rm = (w, reps, rpe) => w * (1 + (reps + (10 - rpe)) / 30);
   const fromE1rm = (e, reps, rpe) => e / (1 + (reps + (10 - rpe)) / 30);
-  const floorStep = (v, unit) => { const s = STEP[unit] || 5; return Math.max(s, Math.floor(v / s + 1e-9) * s); };
+  const floorStep = (v, unit, s = STEP[unit] || 5) => Math.max(s, Math.floor(v / s + 1e-9) * s);
   // Peso para el techo del rango de `target` (al RPE pedido) partiendo de una marca: peso × reps hechas al RPE de su target.
-  function projectWeight(weight, repsDone, fromTarget, fromWeek, target, week, unit) {
+  function projectWeight(weight, repsDone, fromTarget, fromWeek, target, week, unit, step) {
     const was = repRange(fromTarget), cur = repRange(target);
     if (!cur) return null;
     const done = repsDone.length ? repsDone.reduce((a, b) => a + b, 0) / repsDone.length : was ? was.hi : null;
     const rf = rpeOf(fromTarget, fromWeek), rt = rpeOf(target, week);
     if (!(done > 0) || rf == null || rt == null) return null;
-    return floorStep(fromE1rm(e1rm(weight, done, rf), cur.hi, rt), unit);
+    return floorStep(fromE1rm(e1rm(weight, done, rf), cur.hi, rt), unit, step);
   }
 
   // Qué hace falta para superar el récord (más peso, o mismo peso con más reps), dicho en simple.
-  function recordNote(value, max, cur, peak, unit) {
+  function recordNote(value, max, cur, peak, unit, step = STEP[unit] || 5) {
     if (!max || !(max.weight > 0)) return "";
     const mw = max.weight, mr = max.topReps || 0;
     const rec = `${fmtNum(mw)} ${unit}${mr ? ` × ${mr}` : ""}`;
     if (value > mw) return `Con este peso ya superás tu récord (${rec}).`;
     if (value === mw && cur && cur.hi > mr) return `Con ${fmtNum(mw)} ${unit} × ${mr + 1} superás tu récord (${rec}).`;
-    if (peak) return `Tu récord es ${rec}: para superarlo hacé ${fmtNum(mw)} ${unit} × ${mr + 1} o subí a ${fmtNum(mw + (STEP[unit] || 5))} ${unit}.`;
+    if (peak) return `Tu récord es ${rec}: para superarlo hacé ${fmtNum(mw)} ${unit} × ${mr + 1} o subí a ${fmtNum(roundStep(mw, unit, step) > mw ? roundStep(mw, unit, step) : roundStep(mw, unit, step) + step)} ${unit}.`;
     return `Tu récord es ${rec}: se busca en la semana pico (RPE 9); hoy toca dejar reps en reserva.`;
   }
 
+  const roundStepTo = (v, u, s) => roundStep(v, u, s);
+  const projectWeightTo = (...a) => projectWeight(...a);
+
   // Devuelve { value, base, pct, mode, goal, text, record } o null.
+  // step: paso propio del ejercicio (pila de 5 kg en poleas y algunas máquinas); redondea todo a esa pila.
   // mode: "up" · "reps" · "same" · "deload" · "calibrate" (sin referencia directa: usar la 1ª serie)
   // lastSame: la misma semana de un ciclo anterior (S3 contra S3): la sugerencia apunta a superarla.
   function recommend(args) {
     let r = recommendBase(args);
     if (!r || r.mode === "deload" || args.fixedLoad) return r;
-    const cur = repRange(args.target), unit = args.unit, ls = args.lastSame;
+    const cur = repRange(args.target), unit = args.unit, ls = args.lastSame, step = args.step || STEP[unit] || 5;
     // Misma semana del ciclo anterior (S2 contra S2, S3 contra S3): apuntar a superarla, sin saltar más de ~10%.
     if (ls && args.week > 0 && cur && ls.weight > 0) {
-      const p = projectWeight(ls.weight, ls.repsArr || [], ls.target, args.week, args.target, args.week, unit);
+      const p = projectWeight(ls.weight, ls.repsArr || [], ls.target, args.week, args.target, args.week, unit, step);
       const aim = p == null ? ls.weight : Math.max(p, ls.weight);
-      const cap = r.mode === "calibrate" ? aim : floorStep(r.value * 1.1, unit);
+      const cap = r.mode === "calibrate" ? aim : Math.max(r.value, floorStep(r.value * 1.1, unit, step));
       const v = Math.min(aim, Math.max(cap, r.value));
       if (v > r.value) {
         const wkN = args.weekShort && args.weekShort[args.week] ? String(args.weekShort[args.week]).replace(/\s*\(.*\)\s*$/, "") : `S${args.week + 1}`;
@@ -409,14 +416,18 @@
           text: `En ${wkN} del ciclo ${ls.cycle} hiciste ${fmtNum(ls.weight)} ${unit}${lr}: para progresar, ${v === ls.weight ? `mismo peso y más reps` : `~${fmtNum(v)} ${unit}`}. (${r.text})` };
       }
     }
-    r.record = recordNote(r.value, args.max, cur, rpeOf(args.target, args.week) >= 9, args.unit);
+    r.record = recordNote(r.value, args.max, cur, rpeOf(args.target, args.week) >= 9, args.unit, step);
     return r;
   }
 
-  function recommendBase({ target, prevTarget, week, prev, prevRec, lastS1, lastS1Target, lastSame, max, unit, weekShort, fixedLoad }) {
-    const step = STEP[unit] || 5;
+  function recommendBase({ target, prevTarget, week, prev, prevRec, lastS1, lastS1Target, max, unit, weekShort, fixedLoad, step: exStep }) {
+    const step = exStep || STEP[unit] || 5;
+    const roundStep = (v, u) => roundStepTo(v, u, step);
+    const projectWeight = (...a) => projectWeightTo(...a, step);
     const wk = (i) => (weekShort && weekShort[i] ? String(weekShort[i]).replace(/\s*\(.*\)\s*$/, "") : `S${i + 1}`);
-    const out = (value, base, mode, rDir, text) => {
+    const out = (value0, base, mode, rDir, text) => {
+      // con pila de peso (polea o máquina), el valor siempre cae en un casillero de la pila
+      const value = exStep ? roundStepTo(value0, unit, step) : value0;
       const wDir = value > base ? "up" : value < base ? "down" : "same";
       return { value, base, pct: pctDiff(value, base), mode, goal: goalLabel(wDir, rDir), text };
     };

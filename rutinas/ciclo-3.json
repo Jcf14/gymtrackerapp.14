@@ -124,6 +124,8 @@
             "Extensión de cuádriceps individual"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x12-15",
             "3x12-15 (+peso)",
@@ -164,6 +166,8 @@
             "Crunch con disco en el suelo"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x12-15",
             "3x12-15 (+peso)",
@@ -233,6 +237,8 @@
             "Aperturas con mancuernas"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x12-15",
             "3x12-15 (+peso)",
@@ -272,6 +278,8 @@
             "Elevación lateral con banda"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x15 c/lado",
             "3x15 c/lado",
@@ -292,6 +300,8 @@
             "Extensión de tríceps con banda"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x12-15",
             "3x12-15 (+peso)",
@@ -312,6 +322,8 @@
             "Press francés con mancuerna"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x12-15",
             "3x12-15",
@@ -443,6 +455,8 @@
             "Abducción de pie con banda"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x15 c/lado",
             "3x15 c/lado (+peso)",
@@ -463,6 +477,8 @@
             "Curl femoral acostado"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x12-15",
             "3x12-15 (+peso)",
@@ -483,6 +499,8 @@
             "Pallof press con banda"
           ],
           "rest": "30-45s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x12 c/lado",
             "3x12 c/lado (+peso)",
@@ -514,6 +532,8 @@
             "Jalón al pecho con agarre neutro"
           ],
           "rest": "90-120s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "4x8-10 @RPE7",
             "4x6-8 @RPE8 (+peso)",
@@ -555,6 +575,8 @@
             "Remo unilateral con mancuerna"
           ],
           "rest": "60-75s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x10-12 c/lado",
             "3x10-12 c/lado (+peso)",
@@ -575,6 +597,8 @@
             "Face pull con banda"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x15",
             "3x15 (+peso)",
@@ -744,6 +768,8 @@
             "Kickback en máquina de glúteo"
           ],
           "rest": "45-60s",
+          "unit": "kg",
+          "step": 5,
           "targets": [
             "3x15 c/pierna",
             "3x15 c/pierna (+peso)",

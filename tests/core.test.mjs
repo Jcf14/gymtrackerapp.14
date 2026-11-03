@@ -121,6 +121,30 @@ test("recomendación: S3 contra S3 del ciclo anterior y qué falta para el réco
   assert.equal(r.record, undefined);
 });
 
+test("poleas y máquinas de pila (unit kg, step 5): todo cae en 5, 10, 15…", () => {
+  const ws = ["S1", "S2", "S3", "S4"];
+  const base = { unit: "kg", step: 5, weekShort: ws, max: null, lastS1: null };
+  // llegó al techo: sube un casillero (5 kg, no 2,5)
+  let r = G.recommend({ ...base, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 20, week: 0 }, prevRec: { reps: ["15", "15", "15"] } });
+  assert.equal(r.value, 25);
+  // (+peso) desde un peso fuera de la pila: queda en la pila
+  r = G.recommend({ ...base, target: "3x12-15 (+peso)", prevTarget: "3x12-15", week: 1, prev: { weight: 22, week: 0 }, prevRec: { reps: ["12"] } });
+  assert.equal(r.value % 5, 0); assert.ok(r.value > 22);
+  // descarga: 55% de 25 = 13,75 → 15
+  r = G.recommend({ ...base, target: "2x12 (liviano)", prevTarget: "3x15", week: 3, prev: { weight: 25, week: 2 }, prevRec: {} });
+  assert.equal(r.value, 15);
+  // qué falta para el récord: el siguiente casillero
+  r = G.recommend({ ...base, target: "3x10 c/lado @RPE9", prevTarget: "3x10-12 c/lado", week: 2, prev: { weight: 20, week: 1 }, prevRec: { reps: ["10", "10", "10"] }, max: { weight: 25, topReps: 10 } });
+  assert.match(r.record, /subí a 30 kg/);
+  // sin step, kg sigue de a 2,5
+  r = G.recommend({ ...base, step: undefined, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 20, week: 0 }, prevRec: { reps: ["15", "15", "15"] } });
+  assert.equal(r.value, 22.5);
+  // validación de los campos nuevos
+  const bad = fixture();
+  bad.days[0].exercises[0].step = 5;
+  assert.match(G.validateRoutine(bad).join("\n"), /step necesita unit/);
+});
+
 test("récords: se guarda cada vez que se supera el máximo", () => {
   const recs = [
     { cycle: 2, week: 0, weight: 215, topReps: 8, date: "2026-10-01T10:00:00Z" },

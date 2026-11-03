@@ -214,7 +214,11 @@
   // ---------- Unidad por ejercicio (lb por defecto) ----------
 
   const unitKey = (day, idx) => `unit_${day}_${idx}`;
-  const exUnit = (day, idx) => S.data[unitKey(day, idx)] || S.unit;
+  const exDef = (day, idx) => { const d = routine() && routine().days.find((x) => x.key === day); return d ? d.exercises[idx] : null; };
+  // La elegida en la tarjeta; si no, la del ejercicio en la rutina (poleas en kg); si no, la preferida.
+  const exUnit = (day, idx) => S.data[unitKey(day, idx)] || (exDef(day, idx) || {}).unit || S.unit;
+  // Paso del − / + y de las sugerencias: el de la pila del ejercicio (5 kg) si está en su unidad; si no, el de la unidad.
+  const exStep = (ex, u) => (ex && ex.step && u === ex.unit ? ex.step : G.STEP[u] || 5);
   // Unidad con la que se muestra una tarjeta: la del borrador, la del registro guardado o la preferida.
   function cardUnit(day, idx, k, rec) {
     if (S.drafts[k]) return S.drafts[k].unit;
@@ -278,6 +282,7 @@
         target: ex.targets[w], prevTarget: prev ? ex.targets[prev.week] : null, week: w, prev, fixedLoad: !!ex.fixedLoad,
         prevRec: prev ? S.data[G.slotKey(day.key, idx, prev.week)] : null,
         lastS1, lastS1Target, lastSame, max: inUnit(G.findMax(others), u), unit: u, weekShort: r.weekShort,
+        step: ex.step && u === ex.unit ? ex.step : undefined,
       }),
     };
   }
@@ -1106,12 +1111,16 @@
     },
     "step-weight"(el) {
       const k = el.dataset.k, d = S.drafts[k];
-      const step = G.STEP[d.unit] || 5, dir = Number(el.dataset.dir);
+      const p = G.parseSlotKey(k), ex = p && exDef(p.day, p.idx);
+      const step = exStep(ex, d.unit), dir = Number(el.dataset.dir), stack = !!(ex && ex.step && d.unit === ex.unit);
       let cur = G.parseNum(d.weight);
       if (!(cur >= 0)) {
         const sug = el.closest(".card-body").querySelector(".use-sug-btn");
         cur = sug ? Number(sug.dataset.value) : 0;
         if (!sug) cur += dir * step;
+      } else if (stack && Math.abs(cur / step - Math.round(cur / step)) > 1e-9) {
+        // fuera de la pila (por ej. 12 kg): va al casillero más cercano en esa dirección (15 o 10)
+        cur = (dir > 0 ? Math.ceil(cur / step) : Math.floor(cur / step)) * step;
       } else cur += dir * step;
       d.weight = String(Math.max(0, cur)); d.weightMode = "total"; d.perSideDisplay = null;
       const box = el.closest(".reg");

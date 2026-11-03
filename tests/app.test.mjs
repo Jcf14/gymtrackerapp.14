@@ -301,6 +301,33 @@ test("ejercicio con barra libre: discos por lado debajo del peso (barra 35 | 45)
   assert.deepEqual(t.errors, []);
 });
 
+test("polea o máquina de pila (unit kg, step 5): arranca en kg y el − / + va de a 5", async () => {
+  const routine = JSON.parse(JSON.stringify(FIXTURE));
+  Object.assign(routine.days[0].exercises[1], { unit: "kg", step: 5 });
+  const t = await boot({ routine });
+  t.goTo(0, "A"); t.openCard(1);
+  const card = () => t.$$(".card")[1];
+  assert.ok(card().querySelector('.ex-unit-btn[data-unit="kg"]').classList.contains("active"), "kg por defecto en ese ejercicio");
+  assert.equal(card().querySelector(".weight-box .unit").textContent, "kg");
+  t.type(".card:nth-child(2) .weight-input", "12");
+  t.click(".card:nth-child(2) .step-up-btn");
+  assert.equal(card().querySelector(".weight-input").value, "15", "fuera de la pila va al casillero siguiente");
+  t.click(".card:nth-child(2) .step-up-btn");
+  assert.equal(card().querySelector(".weight-input").value, "20");
+  t.click(".card:nth-child(2) .step-down-btn");
+  assert.equal(card().querySelector(".weight-input").value, "15");
+  // en lb vuelve al paso de 5 lb
+  t.click('.card:nth-child(2) .ex-unit-btn[data-unit="lb"]');
+  const lb = G_parse(card().querySelector(".weight-input").value);
+  t.click(".card:nth-child(2) .step-up-btn");
+  assert.equal(G_parse(card().querySelector(".weight-input").value), lb + 5);
+  // los demás ejercicios siguen en lb
+  t.openCard(0);
+  assert.ok(t.$$(".card")[0].querySelector('.ex-unit-btn[data-unit="lb"]').classList.contains("active"));
+  assert.deepEqual(t.errors, []);
+});
+const G_parse = (s) => Number(String(s).replace(",", "."));
+
 test("calculadora de discos suelta (encabezado): por lado → total y total → discos", async () => {
   const t = await boot();
   t.click(".calc-top-btn");
