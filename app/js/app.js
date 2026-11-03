@@ -232,6 +232,13 @@
     if (!pf) return "";
     return `Por lado ${fmt(pf.side)} → ${pf.plates.length ? pf.plates.map(fmt).join(" + ") : "sin discos"}${pf.rest > 0 ? ` · faltan ${fmt(pf.rest)} (no se arma con estos discos)` : ""}`;
   }
+  // Ejercicios con barra libre (no Smith): muestran los discos por lado debajo del peso.
+  const usesBar = (n) => /\bbarra\b/i.test(n || "") && !/smith/i.test(n || "");
+  const exPlatesTxt = (d) => plateTxt(d.weight, d.unit, d.calcBar);
+  function refreshExPlates(k) {
+    const el = document.querySelector(`[data-plates="${k}-w"]`), d = S.drafts[k];
+    if (el && d) el.textContent = exPlatesTxt(d);
+  }
   const EX_SKIP_REASONS = ["Sin tiempo", "Máquina ocupada", "Cansancio", "Molestia", "Otro"];
 
   // Recomendación de una tarjeta de la rutina (o null), en la unidad u.
@@ -256,6 +263,9 @@
     const others = records.filter((x) => !(x.cycle === S.cycle && x.key === k));
     const prev = inUnit(G.prevWeight(S.data, day.key, idx, w, ex, r.unitDefault), u);
     const lastS1 = inUnit(G.lastCycleS1(others, S.cycle), u);
+    // la misma semana en el último ciclo anterior en que se hizo (S3 contra S3)
+    const sameWeek = others.filter((x) => x.week === w && x.cycle < S.cycle && x.weight > 0).sort((a, b) => b.cycle - a.cycle)[0];
+    const lastSame = sameWeek ? inUnit(sameWeek, u) : null;
     let lastS1Target = null;
     if (lastS1) {
       const p = G.parseSlotKey(lastS1.key) || {}, lr = S.routines[lastS1.cycle];
@@ -267,7 +277,7 @@
       rec: G.recommend({
         target: ex.targets[w], prevTarget: prev ? ex.targets[prev.week] : null, week: w, prev, fixedLoad: !!ex.fixedLoad,
         prevRec: prev ? S.data[G.slotKey(day.key, idx, prev.week)] : null,
-        lastS1, lastS1Target, max: inUnit(G.findMax(others), u), unit: u, weekShort: r.weekShort,
+        lastS1, lastS1Target, lastSame, max: inUnit(G.findMax(others), u), unit: u, weekShort: r.weekShort,
       }),
     };
   }
@@ -484,6 +494,7 @@
     const insight = ex.noWeight ? "" : sug
       ? `<div class="insight ${sug.mode}">
           <p class="why">${icon("info")}<span><b>${esc(sug.goal)}.</b> ${esc(sug.text)}</span></p>
+          ${sug.record ? `<p class="rec-note">${icon("trophy")}<span>${esc(sug.record)}</span></p>` : ""}
           <button class="use-sug-btn" data-action="use-suggestion" data-k="${k}" data-value="${sug.value}"${sug.setWeights ? ` data-setweights="${sug.setWeights.join(",")}"` : ""}>Usar ${sug.setWeights ? sug.setWeights.map(fmt).join(" · ") : fmt(sug.value)} ${u}</button>
         </div>`
       : `<div class="insight none"><p class="why">${icon("info")}<span>Sin registros de este ejercicio: elegí un peso que te deje en el RPE pedido y ajustá con la 1ª serie.</span></p></div>`;
@@ -551,6 +562,9 @@
           </div>
         </div>
         <div class="reg-sub">${hints}</div>
+        ${!ex.noWeight && u === "lb" && usesBar(name) ? `<div class="reg-row sets-ctrls ex-plates-row"><span class="ctrl-lbl">Barra</span><div class="seg mini bar-toggle" role="group" aria-label="Barra">${[["women", "35 lb"], ["men", "45 lb"]].map(([v, l]) =>
+          `<button class="seg-btn calc-bar-btn${d.calcBar === v ? " active" : ""}" data-action="calc-bar" data-bar="${v}" data-k="${k}">${l}</button>`).join("")}</div></div>
+        <div class="plate-hint ex-plate-hint" data-plates="${k}-w">${esc(exPlatesTxt(d))}</div>` : ""}
         ${d.calcOpen && !ex.noWeight ? renderCalc(k, d) : ""}
         <div class="reg-row reps-row">
           <span class="reg-label">Reps
@@ -1105,6 +1119,7 @@
       const hint = box.querySelector(".perside-hint");
       if (hint) hint.remove();
       box.querySelector(".conv-hint").textContent = cur > 0 ? convTxt(Math.max(0, cur), d.unit) : "";
+      refreshExPlates(el.dataset.k);
     },
     "set-ex-unit"(el) {
       const k = el.dataset.k, d = S.drafts[k], to = el.dataset.unit;
@@ -1287,6 +1302,7 @@
       if (hint) hint.remove();
       const wv = G.parseNum(el.value), conv = card.querySelector(".conv-hint");
       if (conv) conv.textContent = wv > 0 ? convTxt(wv, d.unit) : "";
+      refreshExPlates(k);
     }
     if (f === "calcValue" || f === "calcCustom") {
       const out = document.querySelector(`[data-calc-result="${k}"]`);

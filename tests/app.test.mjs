@@ -194,15 +194,17 @@ test("sugerencias: (+peso) en S2 y 55% en descarga", async () => {
   // cabecera: cada dato con su etiqueta (HOY · SUGERIDO · RÉCORD)
   const head = () => t.$$(".card")[0];
   assert.match(head().querySelector(".cs-today").textContent, /Hoy\s*4×6-8 · RPE 8 \(\+peso\)/);
-  assert.match(head().querySelector(".cs-sug").textContent, /Sugerido\s*220 lb \S*\+2% · Más peso/);
+  // 215 × 10 a RPE 7 → para 6-8 a RPE 8 corresponde ~230 (no un +5 fijo)
+  assert.match(head().querySelector(".cs-sug").textContent, /Sugerido\s*230 lb \S*\+7% · Más peso/);
   assert.match(head().querySelector(".cs-rec").textContent, /Récord\s*215/);
   t.openCard(0);
-  assert.match(t.$(".use-sug-btn").textContent, /Usar 220 lb/);
+  assert.match(t.$(".use-sug-btn").textContent, /Usar 230 lb/);
   assert.match(t.$(".insight .why").textContent, /Más peso, menos reps/);
+  assert.match(t.$(".insight .rec-note").textContent, /ya superás tu récord \(215 lb\)/);
   t.click(".use-sug-btn");
-  assert.equal(t.$(".weight-input").value, "220");
+  assert.equal(t.$(".weight-input").value, "230");
   t.click(".save-entry-btn");
-  assert.match(head().querySelector(".cs-reg").textContent, /Registrado\s*220 lb/, "registrado reemplaza a sugerido");
+  assert.match(head().querySelector(".cs-reg").textContent, /Registrado\s*230 lb/, "registrado reemplaza a sugerido");
   t.goTo(2, "A"); t.openCard(0); t.type(".weight-input", "235"); t.click(".save-entry-btn");
   t.goTo(3, "A");
   assert.match(t.$(".ex-max").textContent, /235/);
@@ -280,6 +282,22 @@ test("glosario: solo desde el botón ⓘ del encabezado", async () => {
   t.goTo(2, "A"); t.openCard(0);
   assert.equal(t.$(".glossary-btn"), null, "las tarjetas ya no tienen botón de glosario");
   assert.equal(t.$$(".tools .tool-btn").length, 3, "alternativa, renombrar y no lo hice");
+  assert.deepEqual(t.errors, []);
+});
+
+test("ejercicio con barra libre: discos por lado debajo del peso (barra 35 | 45)", async () => {
+  const t = await boot();
+  t.goTo(0, "A"); t.openCard(0);
+  t.type(".weight-input", "215");
+  assert.match(t.$(".ex-plate-hint").textContent, /^Por lado 90 → 45 \+ 45$/);
+  t.click(".step-up-btn");
+  assert.match(t.$(".ex-plate-hint").textContent, /^Por lado 92,5 → 45 \+ 45 \+ 2,5$/);
+  t.click('.ex-plates-row .calc-bar-btn[data-bar="men"]');
+  assert.match(t.$(".ex-plate-hint").textContent, /^Por lado 87,5 → 45 \+ 35 \+ 5 \+ 2,5$/);
+  // sin barra (búlgara con mancuernas) no hay discos
+  t.openCard(1);
+  assert.ok(t.$$(".card")[1].querySelector(".weight-input"), "la búlgara está abierta");
+  assert.equal(t.$$(".card")[1].querySelector(".ex-plate-hint"), null);
   assert.deepEqual(t.errors, []);
 });
 
@@ -411,7 +429,7 @@ test("lb/kg por ejercicio: convierte, guarda la unidad y muestra la equivalencia
   assert.match(t.$(".ex-weight").textContent, /100 kg · ≈ 220 lb/);
   // la semana siguiente queda en kg y la sugerencia también
   t.goTo(1, "A");
-  assert.match(t.$(".ex-sug").textContent, /102,5 kg/);
+  assert.match(t.$(".ex-sug").textContent, /107,5 kg/);
   // otro ejercicio sigue en lb
   t.openCard(1);
   assert.ok(t.$('.card.open .ex-unit-btn[data-unit="lb"]').classList.contains("active"));

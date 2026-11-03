@@ -44,9 +44,12 @@ test("la validación detecta los errores del formato", () => {
 test("recomendación: dice si toca más peso, más reps o ambos", () => {
   const ws = ["S1", "S2", "S3", "S4"];
   const base = { unit: "lb", weekShort: ws, max: null, lastS1: null };
-  // (+peso): anterior + 5
+  // (+peso) con cambio de rango: el peso sale de la fuerza estimada (215 × 10 @RPE7 → ~230 para 6-8 @RPE8)
   let r = G.recommend({ ...base, target: "4x6-8 @RPE8 (+peso)", prevTarget: "4x8-10 @RPE7", week: 1, prev: { weight: 215, week: 0 }, prevRec: {} });
-  assert.equal(r.value, 220); assert.equal(r.pct, 2); assert.equal(r.goal, "Más peso, menos reps");
+  assert.equal(r.value, 230); assert.equal(r.pct, 7); assert.equal(r.goal, "Más peso, menos reps");
+  // (+peso) con el mismo rango: anterior + 5
+  r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 30, week: 0 }, prevRec: { reps: ["10", "10", "10"] } });
+  assert.equal(r.value, 35);
   // descarga: 55% de la semana previa
   r = G.recommend({ ...base, target: "2x10 @RPE6", prevTarget: "3x4-6 @RPE9", week: 3, prev: { weight: 235, week: 2 }, prevRec: {} });
   assert.equal(r.value, 130); assert.equal(r.mode, "deload"); assert.equal(r.pct, -45); assert.equal(r.goal, "Menos peso");
@@ -56,9 +59,9 @@ test("recomendación: dice si toca más peso, más reps o ambos", () => {
   // llegó al techo en todas: más peso
   r = G.recommend({ ...base, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 50, week: 0 }, prevRec: { reps: ["15", "15", "15"] } });
   assert.equal(r.value, 55); assert.equal(r.mode, "up"); assert.equal(r.pct, 10);
-  // S3 con menos reps que S2: más carga (al menos +5%)
+  // S3 con menos reps que S2: más carga según la fuerza estimada (220 × 8 @RPE8 → 235 para 4-6 @RPE9)
   r = G.recommend({ ...base, target: "3x4-6 @RPE9", prevTarget: "4x6-8 @RPE8", week: 2, prev: { weight: 220, week: 1 }, prevRec: {} });
-  assert.equal(r.value, 230); assert.equal(r.goal, "Más peso, menos reps");
+  assert.equal(r.value, 235); assert.equal(r.goal, "Más peso, menos reps");
   // S1 nueva contra S1 del ciclo anterior: +5%
   r = G.recommend({ ...base, target: "4x8-10 @RPE7", prevTarget: null, week: 0, prev: null, prevRec: null,
     lastS1: { cycle: 2, weight: 215, repsArr: [10, 10, 10, 10] }, lastS1Target: "4x8-10 @RPE7" });
@@ -70,6 +73,52 @@ test("recomendación: dice si toca más peso, más reps o ambos", () => {
   r = G.recommend({ ...base, target: "3x8", week: 0, prev: null, max: { weight: 100 } });
   assert.equal(r.value, 90); assert.equal(r.goal, "Calibrá el peso");
   assert.equal(G.recommend({ ...base, target: "3x8", week: 0, prev: null }), null);
+});
+
+test("recomendación con datos reales (hip thrust del ciclo 2): sigue la fuerza, no un +5% fijo", () => {
+  const ws = ["S1", "S2", "S3", "S4"];
+  const base = { unit: "lb", weekShort: ws, max: null, lastS1: null };
+  const T = ["4x8-10 @RPE7", "4x6-8 @RPE8", "3x4-6 @RPE9 + 1x15-20", "2x10 @RPE6"];
+  // S1 215 × 10 → S2 ~230 (hizo 255 × 6) · S2 255 × 6 → S3 260 (hizo 260 × 4)
+  let r = G.recommend({ ...base, target: T[1], prevTarget: T[0], week: 1, prev: { weight: 215, week: 0 }, prevRec: { reps: ["10", "10", "10", "10"] } });
+  assert.equal(r.value, 230);
+  assert.match(r.text, /En S1 hiciste 215 × 10·10·10·10: para 6-8 reps @RPE8 te corresponde ~230 lb/);
+  r = G.recommend({ ...base, target: T[2], prevTarget: T[1], week: 2, prev: { weight: 255, week: 1 }, prevRec: { reps: ["6", "6", "6", "6"] } });
+  assert.equal(r.value, 260);
+  // S2 sin registrar: se estima desde S1 y lo avisa
+  r = G.recommend({ ...base, target: T[2], prevTarget: T[0], week: 2, prev: { weight: 215, week: 0 }, prevRec: { reps: ["10", "10", "10", "10"] } });
+  assert.equal(r.value, 245);
+  assert.match(r.text, /estimado desde S1: S2 todavía sin registrar/);
+  // accesorio al que le sube el rango (abducción 15-20 → 20-25): no baja el peso, pide más reps
+  r = G.recommend({ ...base, target: "3x20-25", prevTarget: "3x15-20 (+peso)", week: 2, prev: { weight: 100, week: 1 }, prevRec: { reps: ["18", "17", "16"] } });
+  assert.equal(r.value, 100); assert.equal(r.goal, "Mismo peso, más reps");
+  // accesorio con el mismo rango: sigue siendo "mismo peso, más reps"
+  r = G.recommend({ ...base, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 50, week: 0 }, prevRec: { reps: ["13", "12", "12"] } });
+  assert.equal(r.value, 50); assert.equal(r.goal, "Mismo peso, más reps");
+});
+
+test("recomendación: S3 contra S3 del ciclo anterior y qué falta para el récord", () => {
+  const ws = ["S1", "S2", "S3", "S4"];
+  const max = { weight: 260, topReps: 4 };
+  const lastSame = { cycle: 2, weight: 260, repsArr: [4, 4, 4, 4], target: "3x4-6 @RPE9" };
+  // con lo de este ciclo daría 235; el S3 anterior fue 260 × 4: sube hasta ~10% (255)
+  let r = G.recommend({ unit: "lb", weekShort: ws, target: "3x4-6 @RPE9", prevTarget: "4x6-8 @RPE8", week: 2,
+    prev: { weight: 220, week: 1 }, prevRec: { reps: ["8", "8", "8", "8"] }, lastSame, max });
+  assert.equal(r.value, 255);
+  assert.match(r.text, /En S3 del ciclo 2 hiciste 260 lb × 4·4·4·4/);
+  assert.equal(r.record, "Tu récord es 260 lb × 4: para superarlo hacé 260 lb × 5 o subí a 265 lb.");
+  // si este ciclo viene más fuerte, manda este ciclo
+  r = G.recommend({ unit: "lb", weekShort: ws, target: "3x4-6 @RPE9", prevTarget: "4x6-8 @RPE8", week: 2,
+    prev: { weight: 260, week: 1 }, prevRec: { reps: ["7", "7", "7", "7"] }, lastSame, max });
+  assert.equal(r.value, 270);
+  assert.equal(r.record, "Con este peso ya superás tu récord (260 lb × 4).");
+  // fuera de la semana pico, el récord no se busca
+  r = G.recommend({ unit: "lb", weekShort: ws, target: "4x6-8 @RPE8", prevTarget: "4x8-10 @RPE7", week: 1,
+    prev: { weight: 200, week: 0 }, prevRec: { reps: ["10"] }, max });
+  assert.match(r.record, /se busca en la semana pico/);
+  // la descarga no habla de récords
+  r = G.recommend({ unit: "lb", weekShort: ws, target: "2x10 @RPE6", prevTarget: "3x4-6 @RPE9", week: 3, prev: { weight: 255, week: 2 }, prevRec: {}, max });
+  assert.equal(r.record, undefined);
 });
 
 test("récords: se guarda cada vez que se supera el máximo", () => {
