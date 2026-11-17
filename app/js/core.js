@@ -256,7 +256,7 @@
             setWeights: Array.isArray(rec.setWeights) ? rec.setWeights : null,
             topReps: topRepsOf(rec, repsArr), date: dayDate(r, data, d.key, w) || rec.savedAt || null, savedAt: rec.savedAt || null,
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed, weekShort: r.weekShort[w],
-            protocol: slotProtocol(rec, ex), target: ex.targets[w], rpe: loggedRpe(rec),
+            protocol: slotProtocol(rec, ex), target: ex.targets[w], rpe: loggedRpe(rec), dbCount: dbCountOf(rec),
           });
         }
       }));
@@ -375,6 +375,40 @@
     if (/extension de cuadriceps|curl femoral sentado/.test(n)) return "machine5";
     if (/maquina|aduccion|abduccion|pec deck/.test(n)) return "machine4";
     return null;
+  }
+
+  // ---------- Mancuernas: se anota el peso de UNA y cuántas (1 o 2); el total = peso × cantidad ----------
+  // Sugerencias, récords y saltos comparan por mancuerna (35 → 40 → 50); el historial muestra también el total.
+  const dbCountOf = (rec) => { const n = rec ? Number(rec.dbCount) : NaN; return n === 1 || n === 2 ? n : null; };
+  // Por el nombre: "con mancuernas" = 2; "con mancuerna", unilateral, c/lado, goblet = 1.
+  function defaultDbCount(name) {
+    const n = normName(name || "");
+    if (/mancuernas/.test(n)) return 2;
+    if (/mancuerna|goblet|unilateral|una mano|un brazo/.test(n)) return 1;
+    return 2;
+  }
+  const dbTotal = (rec) => { const w = rec ? parseNum(rec.weight) : NaN; return w > 0 ? w * (dbCountOf(rec) || 1) : NaN; };
+
+  // Migraciones de datos (una sola vez por ciclo; quedan marcadas en meta.migr).
+  // db1 (17/11/2026): en el ciclo 3 el peso muerto con mancuernas se anotó como total (70 = 35 + 35, 80 = 40 + 40).
+  // Pasa a peso de una mancuerna × 2, igual que el resto de los ejercicios con mancuernas.
+  function migrateData(cycle, data) {
+    // solo el ciclo 3 tiene datos para convertir; un ciclo vacío no se toca
+    if (!data || typeof data !== "object" || Number(cycle) !== 3 || !Object.keys(data).length) return false;
+    const meta = data.meta || (data.meta = {});
+    if (meta.migr && meta.migr.db1) return false;
+    {
+      const ovr = data.ovr_C_2;
+      if (ovr && normName(ovr.name || "") === "peso muerto convencional con mancuernas") {
+        for (let w = 0; w < 4; w++) {
+          const rec = data[slotKey("C", 2, w)];
+          const n = rec ? parseNum(rec.weight) : NaN;
+          if (n > 0 && !rec.dbCount) { rec.weight = String(n / 2); rec.dbCount = 2; }
+        }
+      }
+    }
+    meta.migr = { ...(meta.migr || {}), db1: true };
+    return true;
   }
 
   // Subida máxima por semana de la sugerencia (10%): progresar de a poco.
@@ -626,6 +660,7 @@
             ...(rec.skipped ? { skipped: true, skipReason: rec.skipReason || "" } : {}),
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed,
             ...(loggedRpe(rec) != null ? { rpe: loggedRpe(rec) } : {}),
+            ...(dbCountOf(rec) ? { dbCount: dbCountOf(rec) } : {}),
           });
         }
       });
@@ -645,7 +680,7 @@
         setWeights: Array.isArray(x.setWeights) ? x.setWeights : null,
         reps: repsText(x), repsArr, topReps: topRepsOf(x, repsArr), date: x.date || null, savedAt: null,
         note: x.note || "", completed: !!x.completed, altUsed: !!x.altUsed, weekShort: x.weekShort, target: x.target, archived: true,
-        protocol: x.protocol || "", rpe: loggedRpe(x),
+        protocol: x.protocol || "", rpe: loggedRpe(x), dbCount: dbCountOf(x),
       };
     });
   }
@@ -766,6 +801,7 @@
               skipReason: rec.skipReason || "",
               repsText: repsText(rec),
               rpe: loggedRpe(rec),
+              dbCount: dbCountOf(rec),
               note: rec.note || "",
               completed: !!rec.completed,
               date: rec.savedAt || null,
@@ -796,7 +832,7 @@
     DAY_KEYS, BARS, STEP,
     targetSetCount, isDeloadTarget, hasPlusWeight, validateRoutine,
     dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, alts, normName,
-    parseNum, roundStep, fmtNum, barWeight, calcBar, repsText, PLATES_LB, platesFor, rpeOf, projectWeight, loggedRpe, EQUIP, inferEquip, loadScale, isSlowLift, MAX_JUMP,
+    parseNum, roundStep, fmtNum, barWeight, calcBar, repsText, PLATES_LB, platesFor, rpeOf, projectWeight, loggedRpe, EQUIP, inferEquip, loadScale, dbCountOf, defaultDbCount, dbTotal, migrateData, isSlowLift, MAX_JUMP,
     LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
     collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
     weekFromStart, autoDayKey,

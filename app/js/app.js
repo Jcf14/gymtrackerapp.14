@@ -65,7 +65,12 @@
   const routine = () => S.routines[S.cycle] || null;
   const recordsOf = (name) => G.collectRecords(S.routines, allData(), name).concat(G.historyRecords(S.hist, name));
   const cycleList = () => Object.keys(S.routines).map(Number).sort((a, b) => b - a);
-  const dataOf = (c) => (Number(c) === S.cycle ? S.data : store.get(G.dataKey(c), {}));
+  const dataOf = (c) => {
+    if (Number(c) === S.cycle) return S.data;
+    const d = store.get(G.dataKey(c), {});
+    if (G.migrateData(c, d)) store.set(G.dataKey(c), d);
+    return d;
+  };
 
   function currentDay() {
     const r = routine();
@@ -103,6 +108,7 @@
   function loadCycle(cycle) {
     S.cycle = Number(cycle);
     S.data = store.get(G.dataKey(S.cycle), {});
+    if (G.migrateData(S.cycle, S.data)) saveData();
     S.drafts = {};
     S.open = new Set();
     S.histEx = null;
@@ -179,6 +185,7 @@
     { id: "descarga", term: "Descarga (deload)", text: "Semana liviana para recuperarte y llegar fresca al ciclo siguiente: mismos ejercicios, 2 series (3 si querés), ~50–60% del peso de S3 y RPE 5–6. Sin pulsos ni serie de rematado." },
     { id: "peso", term: "(+peso)", text: "El plan pide subir el peso respecto de la semana anterior, normalmente 5 lb." },
     { id: "saltos", term: "Saltos de peso", text: "Subir un escalón chico (menos de 20%, como 35 → 40 kg) se sugiere cuando llegás al techo del rango. Si el siguiente peso que existe es un salto de 20% o más (polea de 5 a 10 kg, mancuerna de 10 a 15 lb, aductor de 20 a 24 kg), primero sumá reps por encima del rango en todas las series: más reps cuanto más grande el salto (2 a 6; una más en hombros, brazos y aperturas). Con tus datos del ciclo 3, casi todos los saltos de 20% o más no salieron dentro del rango." },
+    { id: "cu", term: "c/u (mancuernas)", text: "Con mancuernas anotás el peso de UNA (\"c/u\" = cada una) y si fueron 1 o 2. La app muestra el total (2 × 40 = 80 lb), pero las sugerencias y los récords comparan por mancuerna, que es como subís de verdad (35 → 40 → 50)." },
     { id: "rpe-real", term: "RPE real (¿cómo se sintió?)", text: "Opcional, al registrar: cuánto te costó de verdad (6 = te sobraban 4 reps, 10 = no salía ni una más). Si lo marcás, la sugerencia de la semana siguiente usa eso en lugar del RPE del plan: si costó más de lo pedido no te hace subir, y si te sobró mucho te sube antes." },
     { id: "sugerido", term: "Peso sugerido y %", text: "Lo calcula la app con tu última semana registrada de ese ejercicio. Te dice qué se espera (más peso, más reps, ambos o igual) y el % de cambio contra esa vez. Si en accesorios no llegaste al techo del rango en todas las series, toca más reps con el mismo peso. Manda siempre la primera serie: si se siente más pesada de lo pedido, bajá." },
     { id: "maximo", term: "Máximo (récord)", text: "Tu mejor marca del ejercicio: el peso más alto y, a igual peso, más reps. Cuando lo superás, el anterior queda guardado en el historial de récords." },
@@ -265,6 +272,18 @@
     const pf = G.platesFor(t, b);
     if (!pf) return "";
     return `Por lado ${fmt(pf.side)} → ${pf.plates.length ? pf.plates.map(fmt).join(" + ") : "sin discos"}${pf.rest > 0 ? ` · faltan ${fmt(pf.rest)} (no se arma con estos discos)` : ""}`;
+  }
+  // Mancuernas: se anota el peso de una; cuántas (1 o 2) sale del último registro de ese ejercicio o del nombre.
+  const isDumbbell = (ex, name) => equipOf(ex, name) === "dumbbell";
+  function lastDbCount(name) {
+    const withCount = recordsOf(name).filter((r) => r.dbCount);
+    const last = G.lastRecord(withCount);
+    return (last && last.dbCount) || G.defaultDbCount(name);
+  }
+  const dbTotalTxt = (d) => { const w = G.parseNum(d.weight); return w > 0 && d.dbCount > 1 ? `Total ${fmt(w * d.dbCount)} ${d.unit} (${d.dbCount} × ${fmt(w)})` : ""; };
+  function refreshDbTotal(k) {
+    const el = document.querySelector(`[data-dbtotal="${k}"]`), d = S.drafts[k];
+    if (el && d) el.textContent = dbTotalTxt(d);
   }
   // Con barra o máquina con discos, debajo del peso van los discos por lado.
   const usesPlates = (ex, name) => { const e = G.EQUIP[equipOf(ex, name)]; return !!(e && e.plates); };
@@ -434,6 +453,8 @@
     if (Array.isArray(rec.setWeights) && rec.setWeights.length)
       return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u}</span><span class="side sets">series: ${rec.setWeights.map((x) => fmt(G.parseNum(x) || 0)).join(" · ")}</span></span>`;
     const side = rec.weightMode === "perSide" && rec.perSideDisplay != null ? `${fmt(rec.perSideDisplay)}/lado · ` : "";
+    if (G.dbCountOf(rec) === 2)
+      return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u} c/u</span><span class="side"> · total ${fmt(w * 2)} ${u}</span></span>`;
     return `<span class="ex-weight"><span class="ex-val"><b>${fmt(w)}</b> ${u}</span><span class="side"> · ${side}${convTxt(w, u)}</span></span>`;
   }
 
@@ -465,6 +486,7 @@
         calcCustom: "",
         calcMode: "perSide",
         rpe: rec.rpe != null ? String(rec.rpe) : "",
+        dbCount: G.dbCountOf(rec) || lastDbCount(slotNameOf(p.day, p.idx, p.week)),
         calcValue: rec.weightMode === "perSide" && rec.perSideDisplay != null ? String(rec.perSideDisplay) : "",
         altOpen: false,
         editOpen: false,
@@ -585,7 +607,7 @@
         <div class="reg-title">Registro de hoy</div>
         ${ex.noWeight ? "" : renderEquipRow(ex, name, k)}
         <div class="reg-row weight-row">
-          <span class="reg-label">Peso${ex.noWeight ? "<small>opcional</small>" : ""}</span>
+          <span class="reg-label">Peso${ex.noWeight ? "<small>opcional</small>" : isDumbbell(ex, name) ? "<small>de una mancuerna</small>" : ""}</span>
           <div class="reg-ctrl">
             <div class="stepper">
               <button class="step-btn step-down-btn" data-action="step-weight" data-dir="-1" data-k="${k}" aria-label="Bajar peso">−</button>
@@ -600,6 +622,9 @@
           </div>
         </div>
         <div class="reg-sub">${hints}</div>
+        ${!ex.noWeight && isDumbbell(ex, name) ? `<div class="reg-row sets-ctrls db-row"><span class="ctrl-lbl">Mancuernas</span><div class="seg mini db-seg" role="group" aria-label="Cantidad de mancuernas">${[1, 2].map((n) =>
+          `<button class="seg-btn db-count-btn${d.dbCount === n ? " active" : ""}" data-action="set-dbcount" data-n="${n}" data-k="${k}">${n}</button>`).join("")}</div>
+          <span class="db-total" data-dbtotal="${k}">${esc(dbTotalTxt(d))}</span></div>` : ""}
         ${!ex.noWeight && u === "lb" && usesPlates(ex, name) ? `<div class="reg-row sets-ctrls ex-plates-row"><span class="ctrl-lbl">Barra</span><div class="seg mini bar-toggle" role="group" aria-label="Barra">${(equipOf(ex, name) === "plates" ? [["none", "Sin barra"], ["women", "35"], ["men", "45"]] : [["women", "35 lb"], ["men", "45 lb"]]).map(([v, l]) =>
           `<button class="seg-btn calc-bar-btn${d.calcBar === v ? " active" : ""}" data-action="calc-bar" data-bar="${v}" data-k="${k}">${l}</button>`).join("")}</div></div>
         <div class="plate-hint ex-plate-hint" data-plates="${k}-w">${esc(exPlatesTxt(d))}</div>` : ""}
@@ -744,7 +769,7 @@
       const sub = e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna");
       const right = e.noWeight && !m
         ? `<span class="hl-none">${e.last ? fmtDate(e.last.date) : "Sin peso"}</span>`
-        : m ? `<span class="hl-max"><b>${fmt(m.weight)}</b> ${m.unit}${m.topReps ? ` × ${m.topReps}` : ""}</span><span class="hl-date">${fmtDate(m.date)}</span>`
+        : m ? `<span class="hl-max"><b>${fmt(m.weight)}</b> ${m.unit}${m.dbCount === 2 ? " c/u" : ""}${m.topReps ? ` × ${m.topReps}` : ""}</span><span class="hl-date">${fmtDate(m.date)}</span>`
           : `<span class="hl-none">Sin registros</span>`;
       return `<li><button class="hist-item ${e.group}" data-action="hist-open" data-ex="${esc(e.key)}">
         <span class="hist-dot"></span>
@@ -799,14 +824,14 @@
       const gain = before ? G.round1(r.weight - G.convert(before.weight, before.unit, r.unit)) : 0;
       const delta = before ? (G.cmpW(r) > G.cmpW(before) ? `+${fmt(gain)} ${r.unit}` : `+${r.topReps - before.topReps} reps`) : "Primera";
       return `<li class="pr-row${i === 0 ? " current" : ""}"><span class="pr-badge">${icon("trophy")}</span>
-        <span class="pr-w num"><b>${fmt(r.weight)}</b> ${r.unit}${r.topReps ? ` × ${r.topReps}` : ""}</span>
+        <span class="pr-w num"><b>${fmt(r.weight)}</b> ${r.unit}${r.dbCount === 2 ? " c/u" : ""}${r.topReps ? ` × ${r.topReps}` : ""}</span>
         <span class="pr-delta">${i === 0 ? "Actual" : delta}</span>
         <span class="pr-meta">${fmtDate(r.date, { day: "numeric", month: "short", year: "numeric" })} · ${where(r)}</span></li>`;
     }).join("");
     const sessRows = sessions.map((r) => `<li class="sess-row">
         <div class="sess-top">
           <span class="sess-when"><span class="sess-date">${fmtDate(r.date, { day: "numeric", month: "short" })}</span><span class="sess-where">${where(r)}${r.altUsed ? " · alternativa" : ""}</span></span>
-          <span class="sess-w num"><b>${r.setWeights ? r.setWeights.map((x) => fmt(G.parseNum(x) || 0)).join("·") : fmt(r.weight)}</b> ${r.unit}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
+          <span class="sess-w num"><b>${r.setWeights ? r.setWeights.map((x) => fmt(G.parseNum(x) || 0)).join("·") : fmt(r.weight)}</b> ${r.unit}${r.dbCount === 2 ? `<small class="db-sub"> c/u · total ${fmt(r.weight * 2)}</small>` : ""}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
           <span class="ok">${r.completed ? icon("check") : ""}</span></div>
         ${r.note ? `<div class="sess-note">${icon("note")}${esc(r.note)}</div>` : ""}</li>`).join("");
     return `<button class="back-btn hist-back-btn" data-action="hist-back">${icon("back")}Historial</button>
@@ -823,7 +848,7 @@
       <div class="pr-hero">
         <span class="label">${icon("trophy")}Máximo actual</span>
         ${m ? `<span class="pr-hero-val num">${fmt(m.weight)} <small>${m.unit}</small>${m.topReps ? ` <span>× ${m.topReps}</span>` : ""}</span>
-          <span class="sub">${convTxt(m.weight, m.unit)} · ${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
+          <span class="sub">${m.dbCount === 2 ? `por mancuerna · total ${fmt(m.weight * 2)} ${m.unit}` : convTxt(m.weight, m.unit)} · ${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
           : `<span class="pr-hero-val num none">—</span><span class="sub">Todavía no hay pesos registrados.</span>`}
       </div>
       ${prs.length > 1 ? `<h2 class="section-title">Récords</h2><ul class="pr-list">${prRows}</ul>` : ""}
@@ -1000,6 +1025,7 @@
       repsSame: d.repsSame,
       repsSameValue: d.repsSame ? same : "",
       ...(d.rpe ? { rpe: Number(d.rpe) } : {}),
+      ...(isDumbbell(ex, G.slotName(S.data, exFromKey(k).dayObj.key, exFromKey(k).idx, ex, week)) && d.dbCount ? { dbCount: d.dbCount } : {}),
       altUsed: !!prev.altUsed,
       ...(prev.altUsed ? { altIdx: prev.altIdx || 0 } : {}),
       unit: d.unit,
@@ -1161,6 +1187,12 @@
       if (isPR) toast(`🏆 ¡Nuevo récord! ${fmt(now.weight)} ${now.unit}${now.topReps ? ` × ${now.topReps}` : ""}`, "pr");
       else toast(complete ? "Guardado y listo ✓" : "Guardado ✓");
     },
+    "set-dbcount"(el) {
+      const k = el.dataset.k, d = S.drafts[k];
+      d.dbCount = Number(el.dataset.n);
+      el.closest(".db-seg").querySelectorAll(".db-count-btn").forEach((b) => b.classList.toggle("active", Number(b.dataset.n) === d.dbCount));
+      refreshDbTotal(k);
+    },
     "set-rpe"(el) {
       const d = S.drafts[el.dataset.k];
       d.rpe = d.rpe === el.dataset.v ? "" : el.dataset.v;
@@ -1183,6 +1215,7 @@
       if (hint) hint.remove();
       box.querySelector(".conv-hint").textContent = cur > 0 ? convTxt(Math.max(0, cur), d.unit) : "";
       refreshExPlates(el.dataset.k);
+      refreshDbTotal(el.dataset.k);
     },
     "set-ex-unit"(el) {
       const k = el.dataset.k, d = S.drafts[k], to = el.dataset.unit;
@@ -1366,6 +1399,7 @@
       const wv = G.parseNum(el.value), conv = card.querySelector(".conv-hint");
       if (conv) conv.textContent = wv > 0 ? convTxt(wv, d.unit) : "";
       refreshExPlates(k);
+      refreshDbTotal(k);
     }
     if (f === "calcValue" || f === "calcCustom") {
       const out = document.querySelector(`[data-calc-result="${k}"]`);

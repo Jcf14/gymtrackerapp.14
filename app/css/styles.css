@@ -717,3 +717,8 @@ textarea.text-input { resize: none; min-height: 44px; }
 }
 .rpe-row .reg-label small { display: block; }
 .rpe-seg .seg-btn { min-width: 36px; }
+/* Mancuernas: cantidad y total */
+.db-row .db-total { font-size: 12px; font-weight: 600; color: var(--lower); margin-left: auto; }
+.sess-w .db-sub { font-size: 11px; font-weight: 600; color: var(--text-2); }
+.weight-row .reg-label { max-width: 76px; }
+.weight-row .reg-label small { white-space: normal; line-height: 1.2; }

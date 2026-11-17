@@ -357,6 +357,40 @@ test("equipo editable en la tarjeta (sirve para la alternativa) y RPE real", asy
   assert.deepEqual(t.errors, []);
 });
 
+test("mancuernas: anoto el peso de una, elijo 1 o 2 y muestra el total", async () => {
+  const routine = JSON.parse(JSON.stringify(FIXTURE));
+  routine.days[0].exercises[1].name = "Press militar con mancuernas";
+  const t = await boot({ routine });
+  t.goTo(0, "A"); t.openCard(1);
+  const card = () => t.$$(".card")[1];
+  assert.match(card().querySelector(".weight-row .reg-label").textContent, /de una mancuerna/);
+  assert.equal(card().querySelector(".equip-select").value, "dumbbell");
+  assert.ok(card().querySelector('.db-count-btn[data-n="2"]').classList.contains("active"), "con mancuernas: 2 por defecto");
+  t.type(".card:nth-child(2) .weight-input", "25");
+  assert.equal(card().querySelector(".db-total").textContent, "Total 50 lb (2 × 25)");
+  // el + va al siguiente par que existe: 35 → 40 → 50
+  t.type(".card:nth-child(2) .weight-input", "40");
+  t.click(".card:nth-child(2) .step-up-btn");
+  assert.equal(card().querySelector(".weight-input").value, "50");
+  assert.equal(card().querySelector(".db-total").textContent, "Total 100 lb (2 × 50)");
+  // con una sola mancuerna no hay total aparte
+  t.click('.card:nth-child(2) .db-count-btn[data-n="1"]');
+  assert.equal(card().querySelector(".db-total").textContent, "");
+  t.click('.card:nth-child(2) .db-count-btn[data-n="2"]');
+  t.type(".card:nth-child(2) .weight-input", "25");
+  t.click(".card:nth-child(2) .save-entry-btn");
+  const rec = t.data().A_1_w0;
+  assert.equal(rec.weight, "25"); assert.equal(rec.dbCount, 2);
+  assert.match(t.$$(".card")[1].querySelector(".ex-weight").textContent, /25 lb c\/u · total 50 lb/);
+  // historial: c/u y total
+  t.click('.tab[data-tab="historial"]');
+  const item = t.$$(".hist-item").find((b) => /Press militar con mancuernas/.test(b.textContent));
+  assert.match(item.textContent, /25 lb c\/u/);
+  t.click(item);
+  assert.match(t.$(".sess-row").textContent, /25 lb c\/u · total 50/);
+  assert.deepEqual(t.errors, []);
+});
+
 test("calculadora de discos suelta (encabezado): por lado → total y total → discos", async () => {
   const t = await boot();
   t.click(".calc-top-btn");

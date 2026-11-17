@@ -271,6 +271,34 @@ test("casos reales del ciclo 3 (respaldo del 17/11): lo que salió y lo que no",
   assert.equal(r.value, 10);
 });
 
+test("mancuernas: peso de una + cantidad; conversión del peso muerto del ciclo 3", () => {
+  assert.equal(G.defaultDbCount("Press militar con mancuernas"), 2);
+  assert.equal(G.defaultDbCount("Peso muerto convencional con mancuernas"), 2);
+  assert.equal(G.defaultDbCount("Patada de tríceps con mancuerna"), 1);
+  assert.equal(G.defaultDbCount("Remo unilateral con mancuerna"), 1);
+  assert.equal(G.defaultDbCount("Sentadilla goblet con mancuerna"), 1);
+  assert.equal(G.dbTotal({ weight: "40", dbCount: 2 }), 80);
+  assert.equal(G.dbTotal({ weight: "40" }), 40);
+  // ciclo 3: el peso muerto con mancuernas estaba anotado como total → pasa a una mancuerna × 2 (una sola vez)
+  const data = {
+    ovr_C_2: { name: "Peso muerto convencional con mancuernas" },
+    C_2_w0: { weight: "70", reps: ["10"] }, C_2_w1: { weight: "80", reps: ["8"] }, C_2_w2: { weight: "80", reps: ["10"] },
+    B_0_w0: { weight: "25", reps: ["8"] },
+  };
+  assert.equal(G.migrateData(3, data), true);
+  assert.deepEqual([data.C_2_w0.weight, data.C_2_w1.weight, data.C_2_w2.weight], ["35", "40", "40"]);
+  assert.equal(data.C_2_w1.dbCount, 2);
+  assert.equal(G.dbTotal(data.C_2_w1), 80, "el total no cambia");
+  assert.equal(data.B_0_w0.weight, "25", "el resto no se toca");
+  assert.equal(G.migrateData(3, data), false, "no se repite");
+  assert.equal(data.C_2_w1.weight, "40");
+  // otros ciclos o datos vacíos: nada
+  const other = { C_2_w0: { weight: "70" }, ovr_C_2: { name: "Peso muerto convencional con mancuernas" } };
+  assert.equal(G.migrateData(4, other), false); assert.equal(other.C_2_w0.weight, "70");
+  const empty = {};
+  assert.equal(G.migrateData(3, empty), false); assert.deepEqual(empty, {});
+});
+
 test("récords: se guarda cada vez que se supera el máximo", () => {
   const recs = [
     { cycle: 2, week: 0, weight: 215, topReps: 8, date: "2026-10-01T10:00:00Z" },
