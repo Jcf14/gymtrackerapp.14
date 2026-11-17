@@ -47,11 +47,14 @@ test("recomendación: dice si toca más peso, más reps o ambos", () => {
   // (+peso) con cambio de rango: el peso sale de la fuerza estimada (215 × 10 @RPE7 → ~230 para 6-8 @RPE8)
   let r = G.recommend({ ...base, target: "4x6-8 @RPE8 (+peso)", prevTarget: "4x8-10 @RPE7", week: 1, prev: { weight: 215, week: 0 }, prevRec: {} });
   assert.equal(r.value, 230); assert.equal(r.pct, 7); assert.equal(r.goal, "Más peso, menos reps");
-  // (+peso) con el mismo rango: anterior + 5… salvo que sea un salto de más de 10% (30 → 35 = +17%): primero reps
+  // (+peso) con el mismo rango: el escalón siguiente si es menor a 20% (30 → 35 = +17%)
   r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 30, week: 0 }, prevRec: { reps: ["10", "10", "10"] } });
-  assert.equal(r.value, 30); assert.equal(r.mode, "reps"); assert.match(r.text, /salto grande \(\+17%\).*hasta 15 en todas/);
-  r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 30, week: 0 }, prevRec: { reps: ["15", "15", "15"] } });
-  assert.equal(r.value, 35); assert.match(r.text, /toca el salto/);
+  assert.equal(r.value, 35);
+  // …pero un escalón de 20% o más (25 → 30) pide antes 2 reps más que el techo
+  r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 25, week: 0 }, prevRec: { reps: ["12", "12", "12"] } });
+  assert.equal(r.value, 25); assert.equal(r.mode, "reps"); assert.match(r.text, /salto grande \(\+20%\).*hasta 14 en todas/);
+  r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 25, week: 0 }, prevRec: { reps: ["14", "14", "14"] } });
+  assert.equal(r.value, 30); assert.match(r.text, /toca el salto/);
   r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 100, week: 0 }, prevRec: { reps: ["10", "10", "10"] } });
   assert.equal(r.value, 105);
   // descarga: 55% de la semana previa
@@ -91,7 +94,7 @@ test("recomendación con datos reales (hip thrust del ciclo 2): sigue la fuerza,
   assert.equal(r.value, 260);
   // S2 sin registrar: se estima desde S1 y lo avisa
   r = G.recommend({ ...base, target: T[2], prevTarget: T[0], week: 2, prev: { weight: 215, week: 0 }, prevRec: { reps: ["10", "10", "10", "10"] } });
-  assert.equal(r.value, 245);
+  assert.equal(r.value, 250); // 249,8 estimado: casi 250
   assert.match(r.text, /estimado desde S1: S2 todavía sin registrar/);
   // accesorio al que le sube el rango (abducción 15-20 → 20-25): no baja el peso, pide más reps
   r = G.recommend({ ...base, target: "3x20-25", prevTarget: "3x15-20 (+peso)", week: 2, prev: { weight: 100, week: 1 }, prevRec: { reps: ["18", "17", "16"] } });
@@ -115,7 +118,7 @@ test("recomendación: S3 contra S3 del ciclo anterior y qué falta para el réco
   // si este ciclo viene más fuerte, manda este ciclo
   r = G.recommend({ unit: "lb", weekShort: ws, target: "3x4-6 @RPE9", prevTarget: "4x6-8 @RPE8", week: 2,
     prev: { weight: 260, week: 1 }, prevRec: { reps: ["7", "7", "7", "7"] }, lastSame, max });
-  assert.equal(r.value, 270);
+  assert.equal(r.value, 275); // 274 estimado: casi 275
   assert.equal(r.record, "Con este peso ya superás tu récord (260 lb × 4).");
   // fuera de la semana pico, el récord no se busca
   r = G.recommend({ unit: "lb", weekShort: ws, target: "4x6-8 @RPE8", prevTarget: "4x8-10 @RPE7", week: 1,
@@ -182,6 +185,7 @@ test("equipo: lo deduce del nombre y cada uno sube de a lo que se puede", () => 
   assert.equal(eq("Elevación posterior en máquina (reverse pec deck)"), "machine4");
   assert.equal(eq("Extensión de cuádriceps"), "machine5");
   assert.equal(eq("Remo T en máquina"), "plates");
+  assert.equal(eq("Press de pecho inclinado en máquina"), "plates", "lo cargo con discos (10 lb c/l)");
   assert.equal(eq("Curl femoral arrodillado a una pierna (máquina)"), "plates");
   assert.equal(eq("Elevación de talones de pie"), "plates");
   assert.equal(eq("Hiperextensión (45°)"), null);
@@ -239,9 +243,31 @@ test("ejercicios que progresan lento (elevación lateral en polea): reps antes d
   // 5 → 10 kg es +100%: con 15 reps no alcanza; pide 20 en todas
   let r = G.recommend({ ...args, prevRec: { reps: ["15", "15", "15"] } });
   assert.equal(r.value, 5); assert.equal(r.goal, "Mismo peso, más reps");
-  assert.match(r.text, /salto grande \(\+100%\) y este ejercicio progresa lento: quedate en 5 kg y sumá reps hasta 20 en todas/);
-  // con 20 en todas, recién ahí sugiere 10 kg
+  assert.match(r.text, /salto grande \(\+100%\) y este ejercicio progresa lento: quedate en 5 kg y sumá reps hasta 21 en todas/);
+  // con 21 en todas, recién ahí sugiere 10 kg
   r = G.recommend({ ...args, prevRec: { reps: ["20", "20", "20"] } });
+  assert.equal(r.value, 5);
+  r = G.recommend({ ...args, prevRec: { reps: ["21", "21", "21"] } });
+  assert.equal(r.value, 10);
+});
+
+test("casos reales del ciclo 3 (respaldo del 17/11): lo que salió y lo que no", () => {
+  const ws = ["S1", "S2", "S3", "S4"];
+  const go = (o) => G.recommend({ unit: "lb", weekShort: ws, max: null, ...o });
+  // Abducción en máquina 32 kg × 20 (techo) con (+peso): 36 kg (+12,5%) se sugiere (hizo 44 × 15)
+  let r = go({ unit: "kg", scale: G.loadScale("machine4", "kg"), target: "3x15-20 (+peso)", prevTarget: "3x15-20", week: 1, prev: { weight: 32, week: 0 }, prevRec: { reps: ["20", "20", "20"] } });
+  assert.equal(r.value, 36);
+  // Aducción 20 kg × 20 con (+peso): 24 kg es +20% → pide 22 reps (hizo 20 kg × 22, y al subir a 24 salió 12·12·8)
+  r = go({ unit: "kg", scale: G.loadScale("machine4", "kg"), target: "3x15-20 (+peso)", prevTarget: "3x15-20", week: 1, prev: { weight: 20, week: 0 }, prevRec: { reps: ["20", "20", "20"] } });
+  assert.equal(r.value, 20); assert.match(r.text, /hasta 22 en todas/);
+  // Press militar 25 × 8 → 6-8 @RPE8: la fuerza dice 25; 30 (+20%) no se fuerza (hizo 30 × 5, debajo del rango)
+  r = go({ scale: G.loadScale("dumbbell", "lb"), target: "4x6-8 @RPE8", prevTarget: "4x8-10 @RPE7", week: 1, prev: { weight: 25, week: 0 }, prevRec: { reps: ["8", "8", "8", "8"] } });
+  assert.equal(r.value, 25);
+  // Jalón 35 kg × 8 al techo de 6-8 → 40 kg (+14%) se sugiere (hizo 40)
+  r = go({ unit: "kg", scale: G.loadScale("cable", "kg"), target: "3x6-8 @RPE9", prevTarget: "4x6-8 @RPE8 (+peso)", week: 2, prev: { weight: 35, week: 1 }, prevRec: { reps: ["8", "8", "8", "8"] } });
+  assert.equal(r.value, 40);
+  // Lateral con mancuerna 10 lb × 20: 15 lb (+50%) no (hizo 15 × 8, debajo del rango)
+  r = go({ scale: G.loadScale("dumbbell", "lb"), slow: true, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 10, week: 0 }, prevRec: { reps: ["20", "20", "20"] } });
   assert.equal(r.value, 10);
 });
 

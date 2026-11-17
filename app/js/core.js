@@ -247,7 +247,7 @@
         for (let w = 0; w < 4; w++) {
           if (normName(slotName(data, d.key, idx, ex, w)) !== target) continue;
           const k = slotKey(d.key, idx, w), rec = data[k];
-          const weight = rec ? parseNum(rec.weight) : NaN;
+          const weight = rec && !rec.skipped ? parseNum(rec.weight) : NaN;
           if (!(weight > 0)) continue;
           const repsArr = repsNums(rec);
           const unit = recUnit(rec, r);
@@ -311,7 +311,7 @@
     for (let w = week - 1; w >= 0; w--) {
       if (name && normName(slotName(data, day, idx, ex, w)) !== name) continue;
       const rec = data[slotKey(day, idx, w)];
-      const weight = rec ? parseNum(rec.weight) : NaN;
+      const weight = rec && !rec.skipped ? parseNum(rec.weight) : NaN;
       if (weight > 0) return { weight, week: w, unit: (rec && rec.unit) || defaultUnit || "lb" };
     }
     return null;
@@ -368,7 +368,7 @@
   // Equipo a partir del nombre (se puede cambiar en la tarjeta). null = no se sabe: pasos genéricos de la unidad.
   function inferEquip(name) {
     const n = normName(name || "");
-    if (/smith|prensa|remo t\b|arrodillad|talones/.test(n)) return "plates";
+    if (/smith|prensa|remo t\b|arrodillad|talones|press .*maquina/.test(n)) return "plates";
     if (/mancuerna|goblet/.test(n)) return "dumbbell";
     if (/polea|cuerda|cable|jalon|face pull|pallof/.test(n)) return "cable";
     if (/\bbarra\b|piramide/.test(n)) return "barbell";
@@ -379,6 +379,8 @@
 
   // Subida máxima por semana de la sugerencia (10%): progresar de a poco.
   const MAX_JUMP = 0.1;
+  // Desde qué salto de un solo escalón hacen falta reps extra antes de subir (20%).
+  const BIG_JUMP = 0.2;
   // Ejercicios chicos que progresan lento (hombro, brazos, aperturas): piden más reps antes de un salto grande.
   function isSlowLift(name) {
     const n = normName(name || "");
@@ -481,27 +483,35 @@
           text: `En ${wkN} del ciclo ${ls.cycle} hiciste ${fmtNum(ls.weight)} ${unit}${lr}: para progresar, ${v === ls.weight ? `mismo peso y más reps` : `~${fmtNum(v)} ${unit}`}. (${r.text})` };
       }
     }
-    // Saltos chicos: no más de ~10% por semana. Si el siguiente peso que existe es un salto más grande
-    // (polea de 5 a 10 kg, mancuerna de 10 a 15 lb), primero se suman reps por encima del rango.
+    // Saltos chicos (validado con el ciclo 3: casi todos los saltos de 20% o más no salieron en el rango).
+    // · Varios escalones de golpe (fuerza estimada, semana anterior del ciclo pasado): no más de ~10% por semana,
+    //   pero el escalón siguiente nunca queda bloqueado por eso.
+    // · Un escalón de 20% o más (polea 5 → 10 kg, mancuerna 10 → 15 lb, aductor 20 → 24 kg): primero reps por
+    //   encima del techo del rango, más cuanto más grande el salto (2 a 6; +1 en ejercicios que progresan lento).
     if (args.prev && r.mode !== "calibrate" && r.base > 0 && r.value > r.base) {
       const weeks = Math.max(1, args.week - args.prev.week);
       const limit = r.base * (1 + MAX_JUMP * weeks);
-      if (r.value > limit + 1e-9) {
-        const extra = args.slow ? 5 : 3;
+      let v = r.value, capped = "";
+      if (v > limit + 1e-9) {
+        const within = scale.floor(limit);
+        v = within > r.base ? within : Math.min(v, scale.next(r.base));
+        if (v < r.value) capped = ` · sin saltar más de ${Math.round(MAX_JUMP * weeks * 100)}% por semana: ${fmtNum(v)} ${unit}`;
+      }
+      const jump = v / r.base - 1;
+      if (jump >= BIG_JUMP - 1e-9) {
+        const extra = Math.min(6, Math.max(2, Math.round(jump * 10)) + (args.slow ? 1 : 0));
         const reps = repsNums(args.prevRec);
         const earned = cur && reps.length && reps.every((x) => x >= cur.hi + extra);
-        const within = scale.floor(limit);
-        const jump = pctDiff(r.value, r.base);
-        if (within > r.base) {
-          r = { ...r, value: within, pct: pctDiff(within, r.base),
-            text: `${r.text} · sin saltar más de ${Math.round(MAX_JUMP * weeks * 100)}%: ${fmtNum(within)} ${unit}` };
-        } else if (earned) {
-          r = { ...r, text: `${r.text} · ya hiciste ${cur.hi + extra}+ reps en todas: toca el salto (+${jump}%)` };
+        const pct = pctDiff(v, r.base);
+        if (earned) {
+          r = { ...r, value: v, pct, text: `${r.text}${capped} · ya hiciste ${cur.hi + extra}+ reps en todas: toca el salto (+${pct}%)` };
         } else {
           r = { ...r, value: r.base, pct: 0, mode: "reps", goal: goalLabel("same", "up"),
-            text: `Subir a ${fmtNum(r.value)} ${unit} es un salto grande (+${jump}%)${args.slow ? " y este ejercicio progresa lento" : ""}: `
+            text: `Subir a ${fmtNum(v)} ${unit} es un salto grande (+${pct}%)${args.slow ? " y este ejercicio progresa lento" : ""}: `
               + `quedate en ${fmtNum(r.base)} ${unit} y sumá reps${cur ? ` hasta ${cur.hi + extra} en todas` : ""} antes de subir.` };
         }
+      } else if (v !== r.value) {
+        r = { ...r, value: v, pct: pctDiff(v, r.base), text: r.text + capped };
       }
     }
     const peak = args.week === 2 || rpeOf(args.target, args.week) >= 9;
@@ -536,7 +546,9 @@
       const harder = felt != null && felt >= rpeOf(prevTarget, prev.week) + 1;
       const raw = cur && was && (harder || cur.hi < was.hi || (cur.hi !== was.hi && hasRpe(target) && hasRpe(prevTarget)))
         ? projectWeight(pw, done, prevTarget, prev.week, target, week, felt) : null;
-      const proj = raw != null ? L.floor(raw) : null;
+      // al peso posible de abajo, salvo que la estimación esté en el último cuarto del escalón (79 lb → 80, no 70; 231 → 230)
+      const lo = raw != null ? L.floor(raw) : null, hi = lo != null ? L.next(lo) : null;
+      const proj = raw != null ? (raw >= lo && hi - raw <= (hi - lo) * 0.25 ? hi : lo) : null;
       const gap = week - prev.week > 1 ? ` (estimado desde ${wk(prev.week)}: ${wk(week - 1)} todavía sin registrar)` : "";
       const did = `${done.length ? `En ${wk(prev.week)} hiciste ${fmtNum(pw)} × ${done.join("·")}` : `En ${wk(prev.week)} usaste ${fmtNum(pw)} ${unit}`}${feltTxt}`;
       if (hasPlusWeight(target) && felt != null && felt >= rpeOf(prevTarget, prev.week) + 2)
@@ -548,7 +560,7 @@
           : `El plan pide subir: de ${fmtNum(pw)} a ${fmtNum(v)} ${unit}${gap}`);
       }
       if (proj != null) {
-        const v = harder ? Math.max(proj, pw) : cur.hi < was.hi ? Math.max(proj, L.next(pw)) : proj;
+        const v = harder ? Math.max(proj, pw) : cur.hi < was.hi && L.next(pw) <= pw * (1 + MAX_JUMP) + 1e-9 ? Math.max(proj, L.next(pw)) : Math.max(proj, cur.hi < was.hi ? pw : proj);
         if (harder && v === pw)
           return out(pw, pw, "reps", repsDir(cur, was), `${did}: costó más de lo pedido, quedate en ${fmtNum(pw)} ${unit} y buscá las reps del rango${gap}`);
         return out(v, pw, v > pw ? "up" : "same", repsDir(cur, was),
@@ -608,7 +620,7 @@
             cycle: routine.cycle, week: w, weekShort: routine.weekShort[w], day: d.key,
             exercise: slotName(data, d.key, idx, ex, w), protocol: slotProtocol(rec, ex), pattern: ex.pattern, type: d.type, noWeight: !!ex.noWeight, target: ex.targets[w],
             date: dayDate(routine, data, d.key, w) || rec.savedAt || null,
-            weight: weight > 0 ? weight : null, unit: weight > 0 ? recUnit(rec, routine) : null,
+            weight: weight > 0 && !rec.skipped ? weight : null, unit: weight > 0 && !rec.skipped ? recUnit(rec, routine) : null,
             reps: rec.reps || [], repsSame: !!rec.repsSame, repsSameValue: rec.repsSameValue || "",
             ...(Array.isArray(rec.setWeights) ? { setWeights: rec.setWeights } : {}),
             ...(rec.skipped ? { skipped: true, skipReason: rec.skipReason || "" } : {}),
@@ -625,7 +637,7 @@
   function historyRecords(hist, name) {
     if (!hist) return [];
     const target = normName(name);
-    return hist.sessions.filter((x) => x.weight > 0 && normName(x.exercise) === target).map((x) => {
+    return hist.sessions.filter((x) => x.weight > 0 && !x.skipped && normName(x.exercise) === target).map((x) => {
       const repsArr = repsNums(x);
       const unit = x.unit || "lb";
       return {

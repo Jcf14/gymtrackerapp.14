@@ -178,7 +178,7 @@
     { id: "fases", term: "Semanas del ciclo", text: "S1 adaptación (RPE 7) · S2 intensificación (RPE 8) · S3 pico (RPE 9, menos reps y más peso en los básicos) · S4 descarga." },
     { id: "descarga", term: "Descarga (deload)", text: "Semana liviana para recuperarte y llegar fresca al ciclo siguiente: mismos ejercicios, 2 series (3 si querés), ~50–60% del peso de S3 y RPE 5–6. Sin pulsos ni serie de rematado." },
     { id: "peso", term: "(+peso)", text: "El plan pide subir el peso respecto de la semana anterior, normalmente 5 lb." },
-    { id: "saltos", term: "Saltos de peso", text: "La sugerencia no sube más de ~10% por semana. Si el siguiente peso que existe es un salto más grande (polea de 5 a 10 kg, mancuerna de 10 a 15 lb), primero sumá reps por encima del rango: 3 más en todas las series (5 en hombros, brazos y aperturas, que progresan lento) y recién ahí subí." },
+    { id: "saltos", term: "Saltos de peso", text: "Subir un escalón chico (menos de 20%, como 35 → 40 kg) se sugiere cuando llegás al techo del rango. Si el siguiente peso que existe es un salto de 20% o más (polea de 5 a 10 kg, mancuerna de 10 a 15 lb, aductor de 20 a 24 kg), primero sumá reps por encima del rango en todas las series: más reps cuanto más grande el salto (2 a 6; una más en hombros, brazos y aperturas). Con tus datos del ciclo 3, casi todos los saltos de 20% o más no salieron dentro del rango." },
     { id: "rpe-real", term: "RPE real (¿cómo se sintió?)", text: "Opcional, al registrar: cuánto te costó de verdad (6 = te sobraban 4 reps, 10 = no salía ni una más). Si lo marcás, la sugerencia de la semana siguiente usa eso en lugar del RPE del plan: si costó más de lo pedido no te hace subir, y si te sobró mucho te sube antes." },
     { id: "sugerido", term: "Peso sugerido y %", text: "Lo calcula la app con tu última semana registrada de ese ejercicio. Te dice qué se espera (más peso, más reps, ambos o igual) y el % de cambio contra esa vez. Si en accesorios no llegaste al techo del rango en todas las series, toca más reps con el mismo peso. Manda siempre la primera serie: si se siente más pesada de lo pedido, bajá." },
     { id: "maximo", term: "Máximo (récord)", text: "Tu mejor marca del ejercicio: el peso más alto y, a igual peso, más reps. Cuando lo superás, el anterior queda guardado en el historial de récords." },
@@ -235,11 +235,14 @@
   // Escala de carga de una tarjeta: el paso fijo de la rutina (ejercicio original, en su unidad) o el del equipo.
   const scaleOf = (ex, name, u) => G.loadScale(equipOf(ex, name), u, isOriginal(ex, name) && ex.step && u === ex.unit ? ex.step : undefined);
 
-  // Unidad por defecto: la elegida en la tarjeta › la de la rutina (ejercicio original) › la del equipo › la preferida.
+  // Unidad por defecto: la elegida en la tarjeta › la de la rutina (ejercicio original; poleas en kg)
+  // › la del último registro de ese ejercicio (como lo cargo de verdad) › la del equipo › la preferida.
   function exUnit(day, idx, w) {
     if (S.data[unitKey(day, idx)]) return S.data[unitKey(day, idx)];
     const ex = exDef(day, idx), name = slotNameOf(day, idx, w || 0);
     if (ex && ex.unit && isOriginal(ex, name)) return ex.unit;
+    const last = G.lastRecord(recordsOf(name));
+    if (last && last.unit) return last.unit;
     const e = G.EQUIP[equipOf(ex, name)];
     return (e && e.unit) || S.unit;
   }
