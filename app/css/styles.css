@@ -756,3 +756,69 @@ textarea.text-input { resize: none; min-height: 44px; }
 .pg-cap { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text); }
 .pg-legend span { line-height: 1; }
 .pg-legend .pg-k { display: block; flex: none; }
+
+/* ---------- Transiciones de pantalla (View Transitions: Safari 18+, Chrome) ----------
+   Encabezado, pestañas y las barras de semana/día quedan quietos; la pastilla de la semana y el círculo
+   del día se deslizan al nuevo lugar; el contenido entra desde el costado; al abrir una tarjeta las demás se acomodan. */
+.topbar { view-transition-name: topbar; }
+.tabbar { view-transition-name: tabbar; }
+.seg.weeks { view-transition-name: weeks-bar; }
+.days { view-transition-name: days-bar; }
+.week-btn.active { view-transition-name: week-pill; }
+.day-btn.active .day-key { view-transition-name: day-pill; }
+[data-vt="card"] .card { view-transition-name: var(--vtn); }
+/* al abrir una tarjeta, la pastilla y el día no se mueven: sin nombre propio (si no, el recorte de abajo los cuadra) */
+[data-vt="card"] .week-btn.active, [data-vt="card"] .day-btn.active .day-key { view-transition-name: none; }
+::view-transition-group(*) { animation-duration: .38s; animation-timing-function: var(--ease); }
+::view-transition-group(week-pill), ::view-transition-group(day-pill) { animation-duration: .44s; animation-timing-function: cubic-bezier(.3, 1.25, .5, 1); }
+[data-vt="card"]::view-transition-image-pair(*) { overflow: clip; }
+/* primero sale lo viejo y recién después entra lo nuevo: así no se cruzan los textos */
+::view-transition-old(root) { animation-duration: .13s; animation-timing-function: ease-in; animation-fill-mode: both; }
+::view-transition-new(root) { animation-duration: .3s; animation-delay: .12s; animation-timing-function: var(--ease); animation-fill-mode: both; }
+[data-vt="slide-next"]::view-transition-old(root) { animation-name: vt-out-left; }
+[data-vt="slide-next"]::view-transition-new(root) { animation-name: vt-in-right; }
+[data-vt="slide-prev"]::view-transition-old(root) { animation-name: vt-out-right; }
+[data-vt="slide-prev"]::view-transition-new(root) { animation-name: vt-in-left; }
+[data-vt="fade"]::view-transition-new(root) { animation-name: vt-rise; }
+@keyframes vt-out-left { to { opacity: 0; transform: translateX(-28px); } }
+@keyframes vt-in-right { from { opacity: 0; transform: translateX(28px); } }
+@keyframes vt-out-right { to { opacity: 0; transform: translateX(28px); } }
+@keyframes vt-in-left { from { opacity: 0; transform: translateX(-28px); } }
+@keyframes vt-rise { from { opacity: 0; transform: translateY(12px); } }
+
+/* ---------- Micro-interacciones ---------- */
+.seg-btn { transition: transform .15s var(--ease), background .2s, color .2s, box-shadow .2s; }
+.seg-btn:active { transform: scale(.95); }
+.tab.active .ic { animation: tab-pop .45s var(--spring); }
+@keyframes tab-pop { 40% { transform: translateY(-3px) scale(1.14); } }
+.ring-txt b { display: inline-block; }
+.ring-txt.fx-bump b { animation: bump .5s var(--spring); }
+@keyframes bump { 40% { transform: scale(1.28); } }
+
+/* Confeti: día completo y récord nuevo */
+.confetti { position: fixed; z-index: 60; width: 0; height: 0; pointer-events: none; }
+.confetti i { position: absolute; left: -4px; top: -3px; width: 8px; height: 5px; border-radius: 2px; opacity: 0;
+  animation: confetti 1.3s var(--d, 0ms) cubic-bezier(.2, .7, .3, 1) forwards; }
+.confetti i.round { width: 7px; height: 7px; border-radius: 50%; }
+@keyframes confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(.5); }
+  35% { opacity: 1; transform: translate(var(--x), var(--y)) rotate(calc(var(--r) / 2)) scale(1); }
+  100% { opacity: 0; transform: translate(calc(var(--x) * 1.25), calc(var(--y) + 150px)) rotate(var(--r)) scale(.9); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* el check se dibuja al marcar */
+  .done-btn.fx-pop .ic path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: check-draw .38s .12s var(--ease) forwards; }
+  @keyframes check-draw { to { stroke-dashoffset: 0; } }
+  /* gráfico de progresión: la línea se dibuja y los puntos aparecen en orden */
+  .pg-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: pg-draw .9s .1s var(--ease) forwards; }
+  @keyframes pg-draw { to { stroke-dashoffset: 0; } }
+  .pg-dot { transform-box: fill-box; transform-origin: center; animation: pg-pop .4s calc(var(--d, 0ms) + 100ms) var(--spring) both; }
+  @keyframes pg-pop { from { opacity: 0; transform: scale(.2); } }
+}
+/* al abrir/cerrar una tarjeta el resto de la pantalla no se funde: solo se mueven las tarjetas */
+[data-vt="card"]::view-transition-old(root) { display: none; }
+[data-vt="card"]::view-transition-new(root) { animation: none; }
+/* la tarjeta se despliega (o se pliega) revelando su contenido, sin fundido: no parpadea */
+[data-vt="card"]::view-transition-old(*) { display: none; }
+[data-vt="card"]::view-transition-new(*) { animation: none; }

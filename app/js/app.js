@@ -342,6 +342,7 @@
 
   function render() {
     FX = S.fx; S.fx = {};
+    const ringBefore = readRing();
     const chip = $("#cycleChip");
     const r = routine();
     chip.hidden = !r;
@@ -354,6 +355,76 @@
     root.classList.toggle("fx-view", !!FX.view);
     if (FX.view) [...root.children].forEach((el, i) => el.style.setProperty("--i", i));
     renderSheet();
+    afterRender(ringBefore);
+  }
+
+  // ---------- Movimiento ----------
+  const reducedMotion = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  // Cambio de pantalla con View Transitions (Safari 18 / Chrome): la pastilla de la semana y el día se deslizan,
+  // el contenido entra desde el costado y, al abrir una tarjeta, las de abajo se acomodan. Sin soporte o con
+  // "reducir movimiento": cambio directo (con la entrada suave de siempre si fallbackFx).
+  function navigate(kind, update, fallbackFx) {
+    if (!document.startViewTransition || reducedMotion()) { if (fallbackFx) S.fx.view = true; update(); return; }
+    const html = document.documentElement;
+    html.dataset.vt = kind;
+    const t = document.startViewTransition(update);
+    t.finished.finally(() => { if (html.dataset.vt === kind) delete html.dataset.vt; });
+  }
+
+  // Anillo del día: id del día que muestra, cuánto marca y cuántos listos.
+  function readRing() {
+    const ring = document.querySelector(".hero .ring");
+    if (!ring) return null;
+    const bar = ring.querySelector(".bar");
+    return { id: ring.dataset.id, off: parseFloat(bar.style.strokeDashoffset), done: Number(ring.dataset.done), n: Number(ring.dataset.n) };
+  }
+
+  function afterRender(before) {
+    if (reducedMotion()) return;
+    const now = readRing();
+    if (before && now && before.id === now.id && before.off !== now.off) {
+      // el anillo avanza (o retrocede) desde donde estaba, y el número hace un salto
+      const bar = document.querySelector(".hero .ring .bar");
+      bar.style.transition = "none"; bar.style.strokeDashoffset = before.off;
+      bar.getBoundingClientRect();
+      bar.style.transition = ""; bar.style.strokeDashoffset = now.off;
+      document.querySelector(".hero .ring-txt").classList.add("fx-bump");
+      // día completo: confeti sobre la tarjeta del día
+      if (now.n > 0 && now.done === now.n && before.done < now.n) {
+        burst(document.querySelector(".hero"), ["#FFFFFF", "#9CCDEB", "#5FA8D3", "#E0BD4A", "#7FD1A8"], 34);
+        // después del aviso de la acción ("Completado ✓"), que se muestra apenas termina el render
+        setTimeout(() => toast("¡Día completo! 🎉"), 0);
+      }
+    }
+    // récord nuevo: confeti dorado desde el check de esa tarjeta
+    if (FX.pr) {
+      const card = document.querySelector(`[data-card="${FX.pr}"] .done-btn`) || document.querySelector(`[data-card="${FX.pr}"]`);
+      if (card) burst(card, ["#E0BD4A", "#F2D06B", "#B8901C", "#FFF3C4"], 26);
+    }
+  }
+
+  // Confeti liviano (sin librerías): partículas con trayectoria al azar que caen y se desvanecen.
+  function burst(el, colors, count) {
+    if (!el || reducedMotion()) return;
+    const r = el.getBoundingClientRect();
+    const layer = document.createElement("div");
+    layer.className = "confetti";
+    layer.style.left = `${r.left + r.width / 2}px`;
+    layer.style.top = `${r.top + Math.min(r.height / 2, 60)}px`;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement("i");
+      const a = Math.random() * Math.PI * 2, d = 50 + Math.random() * 110;
+      p.style.setProperty("--x", `${Math.cos(a) * d}px`);
+      p.style.setProperty("--y", `${Math.sin(a) * d * 0.7 - 40}px`);
+      p.style.setProperty("--r", `${Math.round(Math.random() * 720 - 360)}deg`);
+      p.style.setProperty("--d", `${Math.round(Math.random() * 120)}ms`);
+      p.style.background = colors[i % colors.length];
+      if (i % 3 === 0) p.classList.add("round");
+      layer.append(p);
+    }
+    document.body.append(layer);
+    setTimeout(() => layer.remove(), 1600);
   }
 
   function renderEmpty() {
@@ -432,7 +503,7 @@
             <h1 class="hero-title">${esc(main)}</h1>
             ${sub ? `<div class="hero-sub">${esc(sub)}</div>` : ""}
           </div>
-          <div class="ring" role="img" aria-label="${done} de ${n} completados">
+          <div class="ring" role="img" aria-label="${done} de ${n} completados" data-id="${S.cycle}|${S.week}|${S.day}" data-done="${done}" data-n="${n}">
             <svg viewBox="0 0 72 72"><circle class="track" cx="36" cy="36" r="30"/>
               <circle class="bar" cx="36" cy="36" r="30" style="--c:${C.toFixed(1)};stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${off.toFixed(1)}"/></svg>
             <div class="ring-txt"><div><b>${done}/${n}</b><span>listos</span></div></div>
@@ -535,7 +606,7 @@
       </div>`;
     const cls = `card ${day.type}${done ? " done" : ""}${rec && rec.skipped ? " skipped" : ""}${open ? " open" : ""}${FX.pr === k ? " fx-pr" : ""}${FX.saved === k ? " fx-saved" : ""}`;
     if (!open) return `<li class="${cls}" style="--i:${idx}">${head}</li>`;
-    return `<li class="${cls}" style="--i:${idx}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name, info)}</li>`;
+    return `<li class="${cls}" style="--i:${idx};--vtn:card-${idx}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name, info)}</li>`;
   }
 
   function renderCardBody(day, ex, idx, k, rec, name, info) {
@@ -844,13 +915,13 @@
     const first = lastPr != null ? lastPr : pts.length - 1;
     const dots = pts.map((r, i) => {
       const kind = prs.has(`${r.cycle}|${r.key}`) ? "is-pr" : r.week === 3 ? "is-deload" : "is-reg";
-      return `<circle class="pg-dot ${kind}${i === first ? " sel" : ""}" data-i="${i}" cx="${x(i).toFixed(1)}" cy="${y(vals[i]).toFixed(1)}" r="${kind === "is-pr" ? 5.5 : 4}"/>`;
+      return `<circle class="pg-dot ${kind}${i === first ? " sel" : ""}" style="--d:${Math.round((i / Math.max(1, pts.length - 1)) * 700)}ms" data-i="${i}" cx="${x(i).toFixed(1)}" cy="${y(vals[i]).toFixed(1)}" r="${kind === "is-pr" ? 5.5 : 4}"/>`;
     }).join("");
     const hits = pts.map((r, i) => `<circle class="pg-hit" data-action="pg-pt" data-i="${i}" data-cap="${esc(cap(r, i))}" cx="${x(i).toFixed(1)}" cy="${y(vals[i]).toFixed(1)}" r="14"/>`).join("");
     return `<h2 class="section-title">Progresión <span class="muted">${unit}${pts.some((r) => r.dbCount === 2) ? " por mancuerna" : ""}</span></h2>
       <div class="progress ${e.type === "upper" ? "upper" : "lower"}">
         <svg class="pg-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Progresión de ${esc(e.name)}: peso de cada sesión">
-          ${grid}${cycles}<path class="pg-line" d="${line}"/>${dots}${hits}
+          ${grid}${cycles}<path class="pg-line" pathLength="1" d="${line}"/>${dots}${hits}
         </svg>
         <div class="pg-legend"><span><i class="pg-k is-pr"></i>récord</span><span><i class="pg-k is-reg"></i>sesión</span><span><i class="pg-k is-deload"></i>descarga</span><span class="pg-hint">Tocá un punto</span></div>
         <div class="pg-cap">${esc(cap(pts[first], first))}</div>
@@ -1105,16 +1176,31 @@
   }
 
   const actions = {
-    tab(el) { if (S.tab === el.dataset.tab && !S.histEx) return; S.tab = el.dataset.tab; S.histEx = null; S.histReturn = null; S.fx.view = true; render(); window.scrollTo(0, 0); },
-    week(el) {
-      S.week = Number(el.dataset.week); S.open = new Set(); S.fx.view = true; S.skipOpen = false;
-      store.set(KEYS.lastWeek, { ...lastWeeks(), [S.cycle]: S.week }); render();
+    tab(el) {
+      if (S.tab === el.dataset.tab && !S.histEx) return;
+      navigate("fade", () => { S.tab = el.dataset.tab; S.histEx = null; S.histReturn = null; render(); window.scrollTo(0, 0); }, true);
     },
-    day(el) { S.day = el.dataset.day; S.open = new Set(); S.fx.view = true; S.skipOpen = false; store.set(KEYS.lastDay, S.day); render(); },
+    week(el) {
+      const to = Number(el.dataset.week);
+      if (to === S.week) return;
+      navigate(to > S.week ? "slide-next" : "slide-prev", () => {
+        S.week = to; S.open = new Set(); S.skipOpen = false;
+        store.set(KEYS.lastWeek, { ...lastWeeks(), [S.cycle]: S.week }); render();
+      }, true);
+    },
+    day(el) {
+      const keys = routine().days.map((d) => d.key), to = el.dataset.day;
+      if (to === S.day) return;
+      navigate(keys.indexOf(to) > keys.indexOf(S.day) ? "slide-next" : "slide-prev", () => {
+        S.day = to; S.open = new Set(); S.skipOpen = false; store.set(KEYS.lastDay, S.day); render();
+      }, true);
+    },
     "toggle-card"(el) {
       const i = Number(el.dataset.idx);
-      if (S.open.has(i)) S.open.delete(i); else { S.open.add(i); S.fx.opened = i; }
-      render();
+      navigate("card", () => {
+        if (S.open.has(i)) S.open.delete(i); else { S.open.add(i); S.fx.opened = i; }
+        render();
+      });
     },
     "toggle-done"(el) {
       const k = el.dataset.k;

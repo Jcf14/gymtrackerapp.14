@@ -420,6 +420,22 @@ test("desde la tarjeta: progresión e historial del ejercicio, y volver a la rut
   assert.deepEqual(t.errors, []);
 });
 
+test("completar el último ejercicio del día: anillo lleno, confeti y aviso", async () => {
+  const t = await boot();
+  t.goTo(0, "A");
+  t.openCard(0); t.type(".weight-input", "200"); t.click(".save-done-btn");
+  t.openCard(1); t.type(".card.open .weight-input", "30"); t.click(".card.open .save-done-btn");
+  assert.equal(t.$(".hero .ring").dataset.done, "2");
+  assert.equal(t.$$(".confetti").length, 0, "todavía no");
+  t.click(t.$$(".done-btn")[2]); // plancha (sin peso): se completa directo
+  assert.equal(t.$(".hero .ring").dataset.done, "3");
+  assert.equal(t.$$(".confetti").length, 1, "confeti al completar el día");
+  assert.ok(t.$$(".confetti i").length > 10);
+  await new Promise((r) => setTimeout(r, 5));
+  assert.match(t.toast(), /Día completo/);
+  assert.deepEqual(t.errors, []);
+});
+
 test("calculadora de discos suelta (encabezado): por lado → total y total → discos", async () => {
   const t = await boot();
   t.click(".calc-top-btn");
