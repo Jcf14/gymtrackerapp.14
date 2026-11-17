@@ -834,7 +834,7 @@
     dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, alts, normName,
     parseNum, roundStep, fmtNum, barWeight, calcBar, repsText, PLATES_LB, platesFor, rpeOf, projectWeight, loggedRpe, EQUIP, inferEquip, loadScale, dbCountOf, defaultDbCount, dbTotal, migrateData, isSlowLift, MAX_JUMP,
     LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
-    collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
+    collectRecords, findMax, prHistory, lastRecord, chrono, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
     weekFromStart, autoDayKey,
     isoDate, parseDate, dayId, cycleStart, plannedDate, dayDate, dayStatus,
     buildCycleExport, buildBackup, checkBackup,

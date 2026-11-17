@@ -391,6 +391,35 @@ test("mancuernas: anoto el peso de una, elijo 1 o 2 y muestra el total", async (
   assert.deepEqual(t.errors, []);
 });
 
+test("desde la tarjeta: progresión e historial del ejercicio, y volver a la rutina", async () => {
+  const t = await boot();
+  t.goTo(0, "A"); t.openCard(0); t.type(".weight-input", "200"); t.click(".save-entry-btn");
+  t.goTo(1, "A"); t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
+  t.goTo(2, "A"); t.openCard(0); t.type(".weight-input", "210"); t.click(".save-entry-btn");
+  t.openCard(0);
+  t.click(".ex-hist-btn");
+  assert.ok(t.$(".tab.active[data-tab='historial']"), "pasa a la pestaña Historial");
+  assert.match(t.$(".page-title").textContent, /Hip thrust con barra libre/);
+  // gráfico: 3 sesiones, 2 récords (200 y 215); arranca mostrando el último récord
+  assert.equal(t.$$(".pg-dot").length, 3);
+  assert.equal(t.$$(".pg-dot.is-pr").length, 2);
+  assert.match(t.$(".pg-cap").textContent, /^215 lb .*S2.*récord/);
+  assert.ok(t.$('.pg-dot[data-i="1"]').classList.contains("sel"));
+  // tocar un punto muestra su detalle
+  t.$('.pg-hit[data-i="2"]').dispatchEvent(new t.w.MouseEvent("click", { bubbles: true })); // SVG: jsdom no tiene .click()
+  assert.match(t.$(".pg-cap").textContent, /^210 lb .*S3/);
+  assert.ok(t.$('.pg-dot[data-i="2"]').classList.contains("sel"));
+  // récords del último hacia atrás
+  assert.match(t.$$(".pr-row")[0].textContent, /215/);
+  assert.match(t.$$(".pr-row")[1].textContent, /200/);
+  // volver: a la rutina, con la tarjeta abierta
+  assert.match(t.$(".hist-back-btn").textContent, /Rutina/);
+  t.click(".hist-back-btn");
+  assert.ok(t.$(".tab.active[data-tab='rutina']"));
+  assert.ok(t.$$(".card")[0].classList.contains("open"));
+  assert.deepEqual(t.errors, []);
+});
+
 test("calculadora de discos suelta (encabezado): por lado → total y total → discos", async () => {
   const t = await boot();
   t.click(".calc-top-btn");

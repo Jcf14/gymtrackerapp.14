@@ -594,6 +594,7 @@
         <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>
         ${rec && rec.skipped ? "" : `<button class="tool-btn skip-ex-btn${d.skipOpen ? " on" : ""}" data-action="toggle-skip-ex" data-k="${k}">${icon("ban")}No lo hice</button>`}
       </div>
+      <button class="link-row ex-hist-btn" data-action="ex-history" data-k="${k}">${icon("chart")}<span>Progresión e historial</span>${icon("chevron")}</button>
       ${altBox}
       ${editBox}
       ${rec && rec.skipped ? `<div class="alt-box skip-ex-state">${icon("ban")}<span><b>No hecho</b>${esc(rec.skipReason || "Sin motivo")}</span>
@@ -814,6 +815,48 @@
     return { slots, sessions };
   }
 
+  // Progresión: el peso de cada sesión en el tiempo (una sola serie, sin leyenda; el título la nombra).
+  // Récord = punto lleno grande · descarga (S4) = punto hueco, para que no parezca un retroceso.
+  // Tocar un punto muestra su detalle debajo; las sesiones de abajo son la tabla completa.
+  function renderProgress(e) {
+    const pts = [...e.records].filter((r) => r.weight > 0).sort(G.chrono);
+    if (pts.length < 2) return "";
+    const unit = (e.max && e.max.unit) || pts[pts.length - 1].unit || "lb";
+    const prs = new Set(G.prHistory(e.records).map((r) => `${r.cycle}|${r.key}`));
+    const vals = pts.map((r) => G.round1(G.convert(r.weight, r.unit || "lb", unit)));
+    const W = 340, H = 156, L = 34, R = 12, T = 14, B = 24;
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const span = hi - lo || Math.max(hi * 0.2, 1);
+    lo = Math.max(0, lo - span * 0.2); hi += span * 0.2;
+    const x = (i) => L + (W - L - R) * (i / (pts.length - 1));
+    const y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+    const ticks = [lo, (lo + hi) / 2, hi].map((v) => Math.round(v));
+    const grid = ticks.map((v) => `<line class="pg-grid" x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>
+      <text class="pg-tick" x="${L - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`).join("");
+    // separador y etiqueta de cada ciclo, en su primera sesión
+    const cycles = pts.map((r, i) => (i === 0 || r.cycle !== pts[i - 1].cycle ? i : -1)).filter((i) => i >= 0).map((i) =>
+      `${i > 0 ? `<line class="pg-sep" x1="${(x(i) - (x(i) - x(i - 1)) / 2).toFixed(1)}" x2="${(x(i) - (x(i) - x(i - 1)) / 2).toFixed(1)}" y1="${T}" y2="${H - B}"/>` : ""}
+      <text class="pg-cyc" x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? "start" : "middle"}">Ciclo ${pts[i].cycle}</text>`).join("");
+    const line = pts.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(vals[i]).toFixed(1)}`).join(" ");
+    const cap = (r, i) => `${fmt(vals[i])} ${unit}${r.dbCount === 2 ? " c/u" : ""}${r.topReps ? ` × ${r.topReps}` : ""} · Ciclo ${r.cycle} · ${splitWeek(r.weekShort || `S${r.week + 1}`)[0]}${r.date ? ` · ${fmtDate(r.date)}` : ""}${prs.has(`${r.cycle}|${r.key}`) ? " · récord" : r.week === 3 ? " · descarga" : ""}`;
+    // al abrir, el detalle del último récord (o de la última sesión)
+    const lastPr = pts.map((r, i) => i).filter((i) => prs.has(`${pts[i].cycle}|${pts[i].key}`)).pop();
+    const first = lastPr != null ? lastPr : pts.length - 1;
+    const dots = pts.map((r, i) => {
+      const kind = prs.has(`${r.cycle}|${r.key}`) ? "is-pr" : r.week === 3 ? "is-deload" : "is-reg";
+      return `<circle class="pg-dot ${kind}${i === first ? " sel" : ""}" data-i="${i}" cx="${x(i).toFixed(1)}" cy="${y(vals[i]).toFixed(1)}" r="${kind === "is-pr" ? 5.5 : 4}"/>`;
+    }).join("");
+    const hits = pts.map((r, i) => `<circle class="pg-hit" data-action="pg-pt" data-i="${i}" data-cap="${esc(cap(r, i))}" cx="${x(i).toFixed(1)}" cy="${y(vals[i]).toFixed(1)}" r="14"/>`).join("");
+    return `<h2 class="section-title">Progresión <span class="muted">${unit}${pts.some((r) => r.dbCount === 2) ? " por mancuerna" : ""}</span></h2>
+      <div class="progress ${e.type === "upper" ? "upper" : "lower"}">
+        <svg class="pg-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Progresión de ${esc(e.name)}: peso de cada sesión">
+          ${grid}${cycles}<path class="pg-line" d="${line}"/>${dots}${hits}
+        </svg>
+        <div class="pg-legend"><span><i class="pg-k is-pr"></i>récord</span><span><i class="pg-k is-reg"></i>sesión</span><span><i class="pg-k is-deload"></i>descarga</span><span class="pg-hint">Tocá un punto</span></div>
+        <div class="pg-cap">${esc(cap(pts[first], first))}</div>
+      </div>`;
+  }
+
   function renderHistDetail(e) {
     const prs = G.prHistory(e.records).reverse();
     const sessions = [...e.records].sort((a, b) => (a.date && b.date ? (a.date < b.date ? 1 : -1) : b.cycle - a.cycle || b.week - a.week));
@@ -834,7 +877,7 @@
           <span class="sess-w num"><b>${r.setWeights ? r.setWeights.map((x) => fmt(G.parseNum(x) || 0)).join("·") : fmt(r.weight)}</b> ${r.unit}${r.dbCount === 2 ? `<small class="db-sub"> c/u · total ${fmt(r.weight * 2)}</small>` : ""}</span><span class="sess-r num">${esc(r.reps) || "—"}</span>
           <span class="ok">${r.completed ? icon("check") : ""}</span></div>
         ${r.note ? `<div class="sess-note">${icon("note")}${esc(r.note)}</div>` : ""}</li>`).join("");
-    return `<button class="back-btn hist-back-btn" data-action="hist-back">${icon("back")}Historial</button>
+    return `<button class="back-btn hist-back-btn" data-action="hist-back">${icon("back")}${S.histReturn ? "Rutina" : "Historial"}</button>
       <div class="page-head"><div class="eyebrow">${esc(e.pattern || (e.type === "upper" ? "Tren superior" : "Pierna"))}</div>
         <h1 class="page-title detail">${esc(e.name)}</h1></div>
       ${S.mergeOpen ? `<div class="merge-box">
@@ -851,7 +894,8 @@
           <span class="sub">${m.dbCount === 2 ? `por mancuerna · total ${fmt(m.weight * 2)} ${m.unit}` : convTxt(m.weight, m.unit)} · ${fmtDate(m.date, { day: "numeric", month: "long", year: "numeric" })} · ${where(m)}</span>`
           : `<span class="pr-hero-val num none">—</span><span class="sub">Todavía no hay pesos registrados.</span>`}
       </div>
-      ${prs.length > 1 ? `<h2 class="section-title">Récords</h2><ul class="pr-list">${prRows}</ul>` : ""}
+      ${renderProgress(e)}
+      ${prs.length > 1 ? `<h2 class="section-title">Récords <span class="muted">del último hacia atrás</span></h2><ul class="pr-list">${prRows}</ul>` : ""}
       <h2 class="section-title">Sesiones <span class="muted">${sessions.length}</span></h2>
       ${sessions.length ? `<ul class="sess-list">${sessRows}</ul>` : `<p class="muted small">Sin sesiones con peso.</p>`}`;
   }
@@ -1061,7 +1105,7 @@
   }
 
   const actions = {
-    tab(el) { if (S.tab === el.dataset.tab && !S.histEx) return; S.tab = el.dataset.tab; S.histEx = null; S.fx.view = true; render(); window.scrollTo(0, 0); },
+    tab(el) { if (S.tab === el.dataset.tab && !S.histEx) return; S.tab = el.dataset.tab; S.histEx = null; S.histReturn = null; S.fx.view = true; render(); window.scrollTo(0, 0); },
     week(el) {
       S.week = Number(el.dataset.week); S.open = new Set(); S.fx.view = true; S.skipOpen = false;
       store.set(KEYS.lastWeek, { ...lastWeeks(), [S.cycle]: S.week }); render();
@@ -1232,7 +1276,32 @@
       toast(w > 0 ? `Convertido: ${fmt(G.parseNum(d.weight))} ${to}` : `Este ejercicio en ${to}`);
     },
     "hist-open"(el) { S.mergeOpen = false; S.histEx = el.dataset.ex; S.fx.view = true; render(); window.scrollTo(0, 0); },
-    "hist-back"() { S.histEx = null; S.mergeOpen = false; S.fx.view = true; render(); },
+    "hist-back"() {
+      S.mergeOpen = false; S.histEx = null; S.fx.view = true;
+      const back = S.histReturn;
+      S.histReturn = null;
+      if (back) {
+        // vuelve a la rutina con la tarjeta abierta, donde estaba
+        S.tab = "rutina"; S.open.add(back.idx); render();
+        const card = document.querySelector(`[data-card="${back.k}"]`);
+        if (card && card.scrollIntoView) card.scrollIntoView({ block: "start" });
+        return;
+      }
+      render();
+    },
+    "ex-history"(el) {
+      const k = el.dataset.k, { dayObj, idx, ex, week } = exFromKey(k);
+      const key = G.normName(G.slotName(S.data, dayObj.key, idx, ex, week));
+      if (!histIndex().some((x) => x.key === key)) { toast("Todavía no hay registros de este ejercicio"); return; }
+      S.histReturn = { k, idx };
+      S.tab = "historial"; S.histEx = key; S.mergeOpen = false; S.fx.view = true;
+      render(); window.scrollTo(0, 0);
+    },
+    "pg-pt"(el) {
+      const box = el.closest(".progress");
+      box.querySelector(".pg-cap").textContent = el.dataset.cap;
+      box.querySelectorAll(".pg-dot").forEach((d) => d.classList.toggle("sel", d.dataset.i === el.dataset.i));
+    },
     "merge-open"() { S.mergeOpen = true; S.mergeQuery = ""; render(); },
     "merge-cancel"() { S.mergeOpen = false; render(); },
     "merge-into"(el) {
