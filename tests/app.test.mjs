@@ -318,15 +318,44 @@ test("polea o máquina de pila (unit kg, step 5): arranca en kg y el − / + va 
   assert.equal(card().querySelector(".weight-input").value, "15");
   // en lb vuelve al paso de 5 lb
   t.click('.card:nth-child(2) .ex-unit-btn[data-unit="lb"]');
-  const lb = G_parse(card().querySelector(".weight-input").value);
+  assert.equal(card().querySelector(".weight-input").value, "33");
   t.click(".card:nth-child(2) .step-up-btn");
-  assert.equal(G_parse(card().querySelector(".weight-input").value), lb + 5);
+  assert.equal(card().querySelector(".weight-input").value, "35", "va al siguiente peso posible de 5 en 5 lb");
   // los demás ejercicios siguen en lb
   t.openCard(0);
   assert.ok(t.$$(".card")[0].querySelector('.ex-unit-btn[data-unit="lb"]').classList.contains("active"));
   assert.deepEqual(t.errors, []);
 });
 const G_parse = (s) => Number(String(s).replace(",", "."));
+
+test("equipo editable en la tarjeta (sirve para la alternativa) y RPE real", async () => {
+  const t = await boot();
+  const change = (sel, value) => { const el = t.$(sel); el.value = value; el.dispatchEvent(new t.w.Event("change", { bubbles: true })); };
+  t.goTo(0, "A"); t.openCard(0);
+  assert.equal(t.$(".equip-select").value, "barbell", "hip thrust con barra: Barra");
+  assert.ok(t.$(".ex-plates-row"), "con barra hay discos");
+  // la alternativa con mancuerna: deduce Mancuernas y no muestra discos
+  t.click(".alt-btn"); t.click(".use-alt-btn");
+  t.openCard(0);
+  if (!t.$(".equip-select")) t.openCard(0);
+  assert.equal(t.$(".equip-select").value, "dumbbell");
+  assert.equal(t.$(".ex-plates-row"), null);
+  // la cambio a mano a Barra (y queda recordado para ese nombre)
+  change(".equip-select", "barbell");
+  assert.equal(t.$(".equip-select").value, "barbell");
+  assert.ok(t.$(".ex-plates-row"));
+  assert.equal(JSON.parse(t.w.localStorage.getItem("gluteo_equip"))["hip thrust con mancuerna en banco"], "barbell");
+  // a polea: pasa a kg
+  change(".equip-select", "cable");
+  assert.equal(t.$(".weight-box .unit").textContent, "kg");
+  // RPE real: se marca y se guarda
+  t.type(".weight-input", "20");
+  t.click('.rpe-btn[data-v="9"]');
+  assert.ok(t.$('.rpe-btn[data-v="9"]').classList.contains("active"));
+  t.click(".save-entry-btn");
+  assert.equal(t.data().A_0_w0.rpe, 9);
+  assert.deepEqual(t.errors, []);
+});
 
 test("calculadora de discos suelta (encabezado): por lado → total y total → discos", async () => {
   const t = await boot();
@@ -454,7 +483,7 @@ test("lb/kg por ejercicio: convierte, guarda la unidad y muestra la equivalencia
   assert.equal(t.$(".weight-box .unit").textContent, "kg");
   assert.match(t.toast(), /Convertido: 98 kg/);
   t.click(".step-up-btn");
-  assert.equal(t.$(".weight-input").value, "100.5", "en kg el paso es 2,5");
+  assert.equal(t.$(".weight-input").value, "100", "barra en kg: al siguiente múltiplo de 2,5");
   t.type(".weight-input", "100");
   t.click(".save-entry-btn");
   const d = t.data();

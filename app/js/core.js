@@ -4,7 +4,7 @@
   "use strict";
 
   const DAY_KEYS = ["A", "B", "C", "D", "E"];
-  const BARS = { women: { lb: 35, kg: 15 }, men: { lb: 45, kg: 20 } };
+  const BARS = { women: { lb: 35, kg: 15 }, men: { lb: 45, kg: 20 }, none: { lb: 0, kg: 0 } };
   const STEP = { lb: 5, kg: 2.5 };
 
   // ---------- Convenciones de texto en targets (CLAUDE.md §4) ----------
@@ -256,7 +256,7 @@
             setWeights: Array.isArray(rec.setWeights) ? rec.setWeights : null,
             topReps: topRepsOf(rec, repsArr), date: dayDate(r, data, d.key, w) || rec.savedAt || null, savedAt: rec.savedAt || null,
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed, weekShort: r.weekShort[w],
-            protocol: slotProtocol(rec, ex), target: ex.targets[w],
+            protocol: slotProtocol(rec, ex), target: ex.targets[w], rpe: loggedRpe(rec),
           });
         }
       }));
@@ -353,6 +353,70 @@
     return cur.hi > was.hi ? "up" : cur.hi < was.hi ? "down" : "same";
   }
 
+  // ---------- Equipo y saltos de carga (CLAUDE.md §2) ----------
+  // Cada equipo sube de a lo que permite: discos de 2,5 lb por lado (5 lb en total), poleas de 5 en 5 kg,
+  // aductor/abductor/pec deck de 4 en 4 kg, mancuernas de 5 en 5 lb hasta 40 y después de 10 en 10.
+  const DUMBBELLS_LB = [5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100];
+  const EQUIP = {
+    barbell: { label: "Barra", unit: "lb", step: 5, plates: true, bar: "women" },
+    plates: { label: "Máquina con discos", unit: "lb", step: 5, plates: true, bar: "none" },
+    dumbbell: { label: "Mancuernas", unit: "lb", ladder: DUMBBELLS_LB },
+    cable: { label: "Polea (5 kg)", unit: "kg", step: 5 },
+    machine5: { label: "Máquina (5 kg)", unit: "kg", step: 5 },
+    machine4: { label: "Máquina (4 kg)", unit: "kg", step: 4 },
+  };
+  // Equipo a partir del nombre (se puede cambiar en la tarjeta). null = no se sabe: pasos genéricos de la unidad.
+  function inferEquip(name) {
+    const n = normName(name || "");
+    if (/smith|prensa|remo t\b|arrodillad|talones/.test(n)) return "plates";
+    if (/mancuerna|goblet/.test(n)) return "dumbbell";
+    if (/polea|cuerda|cable|jalon|face pull|pallof/.test(n)) return "cable";
+    if (/\bbarra\b|piramide/.test(n)) return "barbell";
+    if (/extension de cuadriceps|curl femoral sentado/.test(n)) return "machine5";
+    if (/maquina|aduccion|abduccion|pec deck/.test(n)) return "machine4";
+    return null;
+  }
+
+  // Subida máxima por semana de la sugerencia (10%): progresar de a poco.
+  const MAX_JUMP = 0.1;
+  // Ejercicios chicos que progresan lento (hombro, brazos, aperturas): piden más reps antes de un salto grande.
+  function isSlowLift(name) {
+    const n = normName(name || "");
+    if (/femoral/.test(n)) return false;
+    return /elevacion lateral|elevacion posterior|pec deck|face pull|curl|triceps|press frances|aperturas|apertura/.test(n);
+  }
+
+  // Escala de carga: los pesos que existen de verdad. round/floor caen en un valor posible;
+  // next/prev = el siguiente/anterior (lo que hace el + / − y "subí un escalón").
+  function uniformScale(s) {
+    const e = 1e-9;
+    return {
+      step: s,
+      round: (v) => Math.max(s, Math.round(v / s) * s),
+      floor: (v) => Math.max(s, Math.floor(v / s + e) * s),
+      next: (v) => (Math.floor(v / s + e) + 1) * s,
+      prev: (v) => Math.max(0, (Math.ceil(v / s - e) - 1) * s),
+    };
+  }
+  function ladderScale(list) {
+    const gap = list[list.length - 1] - list[list.length - 2];
+    const upTo = (v) => { const a = [...list]; while (a[a.length - 1] <= v) a.push(a[a.length - 1] + gap); return a; };
+    return {
+      step: list[1] - list[0],
+      round: (v) => upTo(v).reduce((b, x) => (Math.abs(x - v) < Math.abs(b - v) - 1e-9 ? x : b)),
+      floor: (v) => upTo(v).reduce((b, x) => (x <= v + 1e-9 ? x : b), list[0]),
+      next: (v) => upTo(v).find((x) => x > v + 1e-9),
+      prev: (v) => upTo(v).reduce((b, x) => (x < v - 1e-9 ? x : b), 0),
+    };
+  }
+  // step: paso fijo de la rutina (manda); si no, el del equipo cuando se usa en su unidad; si no, el de la unidad.
+  function loadScale(equip, unit, step) {
+    if (step > 0) return uniformScale(step);
+    const e = EQUIP[equip];
+    if (e && e.unit === unit) return e.ladder ? ladderScale(e.ladder) : uniformScale(e.step);
+    return uniformScale(STEP[unit] || 5);
+  }
+
   // RPE pedido en un target ("@RPE8-9" → 8,5). Sin RPE escrito, el de la fase (§3.1): S1 7 · S2 8 · S3 9 · S4 5,5.
   const PHASE_RPE = [7, 8, 9, 5.5];
   function rpeOf(target, week) {
@@ -361,50 +425,51 @@
     const a = parseNum(m[1]), b = m[2] ? parseNum(m[2]) : a;
     return (a + b) / 2;
   }
+  // RPE que marqué al registrar (6–10), si lo marqué.
+  const loggedRpe = (rec) => { const n = rec ? parseNum(rec.rpe) : NaN; return n >= 5 && n <= 10 ? n : null; };
 
   // Fuerza estimada (1RM, fórmula de Epley) con las reps hechas + las que quedaron en reserva (10 − RPE),
   // y el peso que da esa misma fuerza con otras reps y otro RPE. Así un cambio de rango (8-10 @RPE7 → 4-6 @RPE9)
   // se traduce en el salto de peso que corresponde, no en un +5% fijo que se queda corto.
+  // Si marqué el RPE real, se usa ese (no el del plan): es lo que más afina la estimación.
   const e1rm = (w, reps, rpe) => w * (1 + (reps + (10 - rpe)) / 30);
   const fromE1rm = (e, reps, rpe) => e / (1 + (reps + (10 - rpe)) / 30);
-  const floorStep = (v, unit, s = STEP[unit] || 5) => Math.max(s, Math.floor(v / s + 1e-9) * s);
-  // Peso para el techo del rango de `target` (al RPE pedido) partiendo de una marca: peso × reps hechas al RPE de su target.
-  function projectWeight(weight, repsDone, fromTarget, fromWeek, target, week, unit, step) {
+  // Peso (sin redondear) para el techo del rango de `target` al RPE pedido, desde una marca.
+  function projectWeight(weight, repsDone, fromTarget, fromWeek, target, week, fromRpe) {
     const was = repRange(fromTarget), cur = repRange(target);
     if (!cur) return null;
     const done = repsDone.length ? repsDone.reduce((a, b) => a + b, 0) / repsDone.length : was ? was.hi : null;
-    const rf = rpeOf(fromTarget, fromWeek), rt = rpeOf(target, week);
+    const rf = fromRpe != null ? fromRpe : rpeOf(fromTarget, fromWeek), rt = rpeOf(target, week);
     if (!(done > 0) || rf == null || rt == null) return null;
-    return floorStep(fromE1rm(e1rm(weight, done, rf), cur.hi, rt), unit, step);
+    return fromE1rm(e1rm(weight, done, rf), cur.hi, rt);
   }
 
   // Qué hace falta para superar el récord (más peso, o mismo peso con más reps), dicho en simple.
-  function recordNote(value, max, cur, peak, unit, step = STEP[unit] || 5) {
+  // peak = semana pico (S3 o RPE 9): ahí se busca el récord; en S1–S2 se deja margen.
+  function recordNote(value, max, cur, peak, unit, scale) {
     if (!max || !(max.weight > 0)) return "";
     const mw = max.weight, mr = max.topReps || 0;
     const rec = `${fmtNum(mw)} ${unit}${mr ? ` × ${mr}` : ""}`;
     if (value > mw) return `Con este peso ya superás tu récord (${rec}).`;
-    if (value === mw && cur && cur.hi > mr) return `Con ${fmtNum(mw)} ${unit} × ${mr + 1} superás tu récord (${rec}).`;
-    if (peak) return `Tu récord es ${rec}: para superarlo hacé ${fmtNum(mw)} ${unit} × ${mr + 1} o subí a ${fmtNum(roundStep(mw, unit, step) > mw ? roundStep(mw, unit, step) : roundStep(mw, unit, step) + step)} ${unit}.`;
-    return `Tu récord es ${rec}: se busca en la semana pico (RPE 9); hoy toca dejar reps en reserva.`;
+    if (value === mw) return `Con ${fmtNum(mw)} ${unit} × ${mr + 1} superás tu récord (${rec}).`;
+    if (peak) return `Esta es la semana para el récord (${rec}): hacé ${fmtNum(mw)} ${unit} × ${mr + 1} o subí a ${fmtNum(scale.next(mw))} ${unit}.`;
+    return `Tu récord es ${rec}: se busca en la semana pico (S3); hoy toca dejar reps en reserva.`;
   }
 
-  const roundStepTo = (v, u, s) => roundStep(v, u, s);
-  const projectWeightTo = (...a) => projectWeight(...a);
-
   // Devuelve { value, base, pct, mode, goal, text, record } o null.
-  // step: paso propio del ejercicio (pila de 5 kg en poleas y algunas máquinas); redondea todo a esa pila.
   // mode: "up" · "reps" · "same" · "deload" · "calibrate" (sin referencia directa: usar la 1ª serie)
+  // scale: escala de carga del ejercicio (loadScale); sin ella, `step` o el paso de la unidad.
   // lastSame: la misma semana de un ciclo anterior (S3 contra S3): la sugerencia apunta a superarla.
   function recommend(args) {
-    let r = recommendBase(args);
+    const scale = args.scale || loadScale(null, args.unit, args.step);
+    let r = recommendBase({ ...args, scale });
     if (!r || r.mode === "deload" || args.fixedLoad) return r;
-    const cur = repRange(args.target), unit = args.unit, ls = args.lastSame, step = args.step || STEP[unit] || 5;
+    const cur = repRange(args.target), unit = args.unit, ls = args.lastSame;
     // Misma semana del ciclo anterior (S2 contra S2, S3 contra S3): apuntar a superarla, sin saltar más de ~10%.
     if (ls && args.week > 0 && cur && ls.weight > 0) {
-      const p = projectWeight(ls.weight, ls.repsArr || [], ls.target, args.week, args.target, args.week, unit, step);
-      const aim = p == null ? ls.weight : Math.max(p, ls.weight);
-      const cap = r.mode === "calibrate" ? aim : Math.max(r.value, floorStep(r.value * 1.1, unit, step));
+      const p = projectWeight(ls.weight, ls.repsArr || [], ls.target, args.week, args.target, args.week, loggedRpe(ls));
+      const aim = p == null ? ls.weight : Math.max(scale.floor(p), ls.weight);
+      const cap = r.mode === "calibrate" ? aim : Math.max(r.value, scale.floor(r.value * 1.1));
       const v = Math.min(aim, Math.max(cap, r.value));
       if (v > r.value) {
         const wkN = args.weekShort && args.weekShort[args.week] ? String(args.weekShort[args.week]).replace(/\s*\(.*\)\s*$/, "") : `S${args.week + 1}`;
@@ -416,22 +481,41 @@
           text: `En ${wkN} del ciclo ${ls.cycle} hiciste ${fmtNum(ls.weight)} ${unit}${lr}: para progresar, ${v === ls.weight ? `mismo peso y más reps` : `~${fmtNum(v)} ${unit}`}. (${r.text})` };
       }
     }
-    r.record = recordNote(r.value, args.max, cur, rpeOf(args.target, args.week) >= 9, args.unit, step);
+    // Saltos chicos: no más de ~10% por semana. Si el siguiente peso que existe es un salto más grande
+    // (polea de 5 a 10 kg, mancuerna de 10 a 15 lb), primero se suman reps por encima del rango.
+    if (args.prev && r.mode !== "calibrate" && r.base > 0 && r.value > r.base) {
+      const weeks = Math.max(1, args.week - args.prev.week);
+      const limit = r.base * (1 + MAX_JUMP * weeks);
+      if (r.value > limit + 1e-9) {
+        const extra = args.slow ? 5 : 3;
+        const reps = repsNums(args.prevRec);
+        const earned = cur && reps.length && reps.every((x) => x >= cur.hi + extra);
+        const within = scale.floor(limit);
+        const jump = pctDiff(r.value, r.base);
+        if (within > r.base) {
+          r = { ...r, value: within, pct: pctDiff(within, r.base),
+            text: `${r.text} · sin saltar más de ${Math.round(MAX_JUMP * weeks * 100)}%: ${fmtNum(within)} ${unit}` };
+        } else if (earned) {
+          r = { ...r, text: `${r.text} · ya hiciste ${cur.hi + extra}+ reps en todas: toca el salto (+${jump}%)` };
+        } else {
+          r = { ...r, value: r.base, pct: 0, mode: "reps", goal: goalLabel("same", "up"),
+            text: `Subir a ${fmtNum(r.value)} ${unit} es un salto grande (+${jump}%)${args.slow ? " y este ejercicio progresa lento" : ""}: `
+              + `quedate en ${fmtNum(r.base)} ${unit} y sumá reps${cur ? ` hasta ${cur.hi + extra} en todas` : ""} antes de subir.` };
+        }
+      }
+    }
+    const peak = args.week === 2 || rpeOf(args.target, args.week) >= 9;
+    r.record = recordNote(r.value, args.max, cur, peak, unit, scale);
     return r;
   }
 
-  function recommendBase({ target, prevTarget, week, prev, prevRec, lastS1, lastS1Target, max, unit, weekShort, fixedLoad, step: exStep }) {
-    const step = exStep || STEP[unit] || 5;
-    const roundStep = (v, u) => roundStepTo(v, u, step);
-    const projectWeight = (...a) => projectWeightTo(...a, step);
+  function recommendBase({ target, prevTarget, week, prev, prevRec, lastS1, lastS1Target, max, unit, weekShort, fixedLoad, scale: L }) {
     const wk = (i) => (weekShort && weekShort[i] ? String(weekShort[i]).replace(/\s*\(.*\)\s*$/, "") : `S${i + 1}`);
-    const out = (value0, base, mode, rDir, text) => {
-      // con pila de peso (polea o máquina), el valor siempre cae en un casillero de la pila
-      const value = exStep ? roundStepTo(value0, unit, step) : value0;
+    const out = (value, base, mode, rDir, text) => {
       const wDir = value > base ? "up" : value < base ? "down" : "same";
       return { value, base, pct: pctDiff(value, base), mode, goal: goalLabel(wDir, rDir), text };
     };
-    const up = (base) => Math.max(base + step, roundStep(base * 1.05, unit));
+    const up = (base) => Math.max(L.next(base), L.round(base * 1.05));
     const cur = repRange(target);
     // Peso fijo (pirámide de Bret): el peso no cambia en todo el ciclo; se progresa sumando reps.
     if (fixedLoad && prev) {
@@ -441,23 +525,32 @@
     if (prev) {
       const pw = prev.weight;
       const was = repRange(prevTarget);
-      if (isDeloadTarget(target)) return out(roundStep(pw * 0.55, unit), pw, "deload", repsDir(cur, was), `Descarga: ~55% del peso de ${wk(prev.week)}, terminando con 4+ reps en reserva`);
+      if (isDeloadTarget(target)) return out(L.round(pw * 0.55), pw, "deload", repsDir(cur, was), `Descarga: ~55% del peso de ${wk(prev.week)}, terminando con 4+ reps en reserva`);
       const done = repsNums(prevRec);
+      const felt = loggedRpe(prevRec);
+      const feltTxt = felt != null ? ` (lo marcaste RPE ${fmtNum(felt)})` : "";
       // Cambia el rango de reps (o el RPE): el peso sale de la fuerza estimada con lo que hiciste.
       // Si el rango sube en un accesorio sin RPE escrito (15-20 → 20-25) sigue "mismo peso, más reps".
       const hasRpe = (t) => /@\s*RPE/i.test(String(t || ""));
-      const proj = cur && was && (cur.hi < was.hi || (cur.hi !== was.hi && hasRpe(target) && hasRpe(prevTarget)))
-        ? projectWeight(pw, done, prevTarget, prev.week, target, week, unit) : null;
+      // Si marqué que costó más de lo pedido, también se recalcula con la fuerza estimada (y no se sube a ciegas).
+      const harder = felt != null && felt >= rpeOf(prevTarget, prev.week) + 1;
+      const raw = cur && was && (harder || cur.hi < was.hi || (cur.hi !== was.hi && hasRpe(target) && hasRpe(prevTarget)))
+        ? projectWeight(pw, done, prevTarget, prev.week, target, week, felt) : null;
+      const proj = raw != null ? L.floor(raw) : null;
       const gap = week - prev.week > 1 ? ` (estimado desde ${wk(prev.week)}: ${wk(week - 1)} todavía sin registrar)` : "";
-      const did = done.length ? `En ${wk(prev.week)} hiciste ${fmtNum(pw)} × ${done.join("·")}` : `En ${wk(prev.week)} usaste ${fmtNum(pw)} ${unit}`;
+      const did = `${done.length ? `En ${wk(prev.week)} hiciste ${fmtNum(pw)} × ${done.join("·")}` : `En ${wk(prev.week)} usaste ${fmtNum(pw)} ${unit}`}${feltTxt}`;
+      if (hasPlusWeight(target) && felt != null && felt >= rpeOf(prevTarget, prev.week) + 2)
+        return out(pw, pw, "reps", "up", `${did}: costó bastante más de lo pedido, así que todavía no subas: quedate en ${fmtNum(pw)} ${unit} hasta que se sienta más liviano`);
       if (hasPlusWeight(target)) {
-        const v = Math.max(pw + step, proj || 0);
-        return out(v, pw, "up", repsDir(cur, was), v > pw + step
+        const v = Math.max(L.next(pw), proj || 0);
+        return out(v, pw, "up", repsDir(cur, was), v > L.next(pw)
           ? `El plan pide subir. ${did}: para ${cur.lo}-${cur.hi} reps te corresponde ~${fmtNum(v)} ${unit}${gap}`
-          : `El plan pide subir: ${wk(prev.week)} + ${fmtNum(step)} ${unit}${gap}`);
+          : `El plan pide subir: de ${fmtNum(pw)} a ${fmtNum(v)} ${unit}${gap}`);
       }
       if (proj != null) {
-        const v = cur.hi < was.hi ? Math.max(proj, pw + step) : proj;
+        const v = harder ? Math.max(proj, pw) : cur.hi < was.hi ? Math.max(proj, L.next(pw)) : proj;
+        if (harder && v === pw)
+          return out(pw, pw, "reps", repsDir(cur, was), `${did}: costó más de lo pedido, quedate en ${fmtNum(pw)} ${unit} y buscá las reps del rango${gap}`);
         return out(v, pw, v > pw ? "up" : "same", repsDir(cur, was),
           `${did}: para ${cur.lo}-${cur.hi} reps @RPE${fmtNum(rpeOf(target, week))} te corresponde ~${fmtNum(v)} ${unit}${gap}`);
       }
@@ -466,9 +559,12 @@
       if (cur) {
         const reps = done;
         if (reps.length && reps.every((r) => r >= cur.hi))
-          return out(pw + step, pw, "up", "down", `Llegaste a ${cur.hi} en todas: subí ${fmtNum(step)} ${unit} y volvé a ${cur.lo} reps`);
+          return out(L.next(pw), pw, "up", "down", `Llegaste a ${cur.hi} en todas: subí a ${fmtNum(L.next(pw))} ${unit} y volvé a ${cur.lo} reps`);
+        // Marqué que me sobró mucho (2+ RPE por debajo de lo pedido): subir aunque no haya llegado al techo.
+        if (felt != null && felt <= rpeOf(target, week) - 2)
+          return out(L.next(pw), pw, "up", "same", `Lo marcaste RPE ${fmtNum(felt)}: te sobraron reps, subí a ${fmtNum(L.next(pw))} ${unit}`);
         return out(pw, pw, "reps", "up", reps.length
-          ? `Hiciste ${reps.join("·")}: buscá ${cur.hi} en todas antes de subir peso`
+          ? `Hiciste ${reps.join("·")}${feltTxt}: buscá ${cur.hi} en todas antes de subir peso`
           : `Buscá ${cur.hi} reps en todas las series antes de subir peso`);
       }
       return out(pw, pw, "same", "same", `Igual que ${wk(prev.week)}`);
@@ -479,7 +575,7 @@
       return out(up(lastS1.weight), lastS1.weight, "up", repsDir(cur, repRange(lastS1Target)), `S1 del ciclo ${lastS1.cycle} (${fmtNum(lastS1.weight)} ${unit}) + 5%`);
     }
     if (max) {
-      const r = out(roundStep(max.weight * 0.9, unit), max.weight, "calibrate", "same", "~90% de tu máximo: ajustalo con la 1ª serie según el RPE");
+      const r = out(L.round(max.weight * 0.9), max.weight, "calibrate", "same", "~90% de tu máximo: ajustalo con la 1ª serie según el RPE");
       r.goal = "Calibrá el peso";
       return r;
     }
@@ -517,6 +613,7 @@
             ...(Array.isArray(rec.setWeights) ? { setWeights: rec.setWeights } : {}),
             ...(rec.skipped ? { skipped: true, skipReason: rec.skipReason || "" } : {}),
             note: rec.note || "", completed: !!rec.completed, altUsed: !!rec.altUsed,
+            ...(loggedRpe(rec) != null ? { rpe: loggedRpe(rec) } : {}),
           });
         }
       });
@@ -536,7 +633,7 @@
         setWeights: Array.isArray(x.setWeights) ? x.setWeights : null,
         reps: repsText(x), repsArr, topReps: topRepsOf(x, repsArr), date: x.date || null, savedAt: null,
         note: x.note || "", completed: !!x.completed, altUsed: !!x.altUsed, weekShort: x.weekShort, target: x.target, archived: true,
-        protocol: x.protocol || "",
+        protocol: x.protocol || "", rpe: loggedRpe(x),
       };
     });
   }
@@ -656,6 +753,7 @@
               skipped: !!rec.skipped,
               skipReason: rec.skipReason || "",
               repsText: repsText(rec),
+              rpe: loggedRpe(rec),
               note: rec.note || "",
               completed: !!rec.completed,
               date: rec.savedAt || null,
@@ -666,8 +764,8 @@
     };
   }
 
-  function buildBackup({ routines, data, unit, theme, history }, now) {
-    return { type: "gluteo-backup", version: 1, exportedAt: (now || new Date()).toISOString(), prefs: { unit, theme }, routines, data, history: history || null };
+  function buildBackup({ routines, data, unit, theme, history, equip }, now) {
+    return { type: "gluteo-backup", version: 1, exportedAt: (now || new Date()).toISOString(), prefs: { unit, theme, equip: equip || {} }, routines, data, history: history || null };
   }
 
   function checkBackup(b) {
@@ -686,7 +784,7 @@
     DAY_KEYS, BARS, STEP,
     targetSetCount, isDeloadTarget, hasPlusWeight, validateRoutine,
     dataKey, slotKey, ovrKey, parseSlotKey, effectiveName, slotName, slotProtocol, alts, normName,
-    parseNum, roundStep, fmtNum, barWeight, calcBar, repsText, PLATES_LB, platesFor, rpeOf, projectWeight,
+    parseNum, roundStep, fmtNum, barWeight, calcBar, repsText, PLATES_LB, platesFor, rpeOf, projectWeight, loggedRpe, EQUIP, inferEquip, loadScale, isSlowLift, MAX_JUMP,
     LB_PER_KG, otherUnit, convert, toLb, round1, roundHalf, recUnit, cmpW,
     collectRecords, findMax, prHistory, lastRecord, prevWeight, repRange, repsNums, lastCycleS1, recommend, goalLabel, exerciseIndex,
     weekFromStart, autoDayKey,

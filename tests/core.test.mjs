@@ -47,9 +47,13 @@ test("recomendación: dice si toca más peso, más reps o ambos", () => {
   // (+peso) con cambio de rango: el peso sale de la fuerza estimada (215 × 10 @RPE7 → ~230 para 6-8 @RPE8)
   let r = G.recommend({ ...base, target: "4x6-8 @RPE8 (+peso)", prevTarget: "4x8-10 @RPE7", week: 1, prev: { weight: 215, week: 0 }, prevRec: {} });
   assert.equal(r.value, 230); assert.equal(r.pct, 7); assert.equal(r.goal, "Más peso, menos reps");
-  // (+peso) con el mismo rango: anterior + 5
+  // (+peso) con el mismo rango: anterior + 5… salvo que sea un salto de más de 10% (30 → 35 = +17%): primero reps
   r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 30, week: 0 }, prevRec: { reps: ["10", "10", "10"] } });
-  assert.equal(r.value, 35);
+  assert.equal(r.value, 30); assert.equal(r.mode, "reps"); assert.match(r.text, /salto grande \(\+17%\).*hasta 15 en todas/);
+  r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 30, week: 0 }, prevRec: { reps: ["15", "15", "15"] } });
+  assert.equal(r.value, 35); assert.match(r.text, /toca el salto/);
+  r = G.recommend({ ...base, target: "3x10-12 (+peso)", prevTarget: "3x10-12", week: 1, prev: { weight: 100, week: 0 }, prevRec: { reps: ["10", "10", "10"] } });
+  assert.equal(r.value, 105);
   // descarga: 55% de la semana previa
   r = G.recommend({ ...base, target: "2x10 @RPE6", prevTarget: "3x4-6 @RPE9", week: 3, prev: { weight: 235, week: 2 }, prevRec: {} });
   assert.equal(r.value, 130); assert.equal(r.mode, "deload"); assert.equal(r.pct, -45); assert.equal(r.goal, "Menos peso");
@@ -104,9 +108,10 @@ test("recomendación: S3 contra S3 del ciclo anterior y qué falta para el réco
   // con lo de este ciclo daría 235; el S3 anterior fue 260 × 4: sube hasta ~10% (255)
   let r = G.recommend({ unit: "lb", weekShort: ws, target: "3x4-6 @RPE9", prevTarget: "4x6-8 @RPE8", week: 2,
     prev: { weight: 220, week: 1 }, prevRec: { reps: ["8", "8", "8", "8"] }, lastSame, max });
-  assert.equal(r.value, 255);
+  // apunta al S3 anterior pero sin saltar más de 10% sobre S2 (220 → 240)
+  assert.equal(r.value, 240);
   assert.match(r.text, /En S3 del ciclo 2 hiciste 260 lb × 4·4·4·4/);
-  assert.equal(r.record, "Tu récord es 260 lb × 4: para superarlo hacé 260 lb × 5 o subí a 265 lb.");
+  assert.equal(r.record, "Esta es la semana para el récord (260 lb × 4): hacé 260 lb × 5 o subí a 265 lb.");
   // si este ciclo viene más fuerte, manda este ciclo
   r = G.recommend({ unit: "lb", weekShort: ws, target: "3x4-6 @RPE9", prevTarget: "4x6-8 @RPE8", week: 2,
     prev: { weight: 260, week: 1 }, prevRec: { reps: ["7", "7", "7", "7"] }, lastSame, max });
@@ -124,12 +129,15 @@ test("recomendación: S3 contra S3 del ciclo anterior y qué falta para el réco
 test("poleas y máquinas de pila (unit kg, step 5): todo cae en 5, 10, 15…", () => {
   const ws = ["S1", "S2", "S3", "S4"];
   const base = { unit: "kg", step: 5, weekShort: ws, max: null, lastS1: null };
-  // llegó al techo: sube un casillero (5 kg, no 2,5)
+  // llegó al techo, pero 20 → 25 kg es +25%: primero 18 reps en todas
   let r = G.recommend({ ...base, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 20, week: 0 }, prevRec: { reps: ["15", "15", "15"] } });
+  assert.equal(r.value, 20); assert.match(r.text, /hasta 18 en todas/);
+  // con 18+ en todas, sube un casillero (5 kg, no 2,5)
+  r = G.recommend({ ...base, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 20, week: 0 }, prevRec: { reps: ["18", "18", "18"] } });
   assert.equal(r.value, 25);
   // (+peso) desde un peso fuera de la pila: queda en la pila
-  r = G.recommend({ ...base, target: "3x12-15 (+peso)", prevTarget: "3x12-15", week: 1, prev: { weight: 22, week: 0 }, prevRec: { reps: ["12"] } });
-  assert.equal(r.value % 5, 0); assert.ok(r.value > 22);
+  r = G.recommend({ ...base, target: "3x12-15 (+peso)", prevTarget: "3x12-15", week: 1, prev: { weight: 22, week: 0 }, prevRec: { reps: ["18"] } });
+  assert.equal(r.value, 25);
   // descarga: 55% de 25 = 13,75 → 15
   r = G.recommend({ ...base, target: "2x12 (liviano)", prevTarget: "3x15", week: 3, prev: { weight: 25, week: 2 }, prevRec: {} });
   assert.equal(r.value, 15);
@@ -137,12 +145,104 @@ test("poleas y máquinas de pila (unit kg, step 5): todo cae en 5, 10, 15…", (
   r = G.recommend({ ...base, target: "3x10 c/lado @RPE9", prevTarget: "3x10-12 c/lado", week: 2, prev: { weight: 20, week: 1 }, prevRec: { reps: ["10", "10", "10"] }, max: { weight: 25, topReps: 10 } });
   assert.match(r.record, /subí a 30 kg/);
   // sin step, kg sigue de a 2,5
-  r = G.recommend({ ...base, step: undefined, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 20, week: 0 }, prevRec: { reps: ["15", "15", "15"] } });
+  r = G.recommend({ ...base, step: undefined, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 20, week: 0 }, prevRec: { reps: ["18", "18", "18"] } });
   assert.equal(r.value, 22.5);
   // validación de los campos nuevos
   const bad = fixture();
   bad.days[0].exercises[0].step = 5;
   assert.match(G.validateRoutine(bad).join("\n"), /step necesita unit/);
+});
+
+test("S3 sin @RPE9 escrito igual es la semana del récord (no 'dejá reps en reserva')", () => {
+  const r = G.recommend({ unit: "lb", weekShort: ["S1", "S2", "S3", "S4"], target: "3x15 @RPE8", prevTarget: "3x12-15 (+peso)", week: 2,
+    prev: { weight: 40, week: 1 }, prevRec: { reps: ["12", "12", "12"] }, max: { weight: 45, topReps: 12 } });
+  assert.doesNotMatch(r.record, /reps en reserva/);
+  assert.match(r.record, /semana para el récord \(45 lb × 12\)/);
+});
+
+test("RPE real marcado: afina la estimación y sube si sobró", () => {
+  const base = { unit: "lb", weekShort: ["S1", "S2", "S3", "S4"], max: null };
+  // 215 × 10 marcado RPE 9 (no el 7 del plan): para 6-8 @RPE8 corresponde menos que con RPE 7
+  const plan = G.recommend({ ...base, target: "4x6-8 @RPE8", prevTarget: "4x8-10 @RPE7", week: 1, prev: { weight: 215, week: 0 }, prevRec: { reps: ["10"] } });
+  const felt = G.recommend({ ...base, target: "4x6-8 @RPE8", prevTarget: "4x8-10 @RPE7", week: 1, prev: { weight: 215, week: 0 }, prevRec: { reps: ["10"], rpe: 9 } });
+  assert.equal(plan.value, 230); assert.equal(felt.value, 220);
+  assert.match(felt.text, /lo marcaste RPE 9/);
+  // accesorio sin llegar al techo pero marcado RPE 6 cuando se pedía 8: subí
+  const r = G.recommend({ ...base, target: "3x12-15", prevTarget: "3x12-15", week: 1, prev: { weight: 50, week: 0 }, prevRec: { reps: ["13", "13", "13"], rpe: 6 } });
+  assert.equal(r.value, 55); assert.match(r.text, /te sobraron reps/);
+});
+
+test("equipo: lo deduce del nombre y cada uno sube de a lo que se puede", () => {
+  const eq = (n) => G.inferEquip(n);
+  assert.equal(eq("Peso muerto rumano con barra"), "barbell");
+  assert.equal(eq("Hip thrust con mancuerna en banco"), "dumbbell");
+  assert.equal(eq("Abducción de pie en polea"), "cable");
+  assert.equal(eq("Jalón al pecho"), "cable");
+  assert.equal(eq("Aducción en máquina"), "machine4");
+  assert.equal(eq("Elevación posterior en máquina (reverse pec deck)"), "machine4");
+  assert.equal(eq("Extensión de cuádriceps"), "machine5");
+  assert.equal(eq("Remo T en máquina"), "plates");
+  assert.equal(eq("Curl femoral arrodillado a una pierna (máquina)"), "plates");
+  assert.equal(eq("Elevación de talones de pie"), "plates");
+  assert.equal(eq("Hiperextensión (45°)"), null);
+  // mancuernas: de 5 en 5 hasta 40, después de 10 en 10
+  const db = G.loadScale("dumbbell", "lb");
+  assert.equal(db.next(35), 40); assert.equal(db.next(40), 50); assert.equal(db.next(50), 60);
+  assert.equal(db.prev(50), 40); assert.equal(db.round(44), 40); assert.equal(db.round(47), 50); assert.equal(db.floor(57), 50);
+  // aductor: de 4 en 4 kg · polea: de 5 en 5 kg · barra: 5 lb (2,5 por lado)
+  const m4 = G.loadScale("machine4", "kg");
+  assert.equal(m4.next(20), 24); assert.equal(m4.round(26), 28); assert.equal(m4.prev(22), 20);
+  assert.equal(G.loadScale("cable", "kg").next(12), 15);
+  assert.equal(G.loadScale("barbell", "lb").next(185), 190);
+  // en otra unidad que la del equipo: pasos genéricos
+  assert.equal(G.loadScale("machine4", "lb").next(20), 25);
+  // la sugerencia cae en un valor posible: aductor 20 kg con reps de sobra → 24 (no 22,5)
+  let r = G.recommend({ unit: "kg", scale: m4, weekShort: ["S1", "S2", "S3", "S4"], target: "3x15-20", prevTarget: "3x15-20", week: 1,
+    prev: { weight: 20, week: 0 }, prevRec: { reps: ["23", "23", "23"] } });
+  assert.equal(r.value, 24);
+  // mancuernas de 40: el salto a 50 (+25%) pide 13 reps en todas primero
+  r = G.recommend({ unit: "lb", scale: db, weekShort: ["S1", "S2", "S3", "S4"], target: "3x8-10", prevTarget: "3x8-10", week: 1,
+    prev: { weight: 40, week: 0 }, prevRec: { reps: ["10", "10", "10"] } });
+  assert.equal(r.value, 40);
+  r = G.recommend({ unit: "lb", scale: db, weekShort: ["S1", "S2", "S3", "S4"], target: "3x8-10", prevTarget: "3x8-10", week: 1,
+    prev: { weight: 40, week: 0 }, prevRec: { reps: ["13", "13", "13"] } });
+  assert.equal(r.value, 50);
+});
+
+test("RPE real más alto que el pedido: no sube aunque haya llegado al techo", () => {
+  const ws = ["S1", "S2", "S3", "S4"];
+  // Smith 90 × 8 en 4x8 @RPE7, pero lo sentí RPE 9 → S2 (6-8 @RPE8) se queda en 90
+  let r = G.recommend({ unit: "lb", weekShort: ws, target: "4x6-8 @RPE8", prevTarget: "4x8 @RPE7", week: 1,
+    prev: { weight: 90, week: 0 }, prevRec: { reps: ["8", "8", "8", "8"], rpe: 9 } });
+  assert.equal(r.value, 90); assert.match(r.text, /costó más de lo pedido/);
+  // sin RPE marcado, sube
+  r = G.recommend({ unit: "lb", weekShort: ws, target: "4x6-8 @RPE8", prevTarget: "4x8 @RPE7", week: 1,
+    prev: { weight: 90, week: 0 }, prevRec: { reps: ["8", "8", "8", "8"] } });
+  assert.equal(r.value, 95);
+  // (+peso) pero costó 2+ RPE más: todavía no
+  r = G.recommend({ unit: "lb", weekShort: ws, target: "3x8-10 @RPE8 (+peso)", prevTarget: "3x8-10 @RPE7", week: 1,
+    prev: { weight: 95, week: 0 }, prevRec: { reps: ["10", "10", "9"], rpe: 9 } });
+  assert.equal(r.value, 95); assert.match(r.text, /todavía no subas/);
+  // mismo peso que el récord: una rep más ya es récord (no "dejá reps en reserva")
+  r = G.recommend({ unit: "kg", scale: G.loadScale("cable", "kg"), slow: true, weekShort: ws, target: "3x15", prevTarget: "3x15", week: 1,
+    prev: { weight: 5, week: 0 }, prevRec: { reps: ["15", "15", "15"] }, max: { weight: 5, topReps: 15 } });
+  assert.equal(r.record, "Con 5 kg × 16 superás tu récord (5 kg × 15).");
+});
+
+test("ejercicios que progresan lento (elevación lateral en polea): reps antes del salto", () => {
+  assert.ok(G.isSlowLift("Elevación lateral en polea"));
+  assert.ok(G.isSlowLift("Extensión de tríceps en polea"));
+  assert.ok(!G.isSlowLift("Curl femoral sentado"));
+  assert.ok(!G.isSlowLift("Hip thrust con barra libre"));
+  const cable = G.loadScale("cable", "kg");
+  const args = { unit: "kg", scale: cable, slow: true, weekShort: ["S1", "S2", "S3", "S4"], target: "3x15", prevTarget: "3x15 c/lado", week: 1, prev: { weight: 5, week: 0 } };
+  // 5 → 10 kg es +100%: con 15 reps no alcanza; pide 20 en todas
+  let r = G.recommend({ ...args, prevRec: { reps: ["15", "15", "15"] } });
+  assert.equal(r.value, 5); assert.equal(r.goal, "Mismo peso, más reps");
+  assert.match(r.text, /salto grande \(\+100%\) y este ejercicio progresa lento: quedate en 5 kg y sumá reps hasta 20 en todas/);
+  // con 20 en todas, recién ahí sugiere 10 kg
+  r = G.recommend({ ...args, prevRec: { reps: ["20", "20", "20"] } });
+  assert.equal(r.value, 10);
 });
 
 test("récords: se guarda cada vez que se supera el máximo", () => {

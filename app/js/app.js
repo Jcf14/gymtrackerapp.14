@@ -14,6 +14,7 @@
     lastWeek: "gluteo_last_week",
     lastBackup: "gluteo_last_backup",
     history: "gluteo_historial",   // sesiones de ciclos cerrados (ver G.closeCycle)
+    equip: "gluteo_equip",         // { "<nombre normalizado>": "barbell" | "dumbbell" | … | "other" } elegido en la tarjeta
   };
   const ROUTINE_URL = "rutinas/ciclo-actual.json";
   const BACKUP_EVERY_DAYS = 7;
@@ -39,6 +40,7 @@
     data: {},           // registros del ciclo activo
     unit: "lb",
     theme: "light",
+    equip: {},          // equipo elegido por ejercicio (KEYS.equip)
     tab: "rutina",
     week: 0,
     day: null,
@@ -176,6 +178,8 @@
     { id: "fases", term: "Semanas del ciclo", text: "S1 adaptación (RPE 7) · S2 intensificación (RPE 8) · S3 pico (RPE 9, menos reps y más peso en los básicos) · S4 descarga." },
     { id: "descarga", term: "Descarga (deload)", text: "Semana liviana para recuperarte y llegar fresca al ciclo siguiente: mismos ejercicios, 2 series (3 si querés), ~50–60% del peso de S3 y RPE 5–6. Sin pulsos ni serie de rematado." },
     { id: "peso", term: "(+peso)", text: "El plan pide subir el peso respecto de la semana anterior, normalmente 5 lb." },
+    { id: "saltos", term: "Saltos de peso", text: "La sugerencia no sube más de ~10% por semana. Si el siguiente peso que existe es un salto más grande (polea de 5 a 10 kg, mancuerna de 10 a 15 lb), primero sumá reps por encima del rango: 3 más en todas las series (5 en hombros, brazos y aperturas, que progresan lento) y recién ahí subí." },
+    { id: "rpe-real", term: "RPE real (¿cómo se sintió?)", text: "Opcional, al registrar: cuánto te costó de verdad (6 = te sobraban 4 reps, 10 = no salía ni una más). Si lo marcás, la sugerencia de la semana siguiente usa eso en lugar del RPE del plan: si costó más de lo pedido no te hace subir, y si te sobró mucho te sube antes." },
     { id: "sugerido", term: "Peso sugerido y %", text: "Lo calcula la app con tu última semana registrada de ese ejercicio. Te dice qué se espera (más peso, más reps, ambos o igual) y el % de cambio contra esa vez. Si en accesorios no llegaste al techo del rango en todas las series, toca más reps con el mismo peso. Manda siempre la primera serie: si se siente más pesada de lo pedido, bajá." },
     { id: "maximo", term: "Máximo (récord)", text: "Tu mejor marca del ejercicio: el peso más alto y, a igual peso, más reps. Cuando lo superás, el anterior queda guardado en el historial de récords." },
     { id: "pulsos", term: "Pulsos", text: "Movimientos cortos arriba, al final de la serie (después de la última rep, sin bajar del todo), no en cada rep. 10 en S1–S2, 15 en S3, ninguno en la descarga." },
@@ -215,14 +219,35 @@
 
   const unitKey = (day, idx) => `unit_${day}_${idx}`;
   const exDef = (day, idx) => { const d = routine() && routine().days.find((x) => x.key === day); return d ? d.exercises[idx] : null; };
-  // La elegida en la tarjeta; si no, la del ejercicio en la rutina (poleas en kg); si no, la preferida.
-  const exUnit = (day, idx) => S.data[unitKey(day, idx)] || (exDef(day, idx) || {}).unit || S.unit;
-  // Paso del − / + y de las sugerencias: el de la pila del ejercicio (5 kg) si está en su unidad; si no, el de la unidad.
-  const exStep = (ex, u) => (ex && ex.step && u === ex.unit ? ex.step : G.STEP[u] || 5);
-  // Unidad con la que se muestra una tarjeta: la del borrador, la del registro guardado o la preferida.
+  // Nombre que se hace en un casillero (el original, el renombrado o la alternativa de esa semana).
+  const slotNameOf = (day, idx, w) => { const ex = exDef(day, idx); return ex ? G.slotName(S.data, day, idx, ex, w) : ""; };
+  const isOriginal = (ex, name) => !!ex && G.normName(name) === G.normName(ex.name);
+
+  // ---------- Equipo por ejercicio (barra, discos, mancuernas, polea, máquina) ----------
+  // Lo elegido en la tarjeta (por nombre, vale para todos los ciclos) › "equip" de la rutina › deducido del nombre.
+  function equipOf(ex, name) {
+    const own = S.equip[G.normName(name)];
+    if (own === "other") return null;
+    if (own && G.EQUIP[own]) return own;
+    if (isOriginal(ex, name) && ex.equip && G.EQUIP[ex.equip]) return ex.equip;
+    return G.inferEquip(name);
+  }
+  // Escala de carga de una tarjeta: el paso fijo de la rutina (ejercicio original, en su unidad) o el del equipo.
+  const scaleOf = (ex, name, u) => G.loadScale(equipOf(ex, name), u, isOriginal(ex, name) && ex.step && u === ex.unit ? ex.step : undefined);
+
+  // Unidad por defecto: la elegida en la tarjeta › la de la rutina (ejercicio original) › la del equipo › la preferida.
+  function exUnit(day, idx, w) {
+    if (S.data[unitKey(day, idx)]) return S.data[unitKey(day, idx)];
+    const ex = exDef(day, idx), name = slotNameOf(day, idx, w || 0);
+    if (ex && ex.unit && isOriginal(ex, name)) return ex.unit;
+    const e = G.EQUIP[equipOf(ex, name)];
+    return (e && e.unit) || S.unit;
+  }
+  // Unidad con la que se muestra una tarjeta: la del borrador, la del registro guardado o la por defecto.
   function cardUnit(day, idx, k, rec) {
     if (S.drafts[k]) return S.drafts[k].unit;
-    return rec && G.parseNum(rec.weight) > 0 ? G.recUnit(rec, routine()) : exUnit(day, idx);
+    const p = G.parseSlotKey(k);
+    return rec && G.parseNum(rec.weight) > 0 ? G.recUnit(rec, routine()) : exUnit(day, idx, p ? p.week : 0);
   }
   // Un registro (o marca) expresado en otra unidad, redondeado a 0,5.
   const inUnit = (r, u) => (r ? { ...r, weight: G.roundHalf(G.convert(r.weight, r.unit || "lb", u)), unit: u } : r);
@@ -231,15 +256,15 @@
   // bar: "women" | "men" | "custom" (custom = peso escrito; 0 en máquinas que se cargan con discos sin barra)
   function plateTxt(total, u, bar, custom) {
     const t = G.parseNum(total);
-    const b = bar === "men" ? G.BARS.men.lb : bar === "custom" ? G.parseNum(custom) : G.BARS.women.lb;
+    const b = bar === "men" ? G.BARS.men.lb : bar === "none" ? 0 : bar === "custom" ? G.parseNum(custom) : G.BARS.women.lb;
     if (!(b >= 0)) return "";
     if (u !== "lb" || !(t > b)) return "";
     const pf = G.platesFor(t, b);
     if (!pf) return "";
     return `Por lado ${fmt(pf.side)} → ${pf.plates.length ? pf.plates.map(fmt).join(" + ") : "sin discos"}${pf.rest > 0 ? ` · faltan ${fmt(pf.rest)} (no se arma con estos discos)` : ""}`;
   }
-  // Ejercicios con barra libre (no Smith): muestran los discos por lado debajo del peso.
-  const usesBar = (n) => /\bbarra\b/i.test(n || "") && !/smith/i.test(n || "");
+  // Con barra o máquina con discos, debajo del peso van los discos por lado.
+  const usesPlates = (ex, name) => { const e = G.EQUIP[equipOf(ex, name)]; return !!(e && e.plates); };
   const exPlatesTxt = (d) => plateTxt(d.weight, d.unit, d.calcBar);
   function refreshExPlates(k) {
     const el = document.querySelector(`[data-plates="${k}-w"]`), d = S.drafts[k];
@@ -284,7 +309,7 @@
         target: ex.targets[w], prevTarget: prev ? ex.targets[prev.week] : null, week: w, prev, fixedLoad: !!ex.fixedLoad,
         prevRec: prev ? S.data[G.slotKey(day.key, idx, prev.week)] : null,
         lastS1, lastS1Target, lastSame, max: inUnit(G.findMax(others), u), unit: u, weekShort: r.weekShort,
-        step: ex.step && u === ex.unit ? ex.step : undefined,
+        scale: scaleOf(ex, name, u), slow: G.isSlowLift(name),
       }),
     };
   }
@@ -420,6 +445,7 @@
     if (!S.drafts[k]) {
       const p = G.parseSlotKey(k);
       const unit = cardUnit(p.day, p.idx, k, rec);
+      const eq = G.EQUIP[equipOf(exDef(p.day, p.idx), slotNameOf(p.day, p.idx, p.week))];
       rec = rec || {};
       S.drafts[k] = {
         unit,
@@ -432,9 +458,10 @@
         repsSameValue: rec.repsSameValue || "",
         setWeights: Array.from({ length: sets }, (_, i) => (rec.setWeights && rec.setWeights[i]) || ""),
         calcOpen: false,
-        calcBar: "women",
+        calcBar: (eq && eq.bar) || "women",
         calcCustom: "",
         calcMode: "perSide",
+        rpe: rec.rpe != null ? String(rec.rpe) : "",
         calcValue: rec.weightMode === "perSide" && rec.perSideDisplay != null ? String(rec.perSideDisplay) : "",
         altOpen: false,
         editOpen: false,
@@ -553,6 +580,7 @@
             <button class="chip-btn" data-action="toggle-skip-ex" data-k="${k}">Cancelar</button></div></div>` : ""}
       ${ex.perSetWeight ? renderSetRows(ex, k, d, sets, u, unitSeg) : `<div class="reg">
         <div class="reg-title">Registro de hoy</div>
+        ${ex.noWeight ? "" : renderEquipRow(ex, name, k)}
         <div class="reg-row weight-row">
           <span class="reg-label">Peso${ex.noWeight ? "<small>opcional</small>" : ""}</span>
           <div class="reg-ctrl">
@@ -569,7 +597,7 @@
           </div>
         </div>
         <div class="reg-sub">${hints}</div>
-        ${!ex.noWeight && u === "lb" && usesBar(name) ? `<div class="reg-row sets-ctrls ex-plates-row"><span class="ctrl-lbl">Barra</span><div class="seg mini bar-toggle" role="group" aria-label="Barra">${[["women", "35 lb"], ["men", "45 lb"]].map(([v, l]) =>
+        ${!ex.noWeight && u === "lb" && usesPlates(ex, name) ? `<div class="reg-row sets-ctrls ex-plates-row"><span class="ctrl-lbl">Barra</span><div class="seg mini bar-toggle" role="group" aria-label="Barra">${(equipOf(ex, name) === "plates" ? [["none", "Sin barra"], ["women", "35"], ["men", "45"]] : [["women", "35 lb"], ["men", "45 lb"]]).map(([v, l]) =>
           `<button class="seg-btn calc-bar-btn${d.calcBar === v ? " active" : ""}" data-action="calc-bar" data-bar="${v}" data-k="${k}">${l}</button>`).join("")}</div></div>
         <div class="plate-hint ex-plate-hint" data-plates="${k}-w">${esc(exPlatesTxt(d))}</div>` : ""}
         ${d.calcOpen && !ex.noWeight ? renderCalc(k, d) : ""}
@@ -578,6 +606,7 @@
             <label class="switch mini">Iguales<input type="checkbox" class="reps-same-check" data-field="repsSame" data-k="${k}"${d.repsSame ? " checked" : ""}></label></span>
           <div class="reg-ctrl reps-ctrl">${repsInputs}</div>
         </div>
+        ${ex.noWeight ? "" : renderRpeRow(k, d)}
         <div class="reg-row note-row">
           <textarea class="text-input note-input" rows="1" data-field="note" data-k="${k}" placeholder="Nota (opcional)" aria-label="Nota: cómo se sintió, molestias, ajustes">${esc(d.note)}</textarea>
         </div>
@@ -587,6 +616,22 @@
         <button class="primary-btn save-done-btn" data-action="save-entry" data-complete="1" data-k="${k}">${icon("check")}${rec && rec.completed ? "Guardar" : "Guardar y marcar listo"}</button>
       </div>
     </div>`;
+  }
+
+  // Equipo con el que se hace (cambia saltos, unidad y discos); útil sobre todo al usar una alternativa.
+  function renderEquipRow(ex, name, k) {
+    const cur = equipOf(ex, name) || "other";
+    const opts = [...Object.entries(G.EQUIP).map(([v, e]) => [v, e.label]), ["other", "Otro"]];
+    return `<div class="reg-row equip-row"><span class="ctrl-lbl">Equipo</span>
+      <select class="equip-select" data-change="equip" data-k="${k}" aria-label="Equipo de este ejercicio">${opts.map(([v, l]) =>
+        `<option value="${v}"${v === cur ? " selected" : ""}>${l}</option>`).join("")}</select></div>`;
+  }
+  // RPE real (opcional): cuánto costó de verdad. Afina la sugerencia de la semana siguiente.
+  const RPES = ["6", "7", "8", "9", "10"];
+  function renderRpeRow(k, d) {
+    return `<div class="reg-row rpe-row"><span class="reg-label">¿Cómo se sintió?<small>RPE · opcional</small></span>
+      <div class="seg mini rpe-seg" role="group" aria-label="RPE real">${RPES.map((v) =>
+        `<button class="seg-btn rpe-btn${d.rpe === v ? " active" : ""}" data-action="set-rpe" data-v="${v}" data-k="${k}">${v}</button>`).join("")}</div></div>`;
   }
 
   // Peso por serie (pirámide): una fila por serie con su etiqueta, peso y reps.
@@ -912,6 +957,7 @@
     }
     store.set(KEYS.routines, S.routines);
     if (b.prefs && b.prefs.unit) { S.unit = b.prefs.unit; store.set(KEYS.unit, S.unit); }
+    if (b.prefs && b.prefs.equip && typeof b.prefs.equip === "object") { S.equip = b.prefs.equip; store.set(KEYS.equip, S.equip); }
     if (b.history && Array.isArray(b.history.sessions)) { S.hist = b.history; store.set(KEYS.history, S.hist); }
     if (cycleList().length) loadCycle(S.routines[S.cycle] ? S.cycle : cycleList()[0]);
     render();
@@ -950,6 +996,7 @@
       reps: d.repsSame ? Array(sets).fill(same) : d.reps.slice(0, sets).map((x) => String(x).trim()),
       repsSame: d.repsSame,
       repsSameValue: d.repsSame ? same : "",
+      ...(d.rpe ? { rpe: Number(d.rpe) } : {}),
       altUsed: !!prev.altUsed,
       ...(prev.altUsed ? { altIdx: prev.altIdx || 0 } : {}),
       unit: d.unit,
@@ -1111,19 +1158,21 @@
       if (isPR) toast(`🏆 ¡Nuevo récord! ${fmt(now.weight)} ${now.unit}${now.topReps ? ` × ${now.topReps}` : ""}`, "pr");
       else toast(complete ? "Guardado y listo ✓" : "Guardado ✓");
     },
+    "set-rpe"(el) {
+      const d = S.drafts[el.dataset.k];
+      d.rpe = d.rpe === el.dataset.v ? "" : el.dataset.v;
+      el.closest(".rpe-seg").querySelectorAll(".rpe-btn").forEach((b) => b.classList.toggle("active", b.dataset.v === d.rpe));
+    },
     "step-weight"(el) {
       const k = el.dataset.k, d = S.drafts[k];
       const p = G.parseSlotKey(k), ex = p && exDef(p.day, p.idx);
-      const step = exStep(ex, d.unit), dir = Number(el.dataset.dir), stack = !!(ex && ex.step && d.unit === ex.unit);
+      // la escala del equipo: polea 5 kg, aductor 4 kg, mancuernas 5 lb hasta 40 y después 10…
+      const scale = scaleOf(ex, slotNameOf(p.day, p.idx, p.week), d.unit), dir = Number(el.dataset.dir);
       let cur = G.parseNum(d.weight);
       if (!(cur >= 0)) {
         const sug = el.closest(".card-body").querySelector(".use-sug-btn");
-        cur = sug ? Number(sug.dataset.value) : 0;
-        if (!sug) cur += dir * step;
-      } else if (stack && Math.abs(cur / step - Math.round(cur / step)) > 1e-9) {
-        // fuera de la pila (por ej. 12 kg): va al casillero más cercano en esa dirección (15 o 10)
-        cur = (dir > 0 ? Math.ceil(cur / step) : Math.floor(cur / step)) * step;
-      } else cur += dir * step;
+        cur = sug ? Number(sug.dataset.value) : dir > 0 ? scale.next(0) : 0;
+      } else cur = dir > 0 ? scale.next(cur) : scale.prev(cur);
       d.weight = String(Math.max(0, cur)); d.weightMode = "total"; d.perSideDisplay = null;
       const box = el.closest(".reg");
       box.querySelector(".weight-input").value = d.weight;
@@ -1260,7 +1309,7 @@
     async backup() {
       const data = {};
       for (const c of Object.keys(S.routines)) data[c] = dataOf(c);
-      const b = G.buildBackup({ routines: S.routines, data, unit: S.unit, theme: S.theme, history: S.hist });
+      const b = G.buildBackup({ routines: S.routines, data, unit: S.unit, theme: S.theme, history: S.hist, equip: S.equip });
       const ok = await deliverFile(`gluteo-respaldo-${today()}.json`, b);
       if (ok) { store.set(KEYS.lastBackup, b.exportedAt); render(); toast("Respaldo listo ✓"); }
     },
@@ -1328,6 +1377,25 @@
       d.repsSame = el.checked;
       if (d.repsSame && !d.repsSameValue) d.repsSameValue = d.reps.find((x) => String(x).trim() !== "") || "";
       render();
+      return;
+    }
+    if (el.dataset.change === "equip") {
+      const k = el.dataset.k, d = S.drafts[k], p = G.parseSlotKey(k);
+      const ex = exDef(p.day, p.idx), name = slotNameOf(p.day, p.idx, p.week);
+      const auto = (isOriginal(ex, name) && ex.equip) || G.inferEquip(name) || "other";
+      if (el.value === auto) delete S.equip[G.normName(name)]; else S.equip[G.normName(name)] = el.value;
+      store.set(KEYS.equip, S.equip);
+      // pasa a la unidad del equipo (polea y máquina en kg; barra, discos y mancuernas en lb) y a su barra
+      const e = G.EQUIP[equipOf(ex, name)];
+      if (d && e && e.unit !== d.unit) {
+        const w = G.parseNum(d.weight);
+        if (w > 0) d.weight = String(Math.round(G.convert(w, d.unit, e.unit)));
+        d.weightMode = "total"; d.perSideDisplay = null; d.calcValue = "";
+        d.unit = e.unit;
+      }
+      if (d) d.calcBar = (e && e.bar) || "women";
+      render();
+      toast(`${name}: ${e ? e.label : "otro equipo"}`);
       return;
     }
     if (el.dataset.change === "day-date") {
@@ -1419,6 +1487,7 @@
 
   async function boot() {
     S.theme = store.get(KEYS.theme, "light");
+    S.equip = store.get(KEYS.equip, {}) || {};
     applyTheme();
     S.routines = store.get(KEYS.routines, {});
     S.hist = store.get(KEYS.history, null);
