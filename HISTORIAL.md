@@ -1,11 +1,11 @@
 # HISTORIAL.md — Ciclos de entrenamiento
 
-> Orden: del más viejo al más reciente. Estado a 25/10/2026. Las fechas de los ciclos 1 y 2 salen de los exports de la app (inicio cargado por mí).
+> Orden: del más viejo al más reciente. Estado a 22/11/2026. Las fechas de los ciclos salen de los exports de la app (inicio cargado por mí).
 > Donde no hay dato dice "no registrado": no inventar. Leer completo antes de generar un ciclo nuevo.
 
 ## Convenciones
 
-- **Numeración:** Ciclo 0 = contexto previo (retos). Ciclo 1 = "Rutina Puente". Ciclo 2 = "Programa Glúteo — Bloque 1". Ciclo 3 = "Programa Glúteo — Ciclo 3".
+- **Numeración:** Ciclo 0 = contexto previo (retos). Ciclo 1 = "Rutina Puente". Ciclo 2 = "Programa Glúteo — Bloque 1". Ciclo 3 = "Programa Glúteo — Ciclo 3". Ciclo 4 = "Programa Glúteo — Ciclo 4".
 - **Unidades:** lb salvo que diga kg (en máquinas a veces registro en kg). "X lb/lado" = discos por lado, sin contar la barra. Barra de mujer = 35 lb. Total = 2 × lado + 35.
 - **Picos:** el registro con más peso (comparado en lb) y, a igual peso, más reps. "4×10" = 4 series de 10; "10·10·9" = reps por serie.
 - **RPE:** 6 = 4+ reps en reserva · 7 = 3 · 8 = 2 · 9 = 1 · 10 = fallo.
@@ -64,53 +64,79 @@
 
 ---
 
-## Ciclo 3 — Programa Glúteo, Ciclo 3 (desde el 26/10/2026)
+## Ciclo 3 — Programa Glúteo, Ciclo 3 (26/10 – 21/11/2026)
 
-- **Estado:** en curso.
+- **Estado:** completado y cerrado en la app (22/11/2026).
 - **Enfoque:** regla de tercios de Bret con rotación de variantes. Primera vez con el **BC Pyramid Protocol** de Bret en el hip thrust (Bret lo recomienda 2–3 veces al año).
-- **Estructura:** A lun · B mar · C mié · D jue · E sáb. Sesiones de 60–75 min. S1–S3 progresión + S4 descarga (la pirámide sigue también en S4).
-- **Ejercicios principales:**
-  - **A:** hip thrust pirámide (series de ~15, ~10, ~5 y ~20 con banda; pesos fijos las 4 semanas, sumando reps; arranque estimado ~200 / 230 / 250 / 160 lb; la serie de 20 + banda ~20% menos que la primera, como en el ejemplo de Bret) · Smith con pies adelante · **RDL con barra** · abducción en máquina sentada · extensión de cuádriceps · talones de pie · **crunch en polea**.
-  - **B:** press militar con mancuernas · press de pecho inclinado en máquina · **aperturas en polea** · laterales con mancuernas · laterales en polea a una mano · tríceps en polea · tríceps overhead con cuerda · **patada de tríceps** · rueda abdominal.
-  - **C:** búlgara con **bajada en 3 s** · hip thrust con barra libre + banda + pulsos · **peso muerto convencional con barra** · abducción de pie en polea · curl femoral sentado · Pallof press (con peso).
-  - **D:** jalón al pecho · **remo T en máquina** · **jalón unilateral en polea** · face pull · reverse pec deck · **curl con barra** · **curl inclinado** · dead bug.
-  - **E:** prensa de piernas · hip thrust unipodal · hiperextensión 45° · patada de glúteo en polea · curl femoral arrodillado · aducción · talones sentado · plancha lateral.
+- **Estructura:** A lun · B mar · C mié · D jue · E sáb. Sesiones de 60–75 min ("usualmente me alcanza", también el Día B de 9 ejercicios). S1–S3 progresión + S4 descarga (la pirámide siguió también en S4).
+- **Ejercicios que hice** (con mis cambios sobre el plan): A: hip thrust pirámide · Smith con pies adelante · RDL con barra · abducción en máquina sentada · extensión de cuádriceps · talones de pie · crunch en polea. B: press militar con mancuernas · press de pecho inclinado en máquina · **aperturas en máquina** (en lugar de la polea) · laterales con mancuernas · laterales en polea a una mano · tríceps en polea · **press francés con mancuerna** (en lugar del overhead con cuerda) · patada de tríceps con mancuerna · rueda abdominal. C: búlgara con bajada en 3 s · hip thrust + banda + pulsos · **peso muerto convencional con mancuernas** (en lugar de la barra) · abducción de pie en polea · curl femoral sentado · Pallof press. D: jalón al pecho · remo T en máquina · jalón unilateral en polea · face pull · reverse pec deck · **curl con barra Z** · curl inclinado · dead bug. E: prensa · hip thrust unipodal · hiperextensión 45° · patada en polea · curl femoral arrodillado · aducción · talones sentado · plancha lateral.
+- **Picos (del export):**
+  - A: **Hip thrust pirámide 185 × 20 · 215 × 15 · 260 × 9 · 145 × 24 (S4)** · Smith pies adelante 95 lb × 3×6 (S3) · RDL con barra 75 lb × 3×10 (S3) · abducción máquina 48 kg × 3×18 · extensión de cuádriceps 45 kg × 3×13 · talones de pie 125 lb × 3×14 · crunch en polea 35 kg × 2×12 (S4; 30 kg × 3×15 en S1–S2).
+  - B: press militar 30 lb × 4×5 (S2; en S3 3×5, "aún no logro pasar de 5") · press inclinado en máquina 20 lb (10 c/lado) × 3×12 · aperturas en máquina 25 kg × 3×7 · laterales con mancuernas 15 lb × 3×9 · laterales en polea 5 kg × 3×11 · tríceps en polea 20 kg × 3×13 · press francés 10 lb × 3×8 · patada de tríceps 10 lb × 3×10 · rueda abdominal: sin datos registrados.
+  - C: búlgara (bajada 3 s) 40 lb × 3×13 · hip thrust + banda + pulsos 165 lb × 3×10 + 15 pulsos (barra de 45) · peso muerto con mancuernas 40 lb c/u × 3×10 · abducción polea 15 kg × 13·10·10 · curl femoral sentado 35 kg × 3×15 · Pallof 15 kg × 3×15.
+  - D: jalón al pecho 40 kg × 7·6 (S3) · remo T 40 lb × 3×8 · jalón unilateral 25 kg × 3×9 · face pull 20 kg × 3×15 · reverse pec deck 16 kg × 3×18 · curl con barra Z 15 lb × 3×10 · curl inclinado 10 lb × 3×12.
+  - E: prensa 125 lb × 3×8 · hip thrust unipodal 140 lb × 3×8 · hiperextensión 30 lb × 12·13·10 · patada en polea 20 kg × 3×16 · curl arrodillado 20 lb × 3×8 · aducción 24 kg × 12·12·8 · talones sentado 50 lb × 4×15 (S2).
+- **Cómo me fue:**
+  - **Pirámide "genial":** con los mismos pesos pasé de 15·10·5·20 (S1) a **20·15·9·24 (S4)**. **260 × 9** es mi mejor marca de hip thrust (antes 260 × 4). Toda la pirámide con barra de 45 lb.
+  - **El RDL con barra me molestó un poco la espalda** (creo que es falta de costumbre); en S4 lo hice con mancuernas y el peso muerto del Día C lo hice todo el ciclo con mancuernas.
+  - Estancados: press militar (30 × 5), press francés (10 × 8), laterales (el salto 10 → 15 lb cuesta mucho). La búlgara volvió a tocar el techo de mancuernas (40 × 13).
+  - **No hechos:** Día D de S4 (trabajo). Por tiempo: RDL de S1, crunch de S3, patada de tríceps de S3, talones sentado de S1 y S3 (en S3 los hice de pie el viernes). Smith en S1–S2 y press militar en S2 con 3 series en lugar de 4. Día E de S3 hecho el viernes 13/11.
+  - Sin molestias al cierre (salvo la espalda con el RDL). El cansancio en días de pierna no lo reporté como problema.
 - **Cambios y por qué:**
   - Bisagras con **barra** (RDL y peso muerto convencional): con mancuernas llegué al techo de peso.
   - Búlgara con bajada en 3 s: el máximo de mancuernas es 40 lb (no hay de 45).
   - Pedí más **hombro, espalda, tríceps y bíceps**; el pecho no me gusta pero no quiero descuidarlo → 2 ejercicios de pecho (~6 series/semana para mantener).
   - Core con peso 2 días (crunch en polea, Pallof). No tengo máquina para elevación de piernas colgado.
   - Hasta 2 alternativas por ejercicio (otro ejercicio o el mismo con otro accesorio).
-- **Cómo me fue:**
-  - **S1 · Día A (26/10):** pirámide con **185 × 15 · 215 × 10 · 260 × 5 · 145 × 20 (con banda)**, todo con la **barra de 45 lb** (la de mujer estaba ocupada). Estos son los pesos fijos de la pirámide para S2–S4. El 260 × 5 iguala mi mejor marca de hip thrust (260 × 4 en el ciclo 2) con una rep más.
-  - **RDL con barra (Día A, S1): no lo hice** por falta de tiempo.
-- **Archivos:** `rutinas/ciclo-3.json` (= `ciclo-actual.json`).
+- **Archivos:** `rutinas/ciclo-3.json` · `exports/ciclo-3-export.json`.
 
 ---
 
-## Notas para el próximo ciclo (Ciclo 4)
+## Ciclo 4 — Programa Glúteo, Ciclo 4 (desde el 23/11/2026)
+
+- **Estado:** en curso.
+- **Enfoque:** prioridad tren inferior (glúteo mayor, medio y mínimo, isquios, cuádriceps, pantorrillas: "una pierna bien formada con glúteos parados y redondos"), sin descuidar espalda, brazos y hombros; pecho en mantenimiento. Pedí variar ejercicios e incluir variantes que usa Bret.
+- **Estructura:** A lun · B mar · C mié · D jue · E sáb. Sesiones de 60–75 min. S1–S3 progresión + S4 descarga. **3 dropsets** en S2–S3 (última serie): abducción con torso inclinado (A), laterales con mancuernas (B), patada en polea (E). Vacaciones previstas: S3 viernes/sábado (11–12/12) y S4 lunes/martes (14–15/12) → ajustar cuando se acerque.
+- **Ejercicios principales:**
+  - **A:** hip thrust con barra libre con pausa 2 s (vuelve el pesado; sugerido S1 225 lb = S1 del ciclo 2 + 5%) · Smith con pies adelante · **RDL búlgaro con mancuerna** (pie de atrás en el banco, carga contralateral; lo propuse yo) · abducción en máquina con torso inclinado (dropset) · extensión de cuádriceps · talones de pie · crunch en polea.
+  - **B:** **press Arnold** · press inclinado con mancuernas · aperturas en polea · laterales con mancuernas (dropset) · laterales en polea · **tríceps en polea con cuerda** · press francés · **patada de tríceps en polea** · plancha con toque de hombro.
+  - **C:** **búlgara en Smith** · **Kas glute bridge con barra libre** (Bret: rango corto, 1 s arriba; reemplaza los pulsos como trabajo de lockout) · **peso muerto sumo con mancuerna** · abducción de pie en polea · curl femoral acostado · talones sentado · **leñador en polea**.
+  - **D:** jalón con agarre neutro · remo en polea baja (V) · remo unilateral con mancuerna · **pullover en polea** · reverse pec deck · curl en polea baja · curl martillo · plancha con elevación de pierna alterna.
+  - **E:** **zancada reversa en Smith** · hip thrust B-stance · hiperextensión 45° (siempre la hago con énfasis en glúteo) · patada en polea (dropset) · **abducción de cadera acostada de lado con mancuerna** (Bret) · curl femoral sentado · aducción · elevación de piernas acostada.
+- **Cambios y por qué:**
+  - Bisagras **con mancuerna** este ciclo (el RDL con barra molestó la espalda); la barra se vuelve a probar en el ciclo 5.
+  - Búlgara y zancada en **Smith**: con mancuernas llegué al techo (40 lb). Se anota el peso en discos, sin contar la barra.
+  - Talones sentado pasa del sábado al Día C (en E se quedaba sin hacer por tiempo).
+  - Descansan: pirámide (no antes de ~4 meses), prensa, unipodal, face pull, remo T, curl con barra Z, rueda (quedan como alternativas algunos).
+  - Rechazados en la propuesta: plancha lateral con abducción de pierna (no me gusta). Pedí menos dropsets (de 6 a 3).
+- **Archivos:** `rutinas/ciclo-4.json` (= `ciclo-actual.json`).
+
+---
+
+## Notas para el próximo ciclo (Ciclo 5)
 
 **Antes de generar**
-- Cerrar el ciclo 3 en la app y pasarme el export; resumirlo acá y sumar su hoja al Excel.
-- Preguntarle: molestias, cómo le fue con la pirámide y con los ejercicios con barra, si el Día B de 9 ejercicios entra en el tiempo, y qué quiere cambiar.
+- Cerrar el ciclo 4 en la app y pasarme el export; resumirlo acá y sumar su hoja al Excel.
+- Preguntarle: molestias (sobre todo espalda), cómo le fue con el RDL búlgaro, el Kas glute bridge, búlgara/zancada en Smith y los dropsets, cómo quedaron las semanas de vacaciones, y qué quiere cambiar.
 
 **Qué conservar**
-- Estructura A–E, regla de tercios, S1–S4, RPE y descansos. Sesiones de 60–75 min.
+- Estructura A–E, regla de tercios, S1–S4, RPE y descansos. Sesiones de 60–75 min (el Día B de 9 ejercicios entra).
 - Imprescindibles: búlgara, hip thrust con barra libre (nunca en Smith), Smith con pies adelante.
-- Tren superior con más hombro, espalda, tríceps y bíceps; pecho en mantenimiento (2 ejercicios).
+- Prioridad tren inferior (glúteo medio/mínimo incluido); espalda, hombros y brazos bien trabajados; pecho en mantenimiento (2 ejercicios).
 - Core: al menos 2 días con peso.
+- Dropsets: pocos (≈3 por semana, solo máquinas/poleas, S2–S3).
 
 **Qué rotar**
-- **Hip thrust:** después de la pirámide volver al pesado con pausa en el Día A; la pirámide no antes de ~4 meses.
-- **Hinge:** sumo con barra, buenos días en Smith, RDL a una pierna.
-- **Abducción:** máquina con torso inclinado; kickback en polea (es la que prefiere).
-- **Squat/lunge:** step-up o zancada solo si hay peso suficiente; si no, versiones en máquina (prensa individual, extensión individual).
-- **Espalda:** pullover en polea, remo con barra, remo en polea baja V (opciones que le interesan).
+- **Hinge con barra otra vez** (pedido): probar RDL o sumo con barra con poco peso y buena técnica; si molesta, volver a mancuerna.
+- **Hip thrust:** Día A pesado (con o sin pausa); Día C volver a pulsos o banda + pulsos; Día E unipodal. Pirámide no antes de ~marzo 2027.
+- **Abducción:** máquina sentada normal, banda de pie; kickback en máquina de glúteo.
+- **Espalda:** remo con barra (si la espalda lo permite), remo T, face pull.
+- Ideas de Bret pendientes: B-stance RDL (kickstand), step-up con déficit, zancada cruzada (curtsy).
 
 **Cargas**
-- Comparar S1 contra S1. Referencias: hip thrust S1 215 × 10 (dos ciclos seguidos) y pico 260 × 4.
-- **Techo de mancuernas: 40 lb.** Para progresar en bisagras y sentadillas, usar barra/Smith/máquina o tempo/pausas.
+- Comparar S1 contra S1. Referencias: hip thrust S1 215 × 10 (ciclo 2) y pico 260 × 9 (pirámide, ciclo 3).
+- **Techo de mancuernas para pares: 40 lb** (después hay de 50 y 60, salto muy grande). Para progresar en sentadillas y bisagras, usar Smith/barra/máquina o tempo/pausas.
 
 **Cosas por evaluar**
-- ¿El Día B (9 ejercicios) entra en 75 min?
+- ¿Las vacaciones de S3–S4 obligaron a mover días o alargar el ciclo?
 - Sudoración y cansancio en días de pierna pesada: ¿sigue igual?

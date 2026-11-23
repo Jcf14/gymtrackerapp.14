@@ -32,7 +32,7 @@ Comandos: `npm test` · `npm run validar` · `npm run build` · `npm run serve` 
 
 **Publicación:** repo privado en GitHub → Cloudflare Pages (build command `npm run build`, output `dist`). El build valida todas las rutinas (si alguna falla, no publica), copia `app/` + `rutinas/ciclo-actual.json` y versiona el service worker. `CLAUDE.md`, `HISTORIAL.md` y `exports/` nunca se publican.
 
-Estado: ciclo vigente = **3** (desde el 26/10/2026). Ciclos 1 y 2 cerrados: exports en `exports/` y resumen en HISTORIAL.md.
+Estado: ciclo vigente = **4** (desde el 23/11/2026). Ciclos 1, 2 y 3 cerrados: exports en `exports/` y resumen en HISTORIAL.md.
 
 ---
 
@@ -119,7 +119,7 @@ Estado: ciclo vigente = **3** (desde el 26/10/2026). Ciclos 1 y 2 cerrados: expo
 - Reparto semanal aproximado: 1/3 patrones verticales, 1/3 horizontales, 1/3 abducción (lateral/rotacional).
 - Variantes dentro de cada patrón: thrust (rango completo + trabajo de lockout: pausas, pulsos, barra + banda) · squat/lunge (bilateral + unilateral) · hinge (vertical + horizontal: RDL, hipers) · abducción (plano frontal + transverso).
 - Volumen orientativo: ~4 ejercicios de glúteo por sesión × 3 sesiones ≈ 36 series semanales de glúteo. Cuádriceps e isquios reciben ~9 series cada uno de forma indirecta, más un accesorio dedicado (extensión de cuádriceps / curl femoral) para reforzarlos.
-- **El hip thrust cambia de variante en cada día de glúteo:** Día A pesado con pausa de 2 s arriba → Día C más liviano (≈15–20% menos peso que el Día A) con pulsos → Día E unilateral / B-stance. Siempre con barra libre.
+- **El hip thrust cambia de variante en cada día de glúteo:** Día A pesado con pausa de 2 s arriba → Día C más liviano (≈15–20% menos peso que el Día A) con pulsos → Día E unilateral / B-stance. Siempre con barra libre. En el ciclo 4 el Día C usa el **Kas glute bridge** (rango corto, 1 s arriba) como trabajo de lockout en lugar de los pulsos.
 - **Pulsos:** se hacen **al final de la serie** (después de la última repetición, quedándose arriba), no en cada rep. 10 pulsos en S1–S2, 15 en S3. Ninguno en descarga.
 - Tren superior: 2 días de ~7 ejercicios. Empuje con **2 ejercicios de tríceps**; tirón con **2 de bíceps**; hombro lateral y posterior; core.
 - Frecuencias mínimas por semana: pantorrillas 2×, curl femoral 2×, cuádriceps accesorio 1–2×, aducción 1×.
@@ -153,17 +153,17 @@ Estado: ciclo vigente = **3** (desde el 26/10/2026). Ciclos 1 y 2 cerrados: expo
 - **Alternativas (22/10/2026):** `alt` puede ser un texto o una lista de **hasta 2**, *solo si aplica*: otro ejercicio y/o **el mismo con otro accesorio** (mancuerna, polea, máquina, disco). Ej.: `"alt": ["Remo con barra", "Remo sentado en máquina"]`. Todo ejercicio que dependa de máquina, barra o banco fijo lleva al menos una; los de mancuerna o peso corporal pueden llevar `null` si no hay una alternativa útil. La alternativa se escribe con el nombre completo de ese ejercicio (mismo criterio de nombres), porque su peso se registra bajo ese nombre.
 - Se pueden reutilizar variantes de ciclos anteriores después de 1–2 ciclos, usando el peso de referencia registrado.
 - Catálogo por patrón (`[C1]` / `[C2]` = ya usado en ciclo 1 / ciclo 2):
-  - **Thrust/Bridge:** hip thrust barra libre con pausa 2 s [C2] · barra + banda + pulsos [C1] · barra + pulsos, más liviano [C2] · unipodal / puente a 1 pierna [C1] · B-stance [C2] · alternativas: con mancuerna en banco, en máquina (sin confirmar), frog pump con mancuerna en reps altas.
-  - **Squat/Lunge:** sentadilla en Smith (trasera [C1], pies adelante [C2]) · prensa de piernas (alt.) · búlgara [C1 alt., C2] · step-up [C1 alt., C2] · zancada reversa con déficit [C2] · zancada caminando [C1 alt.] · split squat y goblet (alt.).
-  - **Hinge:** RDL bilateral [C1] · RDL a una pierna [C2] · peso muerto convencional [C1] · peso muerto sumo [C2] · hiperextensión 45° [C1] · buenos días [C2] · versiones con mancuernas (alt.).
-  - **Abducción/rotación:** máquina sentada [C1] · de pie en cable [C2] · máquina sentada con torso inclinado [C2] · kickback en polea [C1] · kickback en máquina de glúteo [C2] · banda de pie (alt.).
+  - **Thrust/Bridge:** hip thrust barra libre con pausa 2 s [C2] · barra + banda + pulsos [C1] · barra + pulsos, más liviano [C2] · unipodal / puente a 1 pierna [C1] · B-stance [C2, C4] · pirámide de Bret [C3] · Kas glute bridge con barra libre [C4] · alternativas: con mancuerna en banco, en máquina (sin confirmar), frog pump con mancuerna en reps altas.
+  - **Squat/Lunge:** sentadilla en Smith (trasera [C1], pies adelante [C2]) · prensa de piernas (alt.) · búlgara [C1 alt., C2] · step-up [C1 alt., C2] · zancada reversa con déficit [C2] · zancada caminando [C1 alt.] · split squat y goblet (alt.) · búlgara en Smith [C4] · zancada reversa en Smith [C4].
+  - **Hinge:** RDL bilateral [C1] · RDL a una pierna [C2] · peso muerto convencional [C1] · peso muerto sumo [C2] · hiperextensión 45° [C1] · buenos días [C2] · RDL con barra [C3, molestó la espalda] · RDL búlgaro con mancuerna (pie de atrás en banco, carga contralateral) [C4] · sumo con mancuerna [C4] · versiones con mancuernas (alt.).
+  - **Abducción/rotación:** máquina sentada [C1] · de pie en cable [C2] · máquina sentada con torso inclinado [C2] · kickback en polea [C1] · kickback en máquina de glúteo [C2] · banda de pie (alt.) · abducción acostada de lado con mancuerna (Bret) [C4].
   - **Aducción:** máquina [C1, C2] · plancha copenhague (alt.).
   - **Cuádriceps accesorio:** extensión de cuádriceps [C1] · extensión unilateral (la hice en lugar de la zancada en el ciclo 2).
   - **Isquios accesorio:** curl femoral sentado [C1] · arrodillado a una pierna [C2] · acostado [C2] · puente de isquios con talones en banco (alt.).
   - **Pantorrillas:** de pie [C1, C2] · sentado [C2].
   - **Empuje:** press banca plano [C1] · inclinado con mancuernas [C2] · press militar con mancuernas [C1] · Arnold [C2] · press de pecho en máquina [C2] · laterales con mancuerna [C1] / en polea [C2] · tríceps: pushdown [C1], overhead con cuerda [C2], press francés o copa [C1, C2].
   - **Tirón:** dominadas/jalón [C1] · jalón agarre neutro [C2] · remo con barra [C1] · remo en polea baja [C2] · remo unilateral con mancuerna [C1, C2] · face pull [C1] · reverse pec deck [C2] · curl barra/mancuerna [C1] · curl en polea baja [C2] · martillo/inclinado [C1] · concentrado [C2].
-  - **Core:** elevación de piernas colgado [C1] · plancha con elevación de pierna [C2] · plancha lateral [C1] · plancha con toque de hombro [C2] · plancha con desplazamiento [C2] · Pallof [C1] · rueda abdominal [C2] · dead bug [C1] · bird dog [C2].
+  - **Core:** elevación de piernas colgado [C1] · plancha con elevación de pierna [C2] · plancha lateral [C1] · plancha con toque de hombro [C2] · plancha con desplazamiento [C2] · Pallof [C1] · rueda abdominal [C2] · dead bug [C1] · bird dog [C2] · crunch en polea [C3, C4] · leñador en polea [C4] · elevación de piernas acostada [C4]. No le gusta: plancha lateral con abducción de pierna.
 - Antes de guardar el ciclo: mostrarme la lista final de ejercicios para que la apruebe o la cambie.
 
 ### 3.7 Cierre de ciclo
@@ -367,7 +367,7 @@ Todos los valores se guardan como JSON (`JSON.stringify`).
 ### 6.5 Pendientes
 
 1. Probar en el iPhone real lo que todavía solo se probó en Chrome (modo avión con la app anclada, exportar a Archivos).
-2. Al cerrar el ciclo 3: export → `exports/ciclo-3-export.json`, HISTORIAL.md y `npm run historial`.
+2. Al cerrar el ciclo 4: export → `exports/ciclo-4-export.json`, HISTORIAL.md y `npm run historial`.
 
 ### 6.6 Paleta de la app (variables CSS del artifact)
 

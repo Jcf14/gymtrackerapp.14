@@ -191,6 +191,7 @@
     { id: "maximo", term: "Máximo (récord)", text: "Tu mejor marca del ejercicio: el peso más alto y, a igual peso, más reps. Cuando lo superás, el anterior queda guardado en el historial de récords." },
     { id: "pulsos", term: "Pulsos", text: "Movimientos cortos arriba, al final de la serie (después de la última rep, sin bajar del todo), no en cada rep. 10 en S1–S2, 15 en S3, ninguno en la descarga." },
     { id: "rematado", term: "Serie de rematado (+ 1x15-20)", text: "Una serie extra de 15–20 reps con ~40–50% menos peso que las series pesadas. Solo en el hip thrust del Día A en S3." },
+    { id: "dropset", term: "Dropset (+ dropset)", text: "Solo en la última serie, en S2–S3: al terminarla (cerca del fallo) bajás el peso ~25% (una placa, o la mancuerna anterior) y seguís sin descanso hasta casi el fallo. Es volumen extra sin cargar más las articulaciones. Anotá las reps de la serie normal; las del dropset, en la nota. Nunca en la descarga." },
     { id: "lado", term: "c/pierna · c/lado", text: "Las reps se cuentan para cada pierna o lado por separado." },
     { id: "barra", term: "Por lado / total", text: "Por lado = los discos de un solo lado, sin la barra. Total = 2 × lado + barra. Barra de mujer: 35 lb (15 kg)." },
     { id: "protocolo", term: "Protocolo", text: "Detalle de cómo se hace el ejercicio en este ciclo (pausa arriba, agarre neutro, pies adelante…). Es solo descriptivo: el mismo nombre es el mismo ejercicio para el historial, el récord y las sugerencias. Si una variante cambia mucho la carga (como el hip thrust con pulsos, más liviano), lleva otro nombre." },
@@ -1068,7 +1069,8 @@
     return true;
   }
 
-  const today = () => new Date().toISOString().slice(0, 10);
+  // Fecha local (no UTC): exportar a las 21:00 en Costa Rica ya es el día siguiente en UTC.
+  const today = () => G.isoDate(new Date());
 
   async function importRoutine(file) {
     let r;
