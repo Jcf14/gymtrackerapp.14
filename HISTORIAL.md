@@ -99,15 +99,16 @@
 - **Estructura:** A lun · B mar · C mié · D jue · E sáb. Sesiones de 60–75 min. S1–S3 progresión + S4 descarga. **3 dropsets** en S2–S3 (última serie): abducción con torso inclinado (A), laterales con mancuernas (B), patada en polea (E). Vacaciones previstas: S3 viernes/sábado (11–12/12) y S4 lunes/martes (14–15/12) → ajustar cuando se acerque.
 - **Ejercicios principales:**
   - **A:** hip thrust con barra libre con pausa 2 s (vuelve el pesado; sugerido S1 225 lb = S1 del ciclo 2 + 5%) · Smith con pies adelante · **RDL búlgaro con mancuerna** (pie de atrás en el banco, carga contralateral; lo propuse yo) · abducción en máquina con torso inclinado (dropset) · extensión de cuádriceps · talones de pie · crunch en polea.
-  - **B:** **press Arnold** · press inclinado con mancuernas · aperturas en polea · laterales con mancuernas (dropset) · laterales en polea · **tríceps en polea con cuerda** · press francés · **patada de tríceps en polea** · plancha con toque de hombro.
-  - **C:** **búlgara en Smith** · **Kas glute bridge con barra libre** (Bret: rango corto, 1 s arriba; reemplaza los pulsos como trabajo de lockout) · **peso muerto sumo con mancuerna** · abducción de pie en polea · curl femoral acostado · talones sentado · **leñador en polea**.
-  - **D:** jalón con agarre neutro · remo en polea baja (V) · remo unilateral con mancuerna · **pullover en polea** · reverse pec deck · curl en polea baja · curl martillo · plancha con elevación de pierna alterna.
-  - **E:** **zancada reversa en Smith** · hip thrust B-stance · hiperextensión 45° (siempre la hago con énfasis en glúteo) · patada en polea (dropset) · **abducción de cadera acostada de lado con mancuerna** (Bret) · curl femoral sentado · aducción · elevación de piernas acostada.
+  - **B:** **press Arnold** · press inclinado con mancuernas · aperturas en polea · laterales con mancuernas (dropset) · laterales en polea · **tríceps en polea con cuerda** · **extensión sobre la cabeza a una mano en polea** · **patada de tríceps en polea** · plancha con toque de hombro.
+  - **C:** **búlgara en Smith** · **Kas glute bridge con barra libre** (Bret: rango corto, 1 s arriba; reemplaza los pulsos como trabajo de lockout) · **peso muerto sumo con mancuerna** · **patada de glúteo en polea en diagonal (45°)** · curl femoral acostado · talones sentado · **leñador en polea**.
+  - **D:** jalón con agarre neutro · remo en polea baja (V) · remo unilateral con mancuerna · **pullover en polea** · **elevación posterior a una mano en polea** · **curl bayesiano en polea** · curl martillo · plancha con elevación de pierna alterna.
+  - **E:** **zancada reversa en Smith** · hip thrust B-stance · hiperextensión 45° (siempre la hago con énfasis en glúteo) · patada en polea (dropset) · **abducción de cadera acostada de lado con mancuerna** (Bret) · **curl femoral sentado a una pierna** · aducción · elevación de piernas acostada.
 - **Cambios y por qué:**
   - Bisagras **con mancuerna** este ciclo (el RDL con barra molestó la espalda); la barra se vuelve a probar en el ciclo 5.
   - Búlgara y zancada en **Smith**: con mancuernas llegué al techo (40 lb). Se anota el peso en discos, sin contar la barra.
   - Talones sentado pasa del sábado al Día C (en E se quedaba sin hacer por tiempo).
   - Descansan: pirámide (no antes de ~4 meses), prensa, unipodal, face pull, remo T, curl con barra Z, rueda (quedan como alternativas algunos).
+  - **Ajuste del 23/11** (después del Día A, antes de B–E): le pareció que repetía mucho de ciclos anteriores; pidió más unilateral y más polea, "sin inventar" (la primera propuesta cambiaba demasiado). Se cambiaron 5 ejercicios en su misma posición: press francés → extensión sobre la cabeza a una mano en polea · abducción de pie en polea → patada en polea en diagonal (45°) · reverse pec deck → elevación posterior a una mano en polea · curl en polea baja → curl bayesiano · curl femoral sentado → a una pierna. Criterio: rotar lo que se repetía 2–3 ciclos, mantener lo que tiene progresión (laterales con mancuernas).
   - Rechazados en la propuesta: plancha lateral con abducción de pierna (no me gusta). Pedí menos dropsets (de 6 a 3).
 - **Archivos:** `rutinas/ciclo-4.json` (= `ciclo-actual.json`).
 
@@ -125,6 +126,8 @@
 - Prioridad tren inferior (glúteo medio/mínimo incluido); espalda, hombros y brazos bien trabajados; pecho en mantenimiento (2 ejercicios).
 - Core: al menos 2 días con peso.
 - Dropsets: pocos (≈3 por semana, solo máquinas/poleas, S2–S3).
+
+**Criterio de variedad (23/11):** punto intermedio: cambiar lo que se repitió 2–3 ciclos seguidos con variantes conocidas (otro ángulo, polea, unilateral); no reinventar la rutina entera. Le gustan la polea (tensión constante) y lo unilateral para espalda, hombros y brazos.
 
 **Qué rotar**
 - **Hinge con barra otra vez** (pedido): probar RDL o sumo con barra con poco peso y buena técnica; si molesta, volver a mancuerna.
