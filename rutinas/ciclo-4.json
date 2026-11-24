@@ -46,7 +46,14 @@
             4,
             4,
             2
-          ]
+          ],
+          "how": [
+            "Espalda alta en el banco (borde bajo de los omóplatos) y la barra sobre la cadera, con almohadilla.",
+            "Pies al ancho de la cadera; arriba, las canillas quedan verticales.",
+            "Subí empujando con los talones hasta extender la cadera, mentón hacia el pecho.",
+            "Aguantá 2 s arriba apretando el glúteo y bajá controlado."
+          ],
+          "avoid": "Arquear la zona lumbar para subir más: la cadera termina alineada con el torso, no más arriba."
         },
         {
           "pattern": "Squat/Lunge (vertical)",
@@ -67,7 +74,13 @@
             4,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Barra sobre la parte alta de la espalda y los pies un paso por delante de la barra.",
+            "Bajá sentándote hacia atrás hasta que el muslo quede paralelo al piso (o un poco más).",
+            "Subí empujando con todo el pie, sin despegar los talones."
+          ],
+          "avoid": "Que las rodillas se vayan hacia adentro o que los talones se levanten."
         },
         {
           "pattern": "Hinge (unilateral)",
@@ -88,7 +101,14 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Pie de atrás apoyado en el banco y la mancuerna en la mano del lado de esa pierna.",
+            "Con la rodilla de adelante apenas doblada, llevá la cadera hacia atrás y bajá la mancuerna hacia el pie que trabaja.",
+            "Bajá hasta sentir el estiramiento en el glúteo y el isquio, con la espalda recta.",
+            "Subí empujando la cadera hacia adelante y apretá el glúteo arriba."
+          ],
+          "avoid": "Redondear la espalda o girar la cadera hacia el lado de la mancuerna."
         },
         {
           "pattern": "Abducción (frontal)",
@@ -109,7 +129,14 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Sentada en la máquina, inclinate hacia adelante con el pecho cerca de los muslos y agarrada a los apoyos.",
+            "Abrí las piernas empujando con la parte de afuera de las rodillas.",
+            "Aguantá 1 s abierta y volvé lento, sin que las placas choquen.",
+            "Dropset (S2–S3): al terminar la última serie, bajá ~25% y seguí hasta casi el fallo."
+          ],
+          "avoid": "Rebotar o usar impulso del torso para abrir."
         },
         {
           "pattern": "Accesorio cuádriceps",
@@ -131,7 +158,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Rodilla alineada con el eje de la máquina y el rodillo sobre los tobillos.",
+            "Estirá las piernas hasta arriba y apretá el cuádriceps 1 s.",
+            "Bajá lento (2–3 s) sin dejar caer el peso."
+          ],
+          "avoid": "Despegar la cola del asiento o patear con impulso."
         },
         {
           "pattern": "Accesorio pantorrillas",
@@ -151,7 +184,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Las puntas de los pies en el borde del escalón y los talones en el aire.",
+            "Bajá los talones lo más que puedas, con un segundo de estiramiento abajo.",
+            "Subí hasta quedar en puntas y apretá 1 s arriba."
+          ],
+          "avoid": "Rebotar abajo o doblar las rodillas para ayudarte."
         },
         {
           "pattern": "Core",
@@ -173,7 +212,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "De rodillas frente a la polea alta, con la cuerda a los costados de la cabeza.",
+            "Enrollá el torso llevando los codos hacia los muslos; la cadera se queda quieta.",
+            "Volvé despacio hasta estirar el abdomen."
+          ],
+          "avoid": "Tirar con los brazos o sentarte sobre los talones para bajar."
         }
       ]
     },
@@ -204,7 +249,13 @@
             4,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Sentada con respaldo, las mancuernas frente al pecho y las palmas hacia vos.",
+            "Mientras subís, girá las palmas hacia afuera hasta estirar los brazos arriba.",
+            "Bajá deshaciendo el giro hasta volver frente al pecho."
+          ],
+          "avoid": "Arquear la zona lumbar para empujar."
         },
         {
           "pattern": null,
@@ -224,7 +275,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Banco a ~30°, omóplatos juntos y apoyados, pies firmes en el piso.",
+            "Bajá las mancuernas a los costados del pecho, con los codos a ~45° del cuerpo.",
+            "Empujá hacia arriba y un poco hacia adentro, sin chocarlas."
+          ],
+          "avoid": "Abrir los codos a 90° (carga el hombro) o despegar la espalda del banco."
         },
         {
           "pattern": null,
@@ -246,7 +303,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Poleas a la altura del pecho, un paso adelante y los codos apenas doblados.",
+            "Cerrá los brazos en arco hasta juntar las manos frente al pecho.",
+            "Volvé lento hasta sentir el estiramiento, sin pasar la línea de los hombros."
+          ],
+          "avoid": "Doblar y estirar los codos: se convierte en un press."
         },
         {
           "pattern": null,
@@ -265,7 +328,14 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "De pie, las mancuernas a los costados y los codos apenas doblados.",
+            "Subí los brazos hacia los costados hasta la altura de los hombros, guiando con los codos.",
+            "Bajá lento (2 s).",
+            "Dropset (S2–S3): al terminar la última serie, pasá a la mancuerna anterior y seguí hasta casi el fallo."
+          ],
+          "avoid": "Balancear el cuerpo o subir los hombros hacia las orejas."
         },
         {
           "pattern": null,
@@ -288,7 +358,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "De costado a la polea baja, el cable en la mano de afuera pasando por delante del cuerpo.",
+            "Subí el brazo hacia el costado hasta la altura del hombro.",
+            "Bajá lento: la polea mantiene la tensión también abajo."
+          ],
+          "avoid": "Inclinar el torso para ayudarte a subir."
         },
         {
           "pattern": null,
@@ -310,7 +386,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Polea alta, codos pegados a los costados.",
+            "Empujá la cuerda hacia abajo y abrí las puntas al final.",
+            "Subí solo hasta que el antebrazo pase la horizontal, sin mover los codos."
+          ],
+          "avoid": "Que los codos se adelanten o usar el cuerpo para empujar."
         },
         {
           "pattern": null,
@@ -333,7 +415,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "De espaldas a la polea, el cable en una mano y el codo apuntando al techo.",
+            "Estirá el brazo por encima de la cabeza.",
+            "Bajá lento detrás de la cabeza hasta sentir el estiramiento del tríceps; el codo no se mueve."
+          ],
+          "avoid": "Abrir el codo hacia afuera o arquear la espalda."
         },
         {
           "pattern": null,
@@ -355,7 +443,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Polea baja, torso inclinado hacia adelante y el codo pegado al costado.",
+            "Estirá el brazo hacia atrás hasta dejarlo recto y apretá 1 s.",
+            "Volvé hasta 90° sin mover el codo."
+          ],
+          "avoid": "Balancear el brazo desde el hombro."
         },
         {
           "pattern": "Core",
@@ -374,7 +468,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Plancha alta con las manos debajo de los hombros y los pies un poco separados.",
+            "Tocá el hombro contrario con una mano, alternando.",
+            "La cadera no se mueve: imaginá un vaso de agua sobre la cola."
+          ],
+          "avoid": "Mover la cadera de lado a lado."
         }
       ]
     },
@@ -406,7 +506,14 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Banco detrás de la Smith, a una zancada larga; el empeine del pie de atrás apoyado.",
+            "Barra sobre la parte alta de la espalda.",
+            "Bajá recto hasta que la rodilla de atrás casi toque el piso; torso apenas inclinado para más glúteo.",
+            "Subí empujando con todo el pie de adelante, sobre todo el talón."
+          ],
+          "avoid": "Que la rodilla de adelante se vaya hacia adentro."
         },
         {
           "pattern": "Thrust/Bridge (lockout)",
@@ -427,7 +534,14 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Espalda alta en el banco y la barra sobre la cadera, con almohadilla.",
+            "Subí hasta extender la cadera, mentón hacia el pecho.",
+            "Bajá solo unos 15 cm: los hombros no se mueven del banco.",
+            "Aguantá 1 s arriba en cada rep."
+          ],
+          "avoid": "Arquear la zona lumbar para subir más."
         },
         {
           "pattern": "Hinge (vertical)",
@@ -448,7 +562,13 @@
             4,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Pies más abiertos que los hombros, puntas hacia afuera, la mancuerna colgando entre las piernas.",
+            "Bajá llevando la cadera atrás y abriendo las rodillas, con la espalda recta.",
+            "Subí empujando el piso y apretá el glúteo arriba."
+          ],
+          "avoid": "Redondear la espalda o que las rodillas se cierren."
         },
         {
           "pattern": "Abducción (transversal)",
@@ -471,7 +591,14 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Tobillera en el pie que trabaja, polea abajo, de frente a la máquina.",
+            "Torso un poco inclinado (~30°), rodilla de apoyo apenas doblada, abdomen firme.",
+            "Llevá la pierna hacia atrás y hacia afuera, como apuntando a las 7 o a las 5 de un reloj en el piso.",
+            "Apretá el glúteo 1 s arriba y volvé lento, sin que la placa toque abajo."
+          ],
+          "avoid": "Girar la cadera o el torso para llevar la pierna más lejos."
         },
         {
           "pattern": "Accesorio isquios",
@@ -494,7 +621,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Boca abajo, las rodillas justo pasando el borde del banco y el rodillo sobre los tobillos.",
+            "Doblá las rodillas llevando los talones hacia la cola.",
+            "Bajá lento (2–3 s)."
+          ],
+          "avoid": "Levantar la cadera del banco para ayudarte."
         },
         {
           "pattern": "Accesorio pantorrillas",
@@ -514,7 +647,13 @@
             4,
             4,
             2
-          ]
+          ],
+          "how": [
+            "Rodillas debajo de la almohadilla y las puntas de los pies en el borde.",
+            "Bajá los talones hasta el máximo estiramiento.",
+            "Subí lo más alto posible y apretá 1 s."
+          ],
+          "avoid": "Rebotar o recortar el recorrido."
         },
         {
           "pattern": "Core",
@@ -537,7 +676,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Polea alta, de costado, el agarre con las dos manos y los brazos casi estirados.",
+            "Llevá el cable en diagonal hacia la rodilla contraria, girando el torso.",
+            "Volvé controlado; la fuerza sale del abdomen, no de los brazos."
+          ],
+          "avoid": "Doblar los brazos o girar solo los hombros."
         }
       ]
     },
@@ -570,7 +715,13 @@
             4,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Agarre neutro (palmas enfrentadas), muslos firmes bajo los rodillos.",
+            "Tirá llevando los codos hacia abajo y atrás, hasta la parte alta del pecho.",
+            "Subí lento hasta estirar los brazos y los dorsales."
+          ],
+          "avoid": "Tirarte hacia atrás para bajar la barra."
         },
         {
           "pattern": null,
@@ -592,7 +743,13 @@
             4,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Sentada, pies apoyados, rodillas apenas dobladas y la espalda recta.",
+            "Tirá el agarre hacia el ombligo juntando los omóplatos.",
+            "Volvé estirando los brazos sin redondear la espalda."
+          ],
+          "avoid": "Balancear el torso hacia atrás y adelante."
         },
         {
           "pattern": null,
@@ -611,7 +768,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Rodilla y mano del mismo lado apoyadas en el banco, espalda plana.",
+            "Tirá la mancuerna hacia la cadera, con el codo pegado al cuerpo.",
+            "Bajá hasta estirar el brazo."
+          ],
+          "avoid": "Girar el torso para subir más."
         },
         {
           "pattern": null,
@@ -634,7 +797,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "De pie frente a la polea alta, con cuerda o barra recta, torso un poco inclinado.",
+            "Con los brazos casi estirados, llevá la polea en arco hasta los muslos.",
+            "Volvé lento hasta sentir el estiramiento de los dorsales."
+          ],
+          "avoid": "Doblar los codos: se convierte en un jalón de tríceps."
         },
         {
           "pattern": null,
@@ -657,7 +826,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "De costado a la polea, a la altura del hombro; el cable en la mano de afuera, cruzado por delante del pecho.",
+            "Abrí el brazo casi estirado hacia atrás hasta la línea del hombro.",
+            "Volvé lento cruzando por delante."
+          ],
+          "avoid": "Girar el torso para ayudar."
         },
         {
           "pattern": null,
@@ -680,7 +855,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "De espaldas a la polea baja, un pie adelante y el brazo estirado un poco por detrás del cuerpo.",
+            "Subí la mano doblando el codo, sin adelantar el codo.",
+            "Bajá lento hasta estirar del todo. Arrancá con el peso más liviano."
+          ],
+          "avoid": "Llevar el codo hacia adelante: se pierde el estiramiento."
         },
         {
           "pattern": null,
@@ -701,7 +882,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "De pie, mancuernas a los costados y las palmas enfrentadas.",
+            "Subí doblando los codos, que se quedan pegados al cuerpo.",
+            "Bajá lento."
+          ],
+          "avoid": "Balancear el cuerpo."
         },
         {
           "pattern": "Core",
@@ -720,7 +907,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Plancha sobre antebrazos, el cuerpo en línea recta.",
+            "Levantá una pierna estirada unos centímetros, aguantá 1 s y cambiá.",
+            "La cadera no se tuerce ni se hunde."
+          ],
+          "avoid": "Hundir la cadera o levantar demasiado la pierna."
         }
       ]
     },
@@ -753,7 +946,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Barra en la espalda, pies juntos debajo de la barra.",
+            "Da un paso largo hacia atrás y bajá hasta que la rodilla de atrás casi toque el piso.",
+            "Subí empujando con el talón de adelante y volvé a juntar los pies."
+          ],
+          "avoid": "Que la rodilla de adelante se vaya hacia adentro o pasar el peso al pie de atrás."
         },
         {
           "pattern": "Thrust/Bridge (unilateral)",
@@ -774,7 +973,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Como el hip thrust, pero el pie de apoyo adelantado y el otro con solo la punta un poco más adelante.",
+            "El 80% del peso va en la pierna de atrás: empujá con ese talón.",
+            "Subí hasta extender la cadera, apretá y bajá controlado."
+          ],
+          "avoid": "Empujar con las dos piernas por igual."
         },
         {
           "pattern": "Hinge (horizontal)",
@@ -794,7 +999,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Cadera apenas por encima de la almohadilla, pies hacia afuera.",
+            "Espalda alta un poco redondeada, mentón hacia el pecho.",
+            "Subí empujando la cadera contra el apoyo y apretando el glúteo, hasta alinear el cuerpo."
+          ],
+          "avoid": "Arquear la zona lumbar al final: el movimiento lo hace la cadera."
         },
         {
           "pattern": "Abducción/rotación",
@@ -817,7 +1028,14 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Tobillera, polea abajo, de frente a la máquina, torso apenas inclinado.",
+            "Llevá la pierna hacia atrás, casi estirada, y apretá el glúteo 1 s.",
+            "Volvé lento sin que la placa toque abajo.",
+            "Dropset (S2–S3): al terminar la última serie, bajá una placa y seguí hasta casi el fallo."
+          ],
+          "avoid": "Arquear la espalda para llevar la pierna más arriba."
         },
         {
           "pattern": "Abducción (frontal)",
@@ -838,7 +1056,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Acostada de lado, la pierna de abajo doblada y la de arriba estirada, un poco hacia atrás.",
+            "La mancuerna apoyada sobre el muslo de arriba, sostenida con la mano.",
+            "Subí la pierna hasta ~45° con la punta del pie mirando apenas hacia abajo y bajá lento."
+          ],
+          "avoid": "Girar la cadera hacia atrás o subir la punta del pie hacia el techo."
         },
         {
           "pattern": "Accesorio isquios",
@@ -860,7 +1084,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Rodilla alineada con el eje de la máquina y el rodillo sobre el tobillo de una pierna.",
+            "Doblá la rodilla llevando el talón hacia abajo y atrás.",
+            "Volvé lento; después, la otra pierna."
+          ],
+          "avoid": "Despegar la cola del asiento."
         },
         {
           "pattern": "Aducción (antagonista)",
@@ -880,7 +1110,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Sentada, la espalda apoyada y las almohadillas en la parte interna de las rodillas.",
+            "Cerrá las piernas apretando 1 s.",
+            "Abrí lento hasta sentir el estiramiento."
+          ],
+          "avoid": "Dejar que las placas choquen al abrir."
         },
         {
           "pattern": "Core",
@@ -899,7 +1135,13 @@
             3,
             3,
             2
-          ]
+          ],
+          "how": [
+            "Boca arriba, las manos debajo de la cola y la zona lumbar pegada al piso.",
+            "Subí las piernas estiradas hasta la vertical.",
+            "Bajá lento sin que la espalda se despegue del piso."
+          ],
+          "avoid": "Arquear la zona lumbar al bajar."
         }
       ]
     }

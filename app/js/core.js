@@ -67,6 +67,8 @@
           errs.push(`${w}: alt debe ser texto, null o una lista de 1 o 2 textos`);
         if (!isStr(ex.rest)) errs.push(`${w}: falta rest`);
         if (ex.protocol !== undefined && !isStr(ex.protocol)) errs.push(`${w}: protocol debe ser un texto (u omitirse)`);
+        if (ex.how !== undefined && !(Array.isArray(ex.how) && ex.how.length > 0 && ex.how.every(isStr))) errs.push(`${w}: how debe ser una lista de pasos (textos) u omitirse`);
+        if (ex.avoid !== undefined && !isStr(ex.avoid)) errs.push(`${w}: avoid debe ser un texto (u omitirse)`);
         if (ex.noWeight !== undefined && ex.noWeight !== true) errs.push(`${w}: noWeight solo puede ser true (u omitirse)`);
         if (ex.fixedLoad !== undefined && ex.fixedLoad !== true) errs.push(`${w}: fixedLoad solo puede ser true (u omitirse)`);
         if (ex.unit !== undefined && ex.unit !== "lb" && ex.unit !== "kg") errs.push(`${w}: unit debe ser "lb" o "kg" (u omitirse)`);

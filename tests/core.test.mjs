@@ -156,6 +156,17 @@ test("poleas y máquinas de pila (unit kg, step 5): todo cae en 5, 10, 15…", (
   assert.match(G.validateRoutine(bad).join("\n"), /step necesita unit/);
 });
 
+test("validación: pasos (how) y qué evitar (avoid) son opcionales pero con formato", () => {
+  const ok = fixture();
+  Object.assign(ok.days[0].exercises[0], { how: ["Paso uno", "Paso dos"], avoid: "Arquear la zona lumbar" });
+  assert.deepEqual(plain(G.validateRoutine(ok)), []);
+  const bad = fixture();
+  Object.assign(bad.days[0].exercises[0], { how: "un solo texto", avoid: ["lista"] });
+  const errs = G.validateRoutine(bad).join("\n");
+  assert.match(errs, /how debe ser una lista/);
+  assert.match(errs, /avoid debe ser un texto/);
+});
+
 test("S3 sin @RPE9 escrito igual es la semana del récord (no 'dejá reps en reserva')", () => {
   const r = G.recommend({ unit: "lb", weekShort: ["S1", "S2", "S3", "S4"], target: "3x15 @RPE8", prevTarget: "3x12-15 (+peso)", week: 2,
     prev: { weight: 40, week: 1 }, prevRec: { reps: ["12", "12", "12"] }, max: { weight: 45, topReps: 12 } });

@@ -88,8 +88,8 @@ test("no guarda ni completa sin peso; guarda con peso y reps", async () => {
   const t = await boot();
   t.goTo(0, "A");
   t.click(t.$$(".done-btn")[0]);
-  assert.match(t.toast(), /Cargá y guardá el peso/);
-  t.openCard(0);
+  assert.match(t.toast(), /Anotá el peso y las reps/);
+  assert.ok(t.$("#sheet .ex-sheet .weight-input"), "el círculo abre el detalle para registrar");
   t.click(".save-entry-btn");
   assert.match(t.toast(), /Cargá el peso/);
   assert.deepEqual(t.data(), {});
@@ -193,10 +193,10 @@ test("sugerencias: (+peso) en S2 y 55% en descarga", async () => {
   t.goTo(1, "A");
   // cabecera: cada dato con su etiqueta (HOY · SUGERIDO · RÉCORD)
   const head = () => t.$$(".card")[0];
-  assert.match(head().querySelector(".cs-today").textContent, /Hoy\s*4×6-8 · RPE 8 \(\+peso\)/);
+  assert.match(head().querySelector(".row-meta").textContent, /4×6-8 · RPE 8 \(\+peso\)/);
   // 215 × 10 a RPE 7 → para 6-8 a RPE 8 corresponde ~230 (no un +5 fijo)
   assert.match(head().querySelector(".cs-sug").textContent, /Sugerido\s*230 lb \S*\+7% · Más peso/);
-  assert.match(head().querySelector(".cs-rec").textContent, /Récord\s*215/);
+  assert.match(head().querySelector(".row-max").textContent, /Récord\s*215/);
   t.openCard(0);
   assert.match(t.$(".use-sug-btn").textContent, /Usar 230 lb/);
   assert.match(t.$(".insight .why").textContent, /Más peso, menos reps/);
@@ -296,8 +296,9 @@ test("ejercicio con barra libre: discos por lado debajo del peso (barra 35 | 45)
   assert.match(t.$(".ex-plate-hint").textContent, /^Por lado 87,5 → 45 \+ 35 \+ 5 \+ 2,5$/);
   // sin barra (búlgara con mancuernas) no hay discos
   t.openCard(1);
-  assert.ok(t.$$(".card")[1].querySelector(".weight-input"), "la búlgara está abierta");
-  assert.equal(t.$$(".card")[1].querySelector(".ex-plate-hint"), null);
+  assert.equal(t.$("#sheet .ex-sheet").dataset.ex, "A_1_w0", "la búlgara está abierta");
+  assert.ok(t.$("#sheet .weight-input"));
+  assert.equal(t.$("#sheet .ex-plate-hint"), null);
   assert.deepEqual(t.errors, []);
 });
 
@@ -306,24 +307,24 @@ test("polea o máquina de pila (unit kg, step 5): arranca en kg y el − / + va 
   Object.assign(routine.days[0].exercises[1], { unit: "kg", step: 5 });
   const t = await boot({ routine });
   t.goTo(0, "A"); t.openCard(1);
-  const card = () => t.$$(".card")[1];
+  const card = () => t.$("#sheet .ex-sheet");
   assert.ok(card().querySelector('.ex-unit-btn[data-unit="kg"]').classList.contains("active"), "kg por defecto en ese ejercicio");
   assert.equal(card().querySelector(".weight-box .unit").textContent, "kg");
-  t.type(".card:nth-child(2) .weight-input", "12");
-  t.click(".card:nth-child(2) .step-up-btn");
+  t.type("#sheet .weight-input", "12");
+  t.click("#sheet .step-up-btn");
   assert.equal(card().querySelector(".weight-input").value, "15", "fuera de la pila va al casillero siguiente");
-  t.click(".card:nth-child(2) .step-up-btn");
+  t.click("#sheet .step-up-btn");
   assert.equal(card().querySelector(".weight-input").value, "20");
-  t.click(".card:nth-child(2) .step-down-btn");
+  t.click("#sheet .step-down-btn");
   assert.equal(card().querySelector(".weight-input").value, "15");
   // en lb vuelve al paso de 5 lb
-  t.click('.card:nth-child(2) .ex-unit-btn[data-unit="lb"]');
+  t.click('#sheet .ex-unit-btn[data-unit="lb"]');
   assert.equal(card().querySelector(".weight-input").value, "33");
-  t.click(".card:nth-child(2) .step-up-btn");
+  t.click("#sheet .step-up-btn");
   assert.equal(card().querySelector(".weight-input").value, "35", "va al siguiente peso posible de 5 en 5 lb");
   // los demás ejercicios siguen en lb
   t.openCard(0);
-  assert.ok(t.$$(".card")[0].querySelector('.ex-unit-btn[data-unit="lb"]').classList.contains("active"));
+  assert.ok(t.$('#sheet .ex-unit-btn[data-unit="lb"]').classList.contains("active"));
   assert.deepEqual(t.errors, []);
 });
 const G_parse = (s) => Number(String(s).replace(",", "."));
@@ -362,23 +363,23 @@ test("mancuernas: anoto el peso de una, elijo 1 o 2 y muestra el total", async (
   routine.days[0].exercises[1].name = "Press militar con mancuernas";
   const t = await boot({ routine });
   t.goTo(0, "A"); t.openCard(1);
-  const card = () => t.$$(".card")[1];
+  const card = () => t.$("#sheet .ex-sheet");
   assert.match(card().querySelector(".weight-row .reg-label").textContent, /de una mancuerna/);
   assert.equal(card().querySelector(".equip-select").value, "dumbbell");
   assert.ok(card().querySelector('.db-count-btn[data-n="2"]').classList.contains("active"), "con mancuernas: 2 por defecto");
-  t.type(".card:nth-child(2) .weight-input", "25");
+  t.type("#sheet .weight-input", "25");
   assert.equal(card().querySelector(".db-total").textContent, "Total 50 lb (2 × 25)");
   // el + va al siguiente par que existe: 35 → 40 → 50
-  t.type(".card:nth-child(2) .weight-input", "40");
-  t.click(".card:nth-child(2) .step-up-btn");
+  t.type("#sheet .weight-input", "40");
+  t.click("#sheet .step-up-btn");
   assert.equal(card().querySelector(".weight-input").value, "50");
   assert.equal(card().querySelector(".db-total").textContent, "Total 100 lb (2 × 50)");
   // con una sola mancuerna no hay total aparte
-  t.click('.card:nth-child(2) .db-count-btn[data-n="1"]');
+  t.click('#sheet .db-count-btn[data-n="1"]');
   assert.equal(card().querySelector(".db-total").textContent, "");
-  t.click('.card:nth-child(2) .db-count-btn[data-n="2"]');
-  t.type(".card:nth-child(2) .weight-input", "25");
-  t.click(".card:nth-child(2) .save-entry-btn");
+  t.click('#sheet .db-count-btn[data-n="2"]');
+  t.type("#sheet .weight-input", "25");
+  t.click("#sheet .save-entry-btn");
   const rec = t.data().A_1_w0;
   assert.equal(rec.weight, "25"); assert.equal(rec.dbCount, 2);
   assert.match(t.$$(".card")[1].querySelector(".ex-weight").textContent, /25 lb c\/u · total 50 lb/);
@@ -397,6 +398,9 @@ test("desde la tarjeta: progresión e historial del ejercicio, y volver a la rut
   t.goTo(1, "A"); t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
   t.goTo(2, "A"); t.openCard(0); t.type(".weight-input", "210"); t.click(".save-entry-btn");
   t.openCard(0);
+  t.click('.ex-tab[data-tab="hist"]');
+  assert.match(t.$("#sheet .hist-max").textContent, /215/, "máximo en la pestaña Historial");
+  assert.equal(t.$$("#sheet .pg-dot").length, 3, "gráfico en la hoja");
   t.click(".ex-hist-btn");
   assert.ok(t.$(".tab.active[data-tab='historial']"), "pasa a la pestaña Historial");
   assert.match(t.$(".page-title").textContent, /Hip thrust con barra libre/);
@@ -416,15 +420,16 @@ test("desde la tarjeta: progresión e historial del ejercicio, y volver a la rut
   assert.match(t.$(".hist-back-btn").textContent, /Rutina/);
   t.click(".hist-back-btn");
   assert.ok(t.$(".tab.active[data-tab='rutina']"));
-  assert.ok(t.$$(".card")[0].classList.contains("open"));
+  assert.equal(t.$("#sheet .ex-sheet").dataset.ex, "A_0_w2", "vuelve con el detalle abierto");
+  assert.ok(t.$('.ex-tab.active[data-tab="hist"]'), "en la pestaña Historial");
   assert.deepEqual(t.errors, []);
 });
 
 test("completar el último ejercicio del día: anillo lleno, confeti y aviso", async () => {
   const t = await boot();
   t.goTo(0, "A");
-  t.openCard(0); t.type(".weight-input", "200"); t.click(".save-done-btn");
-  t.openCard(1); t.type(".card.open .weight-input", "30"); t.click(".card.open .save-done-btn");
+  t.openCard(0); t.type(".weight-input", "200"); t.type(".reps-same-input", "8"); t.click(".save-done-btn");
+  t.openCard(1); t.type("#sheet .weight-input", "30"); t.type("#sheet .reps-same-input", "10"); t.click("#sheet .save-done-btn");
   assert.equal(t.$(".hero .ring").dataset.done, "2");
   assert.equal(t.$$(".confetti").length, 0, "todavía no");
   t.click(t.$$(".done-btn")[2]); // plancha (sin peso): se completa directo
@@ -575,7 +580,7 @@ test("lb/kg por ejercicio: convierte, guarda la unidad y muestra la equivalencia
   assert.match(t.$(".ex-sug").textContent, /107,5 kg/);
   // otro ejercicio sigue en lb
   t.openCard(1);
-  assert.ok(t.$('.card.open .ex-unit-btn[data-unit="lb"]').classList.contains("active"));
+  assert.ok(t.$('#sheet .ex-unit-btn[data-unit="lb"]').classList.contains("active"));
   // la calculadora usa la barra en kg
   t.openCard(0); t.click(".calc-toggle-btn");
   assert.match(t.$(".calc-bar-btn").textContent, /Mujer 15/);
@@ -711,11 +716,14 @@ test("protocolo: es solo descriptivo; mismo nombre = mismo récord y sugerencia"
   const t = await boot({ storage, routine: cur });
   t.goTo(0, "A");
   const card = t.$$(".card")[0];
-  assert.match(card.querySelector(".ex-proto").textContent, /Pausa 2 s/);
   assert.match(card.querySelector(".ex-max").textContent, /300/, "el récord del ciclo anterior se ve aunque cambie el protocolo");
   assert.match(card.querySelector(".ex-sug").textContent, /300 lb.*Más reps/, "S1 anterior: 300 × 8, el rango pide hasta 10 → mismo peso, más reps");
   // y el historial los muestra juntos, con el protocolo en cada sesión
-  t.openCard(0); t.type(".weight-input", "215"); t.click(".save-entry-btn");
+  t.openCard(0);
+  t.click('.ex-tab[data-tab="how"]');
+  assert.match(t.$("#sheet .how-card.proto").textContent, /Pausa 2 s/, "el protocolo está en Cómo se hace");
+  t.click('.ex-tab[data-tab="reg"]');
+  t.type(".weight-input", "215"); t.click(".save-entry-btn");
   t.click('.tab[data-tab="historial"]');
   const items = t.$$(".hist-item").filter((b) => /Hip thrust con barra libre/.test(b.textContent));
   assert.equal(items.length, 1, "un solo ejercicio en el historial");
@@ -944,5 +952,53 @@ test("discos por lado en la pirámide, con barra de 35 o 45", async () => {
   const w2 = t.$$(".set-weight-input")[2];                           // el render reemplazó los campos
   w2.value = "201"; w2.dispatchEvent(new t.w.Event("input", { bubbles: true }));
   assert.match(t.$$(".plate-hint")[2].textContent, /faltan 0,5/);
+  assert.deepEqual(t.errors, []);
+});
+
+test("lista compacta: el círculo no completa con peso sin reps; abre el detalle para registrar", async () => {
+  const t = await boot();
+  t.goTo(0, "A");
+  assert.ok(t.$$(".card.row")[0].querySelector(".row-side"), "fila compacta con sugerido y máximo");
+  assert.equal(t.$("#root .weight-input"), null, "el formulario no está en la lista");
+  t.openCard(0);
+  t.type(".weight-input", "200");
+  t.click(".save-done-btn");                       // marcar listo sin reps: no
+  assert.match(t.toast(), /Anotá las reps/);
+  assert.deepEqual(t.data(), {});
+  t.click(".save-entry-btn");                      // solo guardar con peso: sí
+  assert.equal(t.data().A_0_w0.weight, "200");
+  assert.equal(t.$("#sheet").hidden, true, "al guardar, la hoja se cierra");
+  t.click(t.$$(".done-btn")[0]);                    // peso sin reps: no completa, abre el detalle
+  assert.equal(t.data().A_0_w0.completed, false);
+  assert.equal(t.$("#sheet .ex-sheet").dataset.ex, "A_0_w0");
+  assert.match(t.toast(), /Anotá el peso y las reps/);
+  t.type(".reps-same-input", "10");
+  t.click(".save-done-btn");
+  assert.equal(t.data().A_0_w0.completed, true);
+  assert.deepEqual(t.data().A_0_w0.reps, ["10", "10", "10", "10"]);
+  assert.ok(t.$$(".card.row")[0].classList.contains("done"));
+  assert.deepEqual(t.errors, []);
+});
+
+test("hoja de detalle: pestañas Registrar · Cómo se hace · Historial, y se cierra", async () => {
+  const routine = JSON.parse(JSON.stringify(FIXTURE));
+  Object.assign(routine.days[0].exercises[0], { protocol: "Pausa 2 s arriba", how: ["Espalda alta en el banco", "Aguantá 2 s arriba"], avoid: "Arquear la zona lumbar" });
+  const t = await boot({ routine });
+  t.goTo(0, "A"); t.openCard(0);
+  assert.ok(t.$('.ex-tab.active[data-tab="reg"]'), "abre en Registrar");
+  t.click('.ex-tab[data-tab="how"]');
+  assert.equal(t.$$("#sheet .how-steps li").length, 2);
+  assert.match(t.$("#sheet .how-card.avoid").textContent, /Arquear/);
+  assert.match(t.$("#sheet .how-card.proto").textContent, /Pausa 2 s/);
+  t.click('.ex-tab[data-tab="hist"]');
+  assert.match(t.$("#sheet .ex-pane").textContent, /Todavía no hay registros/);
+  t.click('.ex-tab[data-tab="reg"]');
+  t.type(".weight-input", "180");
+  t.click('.ex-tab[data-tab="how"]'); t.click('.ex-tab[data-tab="reg"]');
+  assert.equal(t.$(".weight-input").value, "180", "el borrador sobrevive al cambiar de pestaña");
+  t.click("#sheet .close-settings-btn");
+  assert.equal(t.$("#sheet").hidden, true);
+  t.openCard(0);
+  assert.equal(t.$(".weight-input").value, "180", "y también al cerrar y volver a abrir");
   assert.deepEqual(t.errors, []);
 });

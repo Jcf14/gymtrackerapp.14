@@ -44,7 +44,8 @@
     tab: "rutina",
     week: 0,
     day: null,
-    open: new Set(),    // índices de tarjetas abiertas
+    exIdx: null,        // ejercicio abierto en la hoja de detalle (S.sheet === "ex")
+    exTab: "reg",       // pestaña de esa hoja: reg · how · hist
     drafts: {},         // borradores por slotKey (sobreviven al re-render)
     histQuery: "",
     histFilter: "all",
@@ -110,7 +111,7 @@
     S.data = store.get(G.dataKey(S.cycle), {});
     if (G.migrateData(S.cycle, S.data)) saveData();
     S.drafts = {};
-    S.open = new Set();
+    if (S.sheet === "ex") S.sheet = false;
     S.histEx = null;
     const r = routine();
     const remembered = lastWeeks()[S.cycle];
@@ -340,6 +341,7 @@
   // ---------- Render principal ----------
 
   let FX = {};   // efectos del render en curso: { view, opened, done, pr } (se consumen en cada render)
+  let FXS = {};  // efectos de la hoja en curso: { tabFrom, pane } (se consumen en cada renderSheet)
 
   function render() {
     FX = S.fx; S.fx = {};
@@ -576,38 +578,107 @@
     const rec = S.data[k] || null;
     const name = G.slotName(S.data, day.key, idx, ex, w);
     const altUsed = !!(rec && rec.altUsed && G.alts(ex).length);
-    const open = S.open.has(idx);
     const done = !!(rec && rec.completed);
     const u = cardUnit(day.key, idx, k, rec);
     const info = recFor(day, ex, idx, w, name, u);
     const tagTxt = altUsed ? "alternativa" : name !== ex.name ? "editado" : "";
     const repsTxt = G.repsText(rec);
     const saved = weightLine(rec);
-    const mid = rec && rec.skipped
-      ? `<div class="cs cs-skip"><span class="cs-lbl">No hecho</span><span class="cs-val">${esc(rec.skipReason || "Sin motivo")}</span></div>`
+    // Fila compacta (pedido 23/11/2026): de un vistazo, qué toca hoy, el peso sugerido (o lo registrado) y el máximo.
+    // Todo lo demás (registro, cómo se hace, historial) está en la hoja de detalle que se abre al tocar la fila.
+    const side = rec && rec.skipped
+      ? `<span class="cs cs-skip"><span class="cs-lbl">No hecho</span><span class="cs-val">${esc(rec.skipReason || "Sin motivo")}</span></span>`
       : saved || (rec && (rec.completed || repsTxt))
-      ? `<div class="cs cs-reg"><span class="cs-lbl">Registrado</span>${saved || `<span class="cs-val">${repsTxt ? esc(repsTxt) : "Hecho"}</span>`}${saved && repsTxt ? `<span class="cs-sub">reps ${esc(repsTxt)}</span>` : ""}</div>`
+      ? `<span class="cs cs-reg"><span class="cs-lbl sr-only">Registrado</span>${saved || `<span class="cs-val">${repsTxt ? esc(repsTxt) : "Hecho"}</span>`}${saved && repsTxt ? `<span class="cs-sub"><span class="sr-only">reps </span>${esc(repsTxt)}</span>` : ""}</span>`
       : info && info.rec
-        ? `<div class="cs cs-sug"><span class="cs-lbl">Sugerido</span>${recBadge(info.rec, u)}</div>`
-        : `<div class="cs"><span class="cs-lbl">Sugerido</span><span class="cs-val none">${ex.noWeight ? "Sin peso" : "Calibrá"}</span></div>`;
+        ? `<span class="cs cs-sug"><span class="cs-lbl sr-only">Sugerido</span>${recBadge(info.rec, u)}</span>`
+        : `<span class="cs"><span class="cs-val none">${ex.noWeight ? "Sin peso" : "Calibrá"}</span></span>`;
     const best = info && info.max;
-    const recCol = ex.noWeight && !best ? "" : best
-      ? `<div class="cs cs-rec"><span class="cs-lbl">Récord</span><span class="cs-val ex-max">${icon("trophy")}${fmt(best.weight)}${best.topReps ? `<small>×${best.topReps}</small>` : ""}</span><span class="cs-sub">${fmtDate(best.date)}</span></div>`
-      : `<div class="cs cs-rec"><span class="cs-lbl">Récord</span><span class="cs-val none">—</span></div>`;
-    const head = `<div class="card-head" data-action="toggle-card" data-idx="${idx}">
+    const maxTxt = best ? `<span class="row-max"><span class="sr-only">Récord </span><span class="ex-max">${icon("trophy")}${fmt(best.weight)}${best.topReps ? `<small>×${best.topReps}</small>` : ""}</span></span>`
+      : ex.noWeight ? "" : `<span class="row-max none">Sin récord</span>`;
+    const cls = `card row ${day.type}${done ? " done" : ""}${rec && rec.skipped ? " skipped" : ""}${FX.done === k ? " fx-done" : ""}${FX.pr === k ? " fx-pr" : ""}${FX.saved === k ? " fx-saved" : ""}`;
+    return `<li class="${cls}" style="--i:${idx}" data-card="${k}">
         <button class="done-btn${FX.done === k ? " fx-pop" : ""}" data-action="toggle-done" data-k="${k}" aria-pressed="${done}" aria-label="${done ? "Completado" : "Marcar como completado"}">${icon("check")}</button>
-        <div class="card-info">
-          <div class="ex-name">${esc(name)}${tagTxt ? ` <span class="edited">· ${tagTxt}</span>` : ""}</div>
-          ${ex.pattern || G.slotProtocol(rec, ex) ? `<div class="ex-tags">${ex.pattern ? `<span class="ex-pattern">${icon("layers")}${esc(ex.pattern)}</span>` : ""}${G.slotProtocol(rec, ex) ? `<span class="ex-proto">${icon("pause")}${esc(ex.protocol)}</span>` : ""}</div>` : ""}
-          <div class="card-stats${recCol ? "" : " two"}">
-            <div class="cs cs-today"><span class="cs-lbl">Hoy</span><span class="cs-val ex-target">${esc(prettyTarget(ex.targets[w]))}</span><span class="cs-sub ex-rest">${icon("clock")}${esc(ex.rest)}</span></div>
-            ${mid}${recCol}
+        <button class="card-head row-head" data-action="open-ex" data-idx="${idx}" aria-label="Abrir ${esc(name)}">
+          <span class="row-main">
+            <span class="ex-name">${esc(name)}${tagTxt ? ` <span class="edited">· ${tagTxt}</span>` : ""}</span>
+            <span class="row-meta"><span class="ex-target">${esc(prettyTarget(ex.targets[w]))}</span><span class="ex-rest">${icon("clock")}${esc(ex.rest)}</span></span>
+          </span>
+          <span class="row-side">${side}${maxTxt}</span>
+          ${icon("chevron").replace('class="ic"', 'class="ic row-chev"')}
+        </button>
+      </li>`;
+  }
+
+  // ---------- Hoja de detalle del ejercicio: Registrar · Cómo se hace · Historial ----------
+  const EX_TABS = [["reg", "Registrar"], ["how", "Cómo se hace"], ["hist", "Historial"]];
+
+  function renderExSheet() {
+    const r = routine(), day = currentDay();
+    const idx = S.exIdx, ex = r && day && day.exercises[idx];
+    if (!ex) { S.sheet = false; return ""; }
+    const w = S.week, k = G.slotKey(day.key, idx, w);
+    const rec = S.data[k] || null;
+    const name = G.slotName(S.data, day.key, idx, ex, w);
+    const u = cardUnit(day.key, idx, k, rec);
+    const info = recFor(day, ex, idx, w, name, u);
+    const proto = G.slotProtocol(rec, ex);
+    const ti = Math.max(0, EX_TABS.findIndex(([id]) => id === S.exTab));
+    const from = FXS.tabFrom != null ? FXS.tabFrom : ti;
+    const pane = S.exTab === "how" ? renderExHow(ex, name, proto)
+      : S.exTab === "hist" ? renderExHist(ex, name, k, info)
+      : renderCardBody(day, ex, idx, k, rec, name, info);
+    return `<div class="ex-sheet ${day.type}" data-ex="${k}">
+      <div class="sheet-drag">
+        <div class="sheet-grabber"></div>
+        <div class="ex-sheet-head">
+          <div class="ex-sheet-title">
+            <div class="eyebrow">${esc(ex.pattern || (day.type === "upper" ? "Tren superior" : "Pierna"))}</div>
+            <h2>${esc(name)}</h2>
+            <div class="ex-sheet-meta"><span class="ex-chip today">${esc(prettyTarget(ex.targets[w]))}</span><span class="ex-chip">${icon("clock")}${esc(ex.rest)}</span>${rec && rec.completed ? `<span class="ex-chip ok">${icon("check")}Listo</span>` : ""}</div>
           </div>
+          <button class="icon-btn close-settings-btn" data-action="close-settings" aria-label="Cerrar">${icon("x")}</button>
         </div>
-      </div>`;
-    const cls = `card ${day.type}${done ? " done" : ""}${rec && rec.skipped ? " skipped" : ""}${open ? " open" : ""}${FX.pr === k ? " fx-pr" : ""}${FX.saved === k ? " fx-saved" : ""}`;
-    if (!open) return `<li class="${cls}" style="--i:${idx}">${head}</li>`;
-    return `<li class="${cls}" style="--i:${idx};--vtn:card-${idx}" data-card="${k}">${head}${renderCardBody(day, ex, idx, k, rec, name, info)}</li>`;
+      </div>
+      <div class="ex-tabs" role="tablist" aria-label="Detalle del ejercicio" style="--t:${from}" data-to="${ti}">
+        <span class="ex-tab-ind" aria-hidden="true"></span>
+        ${EX_TABS.map(([id, label]) => `<button class="ex-tab${S.exTab === id ? " active" : ""}" role="tab" aria-selected="${S.exTab === id}" data-action="ex-tab" data-tab="${id}">${label}</button>`).join("")}
+      </div>
+      <div class="ex-pane ${S.exTab}${FXS.pane ? ` fx-pane ${FXS.pane}` : ""}">${pane}</div>
+    </div>`;
+  }
+
+  // "Cómo se hace": protocolo del ciclo + pasos (campos opcionales `how` y `avoid` de la rutina) + alternativas.
+  function renderExHow(ex, name, proto) {
+    const steps = Array.isArray(ex.how) ? ex.how.filter((x) => String(x).trim()) : [];
+    const alts = G.alts(ex);
+    return `${proto ? `<div class="how-card proto">${icon("pause")}<div><span class="how-lbl">En este ciclo</span><p>${esc(proto)}</p></div></div>` : ""}
+      ${steps.length ? `<div class="how-card"><span class="how-lbl">Paso a paso</span>
+          <ol class="how-steps">${steps.map((s, i) => `<li style="--i:${i}"><span class="how-n">${i + 1}</span><span>${esc(s)}</span></li>`).join("")}</ol></div>`
+        : `<div class="how-card muted-card">${icon("info")}<p>Todavía no hay pasos cargados para este ejercicio.</p></div>`}
+      ${ex.avoid ? `<div class="how-card avoid">${icon("ban")}<div><span class="how-lbl">Evitá</span><p>${esc(ex.avoid)}</p></div></div>` : ""}
+      ${alts.length ? `<div class="how-card"><span class="how-lbl">Si está ocupado</span>${alts.map((a) => `<p class="how-alt">${icon("swap")}${esc(a)}</p>`).join("")}
+          <p class="how-hint">Para usarla, en Registrar → Alternativa.</p></div>` : ""}`;
+  }
+
+  // "Historial": máximo, gráfico y últimas sesiones; el detalle completo sigue en la pestaña Historial.
+  function renderExHist(ex, name, k, info) {
+    const e = histIndex().find((x) => x.key === G.normName(name));
+    if (!e || !e.records.some((r) => r.weight > 0)) {
+      return `<div class="how-card muted-card">${icon("chart")}<p>Todavía no hay registros de <b>${esc(name)}</b>. Cuando guardes la primera sesión, acá vas a ver tu progresión.</p></div>`;
+    }
+    const m = e.max;
+    const last = [...e.records].filter((r) => r.weight > 0).sort(G.chrono).reverse().slice(0, 4);
+    return `<div class="how-card hist-max">
+        <span class="how-lbl">${icon("trophy")}Máximo</span>
+        <span class="hist-max-val num">${fmt(m.weight)} <small>${m.unit}${m.dbCount === 2 ? " c/u" : ""}</small>${m.topReps ? ` <span>× ${m.topReps}</span>` : ""}</span>
+        <span class="hist-max-sub">${fmtDate(m.date, { day: "numeric", month: "short", year: "numeric" })} · Ciclo ${m.cycle} · ${esc(splitWeek(m.weekShort || `S${m.week + 1}`)[0])}</span>
+      </div>
+      ${renderProgress(e)}
+      <div class="how-card"><span class="how-lbl">Últimas sesiones</span>
+        <ul class="mini-sess">${last.map((r) => `<li><span>${fmtDate(r.date, { day: "numeric", month: "short" })} <small>· C${r.cycle} ${esc(splitWeek(r.weekShort || `S${r.week + 1}`)[0])}</small></span><b class="num">${fmt(r.weight)} ${r.unit}${r.dbCount === 2 ? " c/u" : ""}</b><span class="mini-reps">${esc(r.reps) || "—"}</span></li>`).join("")}</ul>
+      </div>
+      <button class="link-row ex-hist-btn" data-action="ex-history" data-k="${k}">${icon("chart")}<span>Ver historial completo</span>${icon("chevron")}</button>`;
   }
 
   function renderCardBody(day, ex, idx, k, rec, name, info) {
@@ -666,7 +737,6 @@
         <button class="tool-btn edit-btn${d.editOpen ? " on" : ""}" data-action="toggle-edit" data-k="${k}">${icon("pencil")}Renombrar</button>
         ${rec && rec.skipped ? "" : `<button class="tool-btn skip-ex-btn${d.skipOpen ? " on" : ""}" data-action="toggle-skip-ex" data-k="${k}">${icon("ban")}No lo hice</button>`}
       </div>
-      <button class="link-row ex-hist-btn" data-action="ex-history" data-k="${k}">${icon("chart")}<span>Progresión e historial</span>${icon("chevron")}</button>
       ${altBox}
       ${editBox}
       ${rec && rec.skipped ? `<div class="alt-box skip-ex-state">${icon("ban")}<span><b>No hecho</b>${esc(rec.skipReason || "Sin motivo")}</span>
@@ -977,13 +1047,35 @@
   function renderSheet() {
     const sheet = $("#sheet");
     if (!S.sheet) { sheet.hidden = true; sheet.innerHTML = ""; return; }
+    FXS = S.fxs || {}; S.fxs = {};
+    const isEx = S.sheet === "ex";
+    const body = isEx ? renderExSheet() : S.sheet === "glossary" ? renderGlossary() : S.sheet === "calc" ? renderCalcTool() : renderSettings();
+    if (!S.sheet) { sheet.hidden = true; sheet.innerHTML = ""; return; }
     sheet.hidden = false;
-    const body = S.sheet === "glossary" ? renderGlossary() : S.sheet === "calc" ? renderCalcTool() : renderSettings();
     const fx = S.sheetFx ? " fx-sheet" : "";
     S.sheetFx = false;
+    const label = isEx ? "Detalle del ejercicio" : S.sheet === "glossary" ? "Glosario" : S.sheet === "calc" ? "Calculadora de discos" : "Ajustes";
+    // la hoja del ejercicio conserva el scroll al re-renderizar (por ejemplo, al tocar − / +)
+    const prevPanel = sheet.querySelector(".sheet-panel.ex");
+    const keepScroll = isEx && prevPanel && !fx && !FXS.pane ? prevPanel.scrollTop : 0;
     sheet.innerHTML = `<div class="sheet-backdrop${fx}" data-action="close-settings"></div>
-      <div class="sheet-panel${fx}" role="dialog" aria-label="${S.sheet === "glossary" ? "Glosario" : S.sheet === "calc" ? "Calculadora de discos" : "Ajustes"}">
-        <div class="sheet-grabber"></div>${body}</div>`;
+      <div class="sheet-panel${isEx ? " ex" : ""}${fx}" role="dialog" aria-label="${label}">
+        ${isEx ? "" : '<div class="sheet-grabber sheet-drag"></div>'}${body}</div>`;
+    if (keepScroll) sheet.querySelector(".sheet-panel").scrollTop = keepScroll;
+    if (isEx) {
+      // la píldora de la pestaña se desliza desde la anterior
+      const tabs = sheet.querySelector(".ex-tabs");
+      if (tabs && tabs.style.getPropertyValue("--t") !== tabs.dataset.to) {
+        tabs.getBoundingClientRect();
+        requestAnimationFrame(() => tabs.style.setProperty("--t", tabs.dataset.to));
+      }
+      sheet.querySelectorAll(".note-input").forEach((ta) => { if (ta.value) ta.style.height = `${Math.min(ta.scrollHeight + 2, 240)}px`; });
+    }
+  }
+
+  // Cierra la hoja: se desliza hacia abajo (View Transitions; sin soporte, se cierra directo).
+  function closeSheet(after) {
+    navigate("sheet-close", () => { S.sheet = false; renderSheet(); if (after) after(); });
   }
 
   function sheetHead(title) {
@@ -1122,11 +1214,27 @@
       reps: Array(sets).fill(""), repsSame: false, repsSameValue: "", savedAt: new Date().toISOString() };
   }
 
+  // ¿Hay reps anotadas? (en un registro o en un borrador; "todas iguales" usa un solo campo)
+  function hasReps(x) {
+    if (!x) return false;
+    if (x.repsSame && String(x.repsSameValue || "").trim()) return true;
+    return (x.reps || []).some((r) => String(r).trim() !== "");
+  }
+
+  // Abre la hoja de detalle de un ejercicio del día en la pestaña pedida.
+  function openEx(idx, tab) {
+    const was = S.sheet === "ex";
+    S.sheet = "ex"; S.exIdx = idx; S.exTab = tab || "reg";
+    if (!was) S.sheetFx = true;
+    renderSheet();
+  }
+
   function saveEntry(k, complete) {
     const { ex, week } = exFromKey(k);
     const sets = ex.sets[week];
     const d = S.drafts[k];
     const prev = S.data[k] || {};
+    if (complete === true && !ex.noWeight && !hasReps(d)) { toast("Anotá las reps antes de marcarlo listo", "error"); return false; }
     if (ex.perSetWeight) return savePerSet(k, ex, sets, d, prev, complete);
     const w = G.parseNum(d.weight);
     if (!ex.noWeight && !(w > 0)) { toast("Cargá el peso antes de guardar", "error"); return false; }
@@ -1186,7 +1294,7 @@
       const to = Number(el.dataset.week);
       if (to === S.week) return;
       navigate(to > S.week ? "slide-next" : "slide-prev", () => {
-        S.week = to; S.open = new Set(); S.skipOpen = false;
+        S.week = to; if (S.sheet === "ex") S.sheet = false; S.skipOpen = false;
         store.set(KEYS.lastWeek, { ...lastWeeks(), [S.cycle]: S.week }); render();
       }, true);
     },
@@ -1194,36 +1302,46 @@
       const keys = routine().days.map((d) => d.key), to = el.dataset.day;
       if (to === S.day) return;
       navigate(keys.indexOf(to) > keys.indexOf(S.day) ? "slide-next" : "slide-prev", () => {
-        S.day = to; S.open = new Set(); S.skipOpen = false; store.set(KEYS.lastDay, S.day); render();
+        S.day = to; if (S.sheet === "ex") S.sheet = false; S.skipOpen = false; store.set(KEYS.lastDay, S.day); render();
       }, true);
     },
-    "toggle-card"(el) {
-      const i = Number(el.dataset.idx);
-      navigate("card", () => {
-        if (S.open.has(i)) S.open.delete(i); else { S.open.add(i); S.fx.opened = i; }
-        render();
-      });
+    "open-ex"(el) { openEx(Number(el.dataset.idx), "reg"); },
+    "ex-tab"(el) {
+      const to = el.dataset.tab;
+      if (to === S.exTab) return;
+      const order = EX_TABS.map(([id]) => id);
+      S.fxs = { tabFrom: order.indexOf(S.exTab), pane: order.indexOf(to) > order.indexOf(S.exTab) ? "from-right" : "from-left" };
+      S.exTab = to;
+      renderSheet();
+      const panel = document.querySelector(".sheet-panel.ex");
+      if (panel) panel.scrollTop = 0;
     },
+    // El círculo completa solo si ya hay peso Y reps (o si el ejercicio no lleva peso); si falta algo,
+    // abre el detalle en "Registrar" para anotarlo (pedido 23/11/2026: peso sin reps no tiene sentido).
     "toggle-done"(el) {
       const k = el.dataset.k;
-      const { ex, week } = exFromKey(k);
+      const { ex, week, idx } = exFromKey(k);
       const rec = S.data[k];
       if (rec && rec.completed) {
         rec.completed = false; rec.savedAt = new Date().toISOString();
         saveData(); render(); toast("Marcado como pendiente"); return;
       }
-      if (ex.noWeight || (rec && G.parseNum(rec.weight) > 0)) {
+      const recReady = rec && !rec.skipped && (ex.perSetWeight
+        ? Array.isArray(rec.setWeights) && rec.setWeights.some((x) => G.parseNum(x) > 0)
+        : G.parseNum(rec.weight) > 0) && hasReps(rec);
+      if (ex.noWeight || recReady) {
         S.data[k] = { ...emptyRecord(ex.sets[week]), ...rec, completed: true, savedAt: new Date().toISOString() };
         S.fx.done = k;
         saveData(); render(); toast("Completado ✓"); return;
       }
       const d = S.drafts[k];
-      const ready = d && (ex.perSetWeight ? d.setWeights.slice(0, ex.sets[week]).every((x) => G.parseNum(x) > 0) : G.parseNum(d.weight) > 0);
+      const ready = d && (ex.perSetWeight ? d.setWeights.slice(0, ex.sets[week]).every((x) => G.parseNum(x) > 0) : G.parseNum(d.weight) > 0) && hasReps(d);
       if (ready) {
-        if (saveEntry(k, true)) { S.open.delete(exFromKey(k).idx); S.fx.done = k; render(); toast("Guardado y completado ✓"); }
+        if (saveEntry(k, true)) { S.sheet = false; S.fx.done = k; render(); toast("Guardado y completado ✓"); }
         return;
       }
-      toast("Cargá y guardá el peso antes de completar", "error");
+      openEx(idx, "reg");
+      toast("Anotá el peso y las reps para completarlo");
     },
     "toggle-skip-ex"(el) { const d = S.drafts[el.dataset.k]; d.skipOpen = !d.skipOpen; render(); },
     "skip-ex-reason"(el) {
@@ -1238,8 +1356,10 @@
       const { ex, week, idx } = exFromKey(k);
       S.data[k] = { ...emptyRecord(ex.sets[week]), ...(S.data[k] || {}), completed: false, skipped: true, skipReason: (d.skipReason || "").trim(), savedAt: new Date().toISOString() };
       if (!saveData()) return;
-      delete S.drafts[k]; S.open.delete(idx); S.fx.saved = k;
-      render(); toast("Marcado como no hecho");
+      delete S.drafts[k];
+      closeSheet(() => { S.fx.saved = k; render(); });
+      toast("Marcado como no hecho");
+      return idx;
     },
     "undo-skip-ex"(el) {
       const k = el.dataset.k;
@@ -1306,18 +1426,20 @@
       const before = G.findMax(recordsOf(name).filter((r) => !(r.cycle === S.cycle && r.key === k)));
       const complete = el.dataset.complete ? true : undefined;
       if (!saveEntry(k, complete)) return;
-      S.open.delete(idx);
-      S.fx.saved = k;
-      if (complete) S.fx.done = k;
       const now = G.collectRecords(S.routines, allData(), name).find((r) => r.cycle === S.cycle && r.key === k);
       const isPR = before && now && (G.cmpW(now) > G.cmpW(before) || (G.cmpW(now) === G.cmpW(before) && now.topReps > before.topReps));
-      if (isPR) S.fx.pr = k;
-      render();
-      // la tarjeta guardada queda a la vista (y brilla) para no perderla
-      const card = document.querySelector(`.done-btn[data-k="${k}"]`);
-      if (card && card.scrollIntoView) card.closest(".card").scrollIntoView({ block: "center", behavior: "smooth" });
+      // la hoja baja y la fila guardada queda a la vista (y brilla) para no perderla
+      closeSheet(() => {
+        S.fx.saved = k;
+        if (complete) S.fx.done = k;
+        if (isPR) S.fx.pr = k;
+        render();
+        const row = document.querySelector(`.card[data-card="${k}"]`);
+        if (row && row.scrollIntoView) row.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
       if (isPR) toast(`🏆 ¡Nuevo récord! ${fmt(now.weight)} ${now.unit}${now.topReps ? ` × ${now.topReps}` : ""}`, "pr");
       else toast(complete ? "Guardado y listo ✓" : "Guardado ✓");
+      return idx;
     },
     "set-dbcount"(el) {
       const k = el.dataset.k, d = S.drafts[k];
@@ -1369,10 +1491,11 @@
       const back = S.histReturn;
       S.histReturn = null;
       if (back) {
-        // vuelve a la rutina con la tarjeta abierta, donde estaba
-        S.tab = "rutina"; S.open.add(back.idx); render();
+        // vuelve a la rutina con el detalle del ejercicio abierto en su historial
+        S.tab = "rutina"; render();
         const card = document.querySelector(`[data-card="${back.k}"]`);
-        if (card && card.scrollIntoView) card.scrollIntoView({ block: "start" });
+        if (card && card.scrollIntoView) card.scrollIntoView({ block: "center" });
+        openEx(back.idx, "hist");
         return;
       }
       render();
@@ -1382,6 +1505,7 @@
       const key = G.normName(G.slotName(S.data, dayObj.key, idx, ex, week));
       if (!histIndex().some((x) => x.key === key)) { toast("Todavía no hay registros de este ejercicio"); return; }
       S.histReturn = { k, idx };
+      if (S.sheet === "ex") S.sheet = false;
       S.tab = "historial"; S.histEx = key; S.mergeOpen = false; S.fx.view = true;
       render(); window.scrollTo(0, 0);
     },
@@ -1490,7 +1614,7 @@
         toast(`Ciclo ${c} cargado · tocalo para abrirlo`);
       } catch { toast("Sin conexión: no se pudo cargar el ciclo", "error"); }
     },
-    "close-settings"() { S.sheet = false; renderSheet(); },
+    "close-settings"() { closeSheet(); },
     "set-theme"(el) { S.theme = el.dataset.theme; store.set(KEYS.theme, S.theme); applyTheme(); renderSheet(); },
     "set-unit"(el) { S.unit = el.dataset.unit; store.set(KEYS.unit, S.unit); S.drafts = {}; render(); },
     "set-cycle"(el) { loadCycle(el.dataset.cycle); S.sheet = false; S.tab = "rutina"; S.fx.view = true; render(); toast(`Ciclo ${S.cycle} activo`); },
@@ -1550,7 +1674,7 @@
     if (f === "note") { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight + 2, 240)}px`; }
     if (f === "weight") {
       d.weightMode = "total"; d.perSideDisplay = null;
-      const card = el.closest(".card");
+      const card = el.closest(".card-body") || el.closest(".card");
       const hint = card.querySelector(".perside-hint");
       if (hint) hint.remove();
       const wv = G.parseNum(el.value), conv = card.querySelector(".conv-hint");
@@ -1679,6 +1803,42 @@
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   }
 
+  // Hojas: arrastrar hacia abajo desde el encabezado (o la barrita) para cerrar, como en iOS.
+  function setupSheetDrag() {
+    let drag = null;
+    document.addEventListener("touchstart", (e) => {
+      const h = e.target.closest(".sheet-drag");
+      if (!h || e.target.closest("button, input, select, textarea")) return;
+      const panel = h.closest(".sheet-panel");
+      if (!panel) return;
+      drag = { panel, y0: e.touches[0].clientY, dy: 0, t0: Date.now() };
+      panel.style.transition = "none";
+    }, { passive: true });
+    document.addEventListener("touchmove", (e) => {
+      if (!drag) return;
+      drag.dy = Math.max(0, e.touches[0].clientY - drag.y0);
+      drag.panel.style.transform = `translateY(${drag.dy}px)`;
+      const bg = drag.panel.previousElementSibling;
+      if (bg) bg.style.opacity = String(Math.max(0.2, 1 - drag.dy / 500));
+    }, { passive: true });
+    document.addEventListener("touchend", () => {
+      if (!drag) return;
+      const { panel, dy, t0 } = drag;
+      drag = null;
+      const fast = dy > 40 && Date.now() - t0 < 250;
+      panel.style.transition = "transform .28s var(--ease)";
+      const bg = panel.previousElementSibling;
+      if (dy > 120 || fast) {
+        panel.style.transform = "translateY(105%)";
+        if (bg) { bg.style.transition = "opacity .28s"; bg.style.opacity = "0"; }
+        setTimeout(() => { S.sheet = false; renderSheet(); }, 260);
+      } else {
+        panel.style.transform = "";
+        if (bg) bg.style.opacity = "";
+      }
+    });
+  }
+
   async function boot() {
     S.theme = store.get(KEYS.theme, "light");
     S.equip = store.get(KEYS.equip, {}) || {};
@@ -1694,6 +1854,7 @@
     document.addEventListener("click", onClick);
     document.addEventListener("input", onInput);
     document.addEventListener("change", onChange);
+    setupSheetDrag();
 
     if (S.cycle !== null) render();
     if (await refreshRoutine() || S.cycle === null) {
